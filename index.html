@@ -1010,6 +1010,129 @@ document.body.classList.add("dark");
 }
 
 
+// =======================
+// SETTINGS SYSTEM
+// =======================
+
+
+function openSettings(){
+
+document.getElementById("settingsModal")
+.style.display="flex";
+
+}
+
+
+
+function closeSettings(){
+
+document.getElementById("settingsModal")
+.style.display="none";
+
+}
+
+
+
+
+function setTheme(mode){
+
+
+if(mode==="dark"){
+
+document.body.classList.add("dark");
+
+localStorage.setItem(
+"foodflowTheme",
+"true"
+);
+
+
+}else{
+
+
+document.body.classList.remove("dark");
+
+localStorage.setItem(
+"foodflowTheme",
+"false"
+);
+
+
+}
+
+
+}
+
+
+
+
+
+function openCategoryManager(){
+
+document.getElementById("categoryModal")
+.style.display="flex";
+
+}
+
+
+
+
+
+function closeCategoryManager(){
+
+document.getElementById("categoryModal")
+.style.display="none";
+
+}
+
+
+
+
+function saveCategory(){
+
+
+let name =
+document.getElementById("categoryName").value;
+
+
+let emoji =
+document.getElementById("categoryEmoji").value;
+
+
+
+if(!name){
+
+alert("Enter category name");
+
+return;
+
+}
+
+
+
+alert(
+"Category saved: "
++
+emoji
++
+" "
++
+name
+);
+
+
+
+closeCategoryManager();
+
+
+}
+
+
+
+
+render();
+
+
 
 
 
