@@ -1243,7 +1243,49 @@ closeCategoryManager();
 render();
 
 
+function showPage(page){
 
+
+document.getElementById("plannerPage")
+.style.display="none";
+
+
+document.getElementById("recipesPage")
+.style.display="none";
+
+
+document.getElementById("shoppingPage")
+.style.display="none";
+
+
+
+if(page==="planner"){
+
+document.getElementById("plannerPage")
+.style.display="block";
+
+}
+
+
+
+if(page==="recipes"){
+
+document.getElementById("recipesPage")
+.style.display="block";
+
+}
+
+
+
+if(page==="shopping"){
+
+document.getElementById("shoppingPage")
+.style.display="block";
+
+}
+
+
+}
 
 
 render();
