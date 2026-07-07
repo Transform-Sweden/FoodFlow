@@ -1313,6 +1313,91 @@ render();
 
 </script>
 
+<div class="modal" id="recipeModal">
+
+
+<div class="modal-box">
+
+
+<h2>
+Add Recipe
+</h2>
+
+
+<label>
+Recipe Name
+</label>
+
+
+<input 
+id="recipeName"
+placeholder="Example: Spaghetti Bolognese"
+>
+
+
+<label>
+Category
+</label>
+
+
+<select id="recipeCategory">
+
+<option>🍳 Frukost</option>
+
+<option>🥗 Lunch</option>
+
+<option>🍝 Middag</option>
+
+<option>☕ Fika</option>
+
+</select>
+
+
+
+<label>
+Servings
+</label>
+
+
+<input
+id="recipePeople"
+type="number"
+value="4"
+>
+
+
+
+<label>
+Ingredients
+</label>
+
+
+<textarea
+id="recipeIngredients"
+placeholder="One ingredient per line"
+style="width:100%;height:120px;"
+></textarea>
+
+
+
+<br>
+
+
+<button onclick="saveRecipe()">
+Save
+</button>
+
+
+<button onclick="closeRecipeModal()">
+Cancel
+</button>
+
+
+</div>
+
+
+</div>    
+
 
 </body>
 
