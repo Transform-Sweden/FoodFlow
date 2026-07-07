@@ -1292,6 +1292,12 @@ document.getElementById("shoppingPage")
 
 }
 
+let savedPage =
+localStorage.getItem("foodflowPage")
+|| "planner";
+
+
+showPage(savedPage);    
 
 render();
 
