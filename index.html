@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>FoodFlow</title>
+
+<style>
+
+:root {
+    --background: #f5f5f5;
+    --card: white;
+    --text: #222;
+    --primary: #4caf50;
+    --secondary: #777;
+}
+
+
+body.dark {
+    --background: #121212;
+    --card: #1e1e1e;
+    --text: #eeeeee;
+    --secondary: #aaaaaa;
+}
+
+
+* {
+    box-sizing: border-box;
+}
+
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: var(--background);
+    color: var(--text);
+    transition: 0.3s;
+}
+
+
+header {
+
+    padding: 25px;
+    text-align: center;
+
+}
+
+
+h1 {
+    margin-bottom: 5px;
+}
+
+
+button {
+
+    border: none;
+    padding: 10px 15px;
+    border-radius: 12px;
+    cursor: pointer;
+    background: var(--primary);
+    color: white;
+    font-size: 15px;
+
+}
+
+
+.container {
+
+    max-width: 900px;
+    margin:auto;
+    padding:20px;
+
+}
+
+
+.week {
+
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+    gap:20px;
+
+}
+
+
+.day {
+
+    background:var(--card);
+    border-radius:20px;
+    padding:20px;
+    box-shadow:0 5px 15px rgba(0,0,0,0.1);
+
+}
+
+
+.day h2 {
+
+    margin-top:0;
+
+}
+
+
+.meal {
+
+    margin-top:15px;
+    padding:15px;
+    border-radius:15px;
+    background:rgba(128,128,128,0.1);
+
+}
+
+
+.delete {
+
+    background:#e53935;
+    margin-top:10px;
+
+}
+
+
+input {
+
+    width:100%;
+    padding:10px;
+    margin-top:8px;
+    border-radius:10px;
+    border:1px solid #ccc;
+
+}
+
+
+.modal {
+
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.5);
+    justify-content:center;
+    align-items:center;
+
+}
+
+
+.modal-box {
+
+    background:var(--card);
+    padding:25px;
+    border-radius:20px;
+    width:90%;
+    max-width:400px;
+
+}
+
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<header>
+
+<h1>🍃 FoodFlow</h1>
+
+<p>Your weekly meal planner</p>
+
+<button onclick="toggleTheme()">
+🌙 / ☀️ Theme
+</button>
+
+</header>
+
+
+
+<div class="container">
+
+
+<div class="week" id="week"></div>
+
+
+</div>
+
+
+
+<div class="modal" id="modal">
+
+
+<div class="modal-box">
+
+<h2>Add Meal</h2>
+
+
+<input id="mealName" placeholder="Meal name">
+
+
+<input id="people" type="number" value="4" placeholder="People">
+
+
+<br><br>
+
+<button onclick="saveMeal()">
+Save
+</button>
+
+
+<button onclick="closeModal()">
+Cancel
+</button>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+<script>
+
+
+const days = [
+"Monday",
+"Tuesday",
+"Wednesday",
+"Thursday",
+"Friday",
+"Saturday",
+"Sunday"
+];
+
+
+let selectedDay = null;
+
+
+let meals = JSON.parse(
+localStorage.getItem("foodflowMeals")
+) || {};
+
+
+
+function render(){
+
+
+const week=document.getElementById("week");
+
+week.innerHTML="";
+
+
+days.forEach(day=>{
+
+
+let card=document.createElement("div");
+
+card.className="day";
+
+
+card.innerHTML=`
+
+<h2>${day}</h2>
+
+<button onclick="openModal('${day}')">
++ Add Meal
+</button>
+
+`;
+
+
+if(meals[day]){
+
+
+let m=document.createElement("div");
+
+m.className="meal";
+
+
+m.innerHTML=`
+
+<strong>${meals[day].name}</strong>
+<br>
+👥 ${meals[day].people} people
+
+<br>
+
+<button class="delete"
+onclick="deleteMeal('${day}')">
+Delete
+</button>
+
+`;
+
+
+card.appendChild(m);
+
+
+}
+
+
+
+week.appendChild(card);
+
+
+
+});
+
+
+}
+
+
+
+
+function openModal(day){
+
+selectedDay=day;
+
+document.getElementById("modal").style.display="flex";
+
+}
+
+
+
+function closeModal(){
+
+document.getElementById("modal").style.display="none";
+
+}
+
+
+
+function saveMeal(){
+
+
+let name=document.getElementById("mealName").value;
+
+let people=document.getElementById("people").value;
+
+
+if(!name)return;
+
+
+meals[selectedDay]={
+
+name:name,
+
+people:people
+
+};
+
+
+localStorage.setItem(
+
+"foodflowMeals",
+
+JSON.stringify(meals)
+
+);
+
+
+document.getElementById("mealName").value="";
+
+
+closeModal();
+
+render();
+
+
+}
+
+
+
+
+function deleteMeal(day){
+
+
+delete meals[day];
+
+
+localStorage.setItem(
+
+"foodflowMeals",
+
+JSON.stringify(meals)
+
+);
+
+
+render();
+
+
+}
+
+
+
+
+function toggleTheme(){
+
+
+document.body.classList.toggle("dark");
+
+
+localStorage.setItem(
+
+"foodflowTheme",
+
+document.body.classList.contains("dark")
+
+);
+
+
+}
+
+
+
+
+if(
+localStorage.getItem("foodflowTheme") === "true"
+){
+
+document.body.classList.add("dark");
+
+}
+
+
+
+render();
+
+
+
+</script>
+
+
+</body>
+
+</html>
