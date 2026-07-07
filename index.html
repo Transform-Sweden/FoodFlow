@@ -1251,6 +1251,32 @@ closeCategoryManager();
 
 render();
 
+function openRecipeModal(){
+
+document.getElementById("recipeModal")
+.style.display="flex";
+
+}
+
+
+
+function closeRecipeModal(){
+
+document.getElementById("recipeModal")
+.style.display="none";
+
+}
+
+
+
+function saveRecipe(){
+
+alert("Recipe saved!");
+
+closeRecipeModal();
+
+}    
+
 
 function showPage(page){
 
