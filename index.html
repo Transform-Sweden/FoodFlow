@@ -689,2100 +689,7 @@ Cancel
 </div>
 
 
-
-
-
-<script>
-
-
-const days = [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday"
-];
-
-
-let meals = JSON.parse(
-    localStorage.getItem("foodflowMeals")
-) || {};
-
-let recipes = JSON.parse(
-localStorage.getItem("foodflowRecipes")
-) || [];    
-
-
-let selectedDay = null;
-let selectedMeal = null;
-
-
-
-// Load old FoodFlow v0.1 data
-function migrateOldData(){
-
-    let old = localStorage.getItem("foodflowMeals");
-
-    if(!old) return;
-
-
-    let data = JSON.parse(old);
-
-
-    days.forEach(day=>{
-
-        if(
-            data[day] &&
-            !Array.isArray(data[day])
-        ){
-
-            data[day] = [
-                {
-                    type:"🍝 Middag",
-                    name:data[day].name,
-                    people:data[day].people
-                }
-            ];
-
-        }
-
-    });
-
-
-    localStorage.setItem(
-        "foodflowMeals",
-        JSON.stringify(data)
-    );
-
-
-}
-
-
-
-migrateOldData();
-
-
-
-meals =
-JSON.parse(
-localStorage.getItem("foodflowMeals")
-)
-|| {};
-
-
-
-
-
-function render(){
-
-
-const week =
-document.getElementById("week");
-
-
-week.innerHTML="";
-
-
-
-days.forEach(day=>{
-
-
-let card =
-document.createElement("div");
-
-
-card.className="day";
-
-
-
-card.innerHTML = `
-
-<h2>${day}</h2>
-
-<button onclick="openModal('${day}')">
-➕ Add
-</button>
-
-`;
-
-
-
-if(meals[day]){
-
-
-meals[day].forEach((meal,index)=>{
-
-
-let box =
-document.createElement("div");
-
-
-box.className="meal";
-
-
-box.innerHTML = `
-
-<div class="meal-title">
-
-${meal.type}
-
-</div>
-
-
-<strong>
-${meal.name}
-</strong>
-
-
-<div class="small">
-
-👥 ${meal.people} people
-
-</div>
-
-
-<button class="edit"
-onclick="editMeal('${day}',${index})">
-
-✏️ Edit
-
-</button>
-
-
-<button class="delete"
-onclick="deleteMeal('${day}',${index})">
-
-🗑 Delete
-
-</button>
-
-`;
-
-
-
-card.appendChild(box);
-
-
-});
-
-
-}
-
-
-
-week.appendChild(card);
-
-
-});
-
-
-}
-
-
-
-
-
-
-function openModal(day){
-
-
-selectedDay = day;
-
-selectedMeal = null;
-
-
-document.getElementById("modalTitle")
-.innerText =
-"Add Meal"
-
-
-document.getElementById("mealName")
-.value="";
-
-
-document.getElementById("people")
-.value=4;
-
-
-document.getElementById("modal")
-.style.display="flex";
-
-
-}
-
-
-
-
-
-
-function editMeal(day,index){
-
-
-selectedDay=day;
-
-selectedMeal=index;
-
-
-let meal =
-meals[day][index];
-
-
-
-document.getElementById("modalTitle")
-.innerText =
-"Edit Meal"
-
-
-document.getElementById("mealType")
-.value =
-meal.type;
-
-
-
-document.getElementById("mealName")
-.value =
-meal.name;
-
-
-
-document.getElementById("people")
-.value =
-meal.people;
-
-
-
-document.getElementById("modal")
-.style.display="flex";
-
-
-}
-
-
-
-
-
-
-
-function closeModal(){
-
-
-document.getElementById("modal")
-.style.display="none";
-
-
-}
-
-
-
-
-
-
-
-function saveMeal(){
-
-
-let meal = {
-
-
-type:
-document.getElementById("mealType").value,
-
-
-name:
-document.getElementById("mealName").value,
-
-
-people:
-document.getElementById("people").value
-
-
-};
-
-
-
-if(!meal.name){
-
-alert("Please enter a meal name.");
-
-return;
-
-}
-
-
-
-
-if(!meals[selectedDay]){
-
-meals[selectedDay]=[];
-
-}
-
-
-
-
-if(selectedMeal === null){
-
-
-meals[selectedDay].push(meal);
-
-
-}else{
-
-
-meals[selectedDay][selectedMeal]=meal;
-
-
-}
-
-
-
-saveData();
-
-
-closeModal();
-
-
-render();
-
-
-}
-
-
-
-
-
-
-
-function deleteMeal(day,index){
-
-
-meals[day].splice(index,1);
-
-
-saveData();
-
-
-render();
-
-
-}
-
-
-
-
-
-
-
-function saveData(){
-
-
-localStorage.setItem(
-
-"foodflowMeals",
-
-JSON.stringify(meals)
-
-);
-
-
-}
-
-
-
-
-
-
-
-
-function toggleTheme(){
-
-
-document.body.classList.toggle("dark");
-
-
-
-localStorage.setItem(
-
-"foodflowTheme",
-
-document.body.classList.contains("dark")
-
-);
-
-
-}
-
-
-
-
-
-if(
-localStorage.getItem("foodflowTheme")
-==="true"
-){
-
-document.body.classList.add("dark");
-
-}
-
-
-// =======================
-// SETTINGS SYSTEM
-// =======================
-
-
-function openSettings(){
-
-document.getElementById("settingsModal")
-.style.display="flex";
-
-}
-
-
-
-function closeSettings(){
-
-document.getElementById("settingsModal")
-.style.display="none";
-
-}
-
-
-
-
-function setTheme(mode){
-
-
-if(mode==="dark"){
-
-document.body.classList.add("dark");
-
-localStorage.setItem(
-"foodflowTheme",
-"true"
-);
-
-
-}else{
-
-
-document.body.classList.remove("dark");
-
-localStorage.setItem(
-"foodflowTheme",
-"false"
-);
-
-
-}
-
-
-}
-
-
-
-
-
-function openCategoryManager(){
-
-document.getElementById("categoryModal")
-.style.display="flex";
-
-}
-
-
-function selectEmoji(emoji){
-
-document.getElementById("categoryEmoji")
-.value = emoji;
-
-}
-
-
-function closeCategoryManager(){
-
-document.getElementById("categoryModal")
-.style.display="none";
-
-}
-
-
-
-
-function saveCategory(){
-
-
-let name =
-document.getElementById("categoryName").value;
-
-
-let emoji =
-document.getElementById("categoryEmoji").value;
-
-
-
-if(!name){
-
-alert("Enter category name");
-
-return;
-
-}
-
-
-
-alert(
-"Category saved: "
-+
-emoji
-+
-" "
-+
-name
-);
-
-
-
-closeCategoryManager();
-
-
-}
-
-
-
-
-render();
-
-function openRecipeModal(){
-
-document.getElementById("recipeModal")
-.style.display="flex";
-
-}
-
-
-
-function closeRecipeModal(){
-
-document.getElementById("recipeModal")
-.style.display="none";
-
-}
-
-
-
-function saveRecipe(){
-
-let recipe = {
-
-name: document.getElementById("recipeName").value,
-
-people: Number(
-document.getElementById("recipePeople").value
-),
-
-ingredients:
-document.getElementById("recipeIngredients")
-.value
-.split("\n")
-.filter(item => item.trim() !== "")
-
-};
-
-
-if(recipe.name===""){
-
-alert("Please enter a recipe name.");
-
-return;
-
-}
-
-
-recipes.push(recipe);
-
-localStorage.setItem(
-"foodflowRecipes",
-JSON.stringify(recipes)
-);
-
-
-renderRecipes();
-
-closeRecipeModal();
-
-}  
-
-function renderRecipes(){
-
-const list =
-document.getElementById("recipeList");
-
-list.innerHTML = "";
-
-recipes.forEach((recipe,index)=>{
-
-let card =
-document.createElement("div");
-
-card.className="meal";
-
-card.innerHTML=`
-
-<h3>${recipe.name}</h3>
-
-<div class="small">
-
-👥 ${recipe.people} people
-
-</div>
-
-<div class="small">
-
-🥕 ${recipe.ingredients.length} ingredients
-
-</div>
-
-<button class="delete"
-onclick="deleteRecipe(${index})">
-
-🗑 Delete
-
-</button>
-
-`;
-
-list.appendChild(card);
-
-});
-
-}
-
-<!DOCTYPE html>
-<html lang="sv">
-
-<head>
-
-<meta charset="UTF-8">
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>🍃 FoodFlow</title>
-
-
-<style>
-
-
-:root {
-
---bg:#f4f6f4;
---card:white;
---text:#222;
---primary:#4caf50;
---shadow:0 8px 20px rgba(0,0,0,0.08);
-
-}
-
-
-
-body.dark {
-
---bg:#121212;
---card:#1e1e1e;
---text:#eeeeee;
---shadow:0 8px 20px rgba(0,0,0,0.5);
-
-}
-
-
-
-* {
-
-box-sizing:border-box;
-
-}
-
-
-
-body {
-
-margin:0;
-
-font-family:
-"Segoe UI",
-Arial,
-sans-serif;
-
-background:var(--bg);
-
-color:var(--text);
-
-transition:.3s;
-
-}
-
-
-
-header {
-
-text-align:center;
-
-padding:30px;
-
-}
-
-#navbar {
-
-text-align:center;
-
-padding:10px;
-
-}
-
-
-#navbar button {
-
-background:var(--card);
-
-color:var(--text);
-
-box-shadow:var(--shadow);
-
-}    
-
-
-h1 {
-
-font-size:40px;
-
-margin-bottom:5px;
-
-}
-
-
-
-button {
-
-border:none;
-
-background:var(--primary);
-
-color:white;
-
-padding:10px 15px;
-
-border-radius:14px;
-
-cursor:pointer;
-
-font-size:15px;
-
-margin:4px;
-
-}
-
-
-
-
-
-.container {
-
-max-width:1200px;
-
-margin:auto;
-
-padding:20px;
-
-}
-
-
-
-/* WEEK */
-
-
-.week {
-
-display:grid;
-
-grid-template-columns:
-repeat(7,1fr);
-
-gap:15px;
-
-}
-
-
-
-.day {
-
-background:var(--card);
-
-border-radius:20px;
-
-padding:18px;
-
-box-shadow:var(--shadow);
-
-min-height:250px;
-
-}
-
-
-
-.day h2 {
-
-text-align:center;
-
-margin-top:0;
-
-}
-
-
-
-/* MEALS */
-
-
-.meal {
-
-background:
-rgba(120,120,120,.12);
-
-border-radius:15px;
-
-padding:12px;
-
-margin-top:10px;
-
-}
-
-
-
-.meal-title {
-
-font-weight:bold;
-
-}
-
-
-
-.small {
-
-font-size:14px;
-
-opacity:.8;
-
-}
-
-
-
-.edit {
-
-background:#2196f3;
-
-margin-top:8px;
-
-}
-
-
-
-.delete {
-
-background:#e53935;
-
-margin-top:8px;
-
-}
-
-
-
-/* MODAL */
-
-
-.modal {
-
-display:none;
-
-position:fixed;
-
-inset:0;
-
-background:
-rgba(0,0,0,.5);
-
-align-items:center;
-
-justify-content:center;
-
-}
-
-
-
-.modal-box {
-
-background:var(--card);
-
-padding:25px;
-
-border-radius:20px;
-
-width:90%;
-
-max-width:400px;
-
-}
-
-
-
-input,select {
-
-width:100%;
-
-padding:12px;
-
-margin:8px 0;
-
-border-radius:12px;
-
-border:1px solid #ccc;
-
-font-size:16px;
-
-}
-
-
-
-/* MOBILE */
-
-
-@media(max-width:900px){
-
-
-.week {
-
-grid-template-columns:1fr;
-
-}
-
-
-}
-
-
-
-</style>
-
-
-</head>
-
-
-<body>
-
-
-<header>
-
-
-<h1>🍃 FoodFlow</h1>
-
-<p>Plan your weekly meals</p>
-
-
-
-
-<button onclick="openSettings()">
-
-⚙️ Settings
-
-</button>
-
-
-</header>
-
-<nav id="navbar">
-
-<button onclick="showPage('planner')">
-🏠 Meal Planner
-</button>
-
-
-<button onclick="showPage('recipes')">
-📖 Recipes
-</button>
-
-
-<button onclick="showPage('shopping')">
-🛒 Shopping List
-</button>
-
-</nav>    
-
-
-
-<div id="plannerPage">
-
-<div class="container">
-
-<div class="week" id="week"></div>
-
-</div>
-
-</div>
-
-<div id="recipesPage" style="display:none;">
-
-<div class="container">
-
-<h2>📖 Recipes</h2>
-
-
-<button onclick="openRecipeModal()">
-➕ Add Recipe
-</button>
-
-
-<div id="recipeList">
-
-</div>
-
-
-</div>
-
-</div>
-
-
-
-<div id="shoppingPage" style="display:none;">
-
-<div class="container">
-
-<h2>🛒 Shopping List</h2>
-
-<p>Shopping list coming soon...</p>
-
-</div>
-
-</div>    
-
-
-
-<!-- SETTINGS WINDOW -->
-
-
-<div class="modal" id="settingsModal">
-
-
-<div class="modal-box">
-
-
-<h2 id="settingsTitle">
-
-⚙️ Settings
-
-</h2>
-
-
-
-<h3>
-🌍 Language
-</h3>
-
-    
-<button onclick="changeLanguage('en')">
-
-🇬🇧 English
-
-</button>
-    
-
-<button onclick="changeLanguage('sv')">
-
-🇸🇪 Svenska
-
-</button>
-
-
-
-
-
-
-
-
-<h3>
-🎨 Theme
-</h3>
-
-
-<button onclick="setTheme('light')">
-
-☀️ Light
-
-</button>
-
-
-<button onclick="setTheme('dark')">
-
-🌙 Dark
-
-</button>
-
-
-
-
-
-<h3>
-📂 Categories
-</h3>
-
-
-<button onclick="openCategoryManager()">
-
-Manage Categories
-
-</button>
-
-
-
-<br><br>
-
-
-<button onclick="closeSettings()">
-
-Close
-
-</button>
-
-
-
-</div>
-
-
-</div>
-
-    <!-- CATEGORY WINDOW -->
-
-
-<div class="modal" id="categoryModal">
-
-
-<div class="modal-box">
-
-
-<h2>
-
-📂 Categories
-
-</h2>
-
-
-
-<p>
-Add your own meal categories
-</p>
-
-
-
-<input 
-id="categoryName"
-placeholder="Category name"
->
-
-
-
-<p>
-Choose an emoji:
-</p>
-
-
-<div id="emojiPicker">
-
-
-<button onclick="selectEmoji('🍕')">
-🍕
-</button>
-
-<button onclick="selectEmoji('🍰')">
-🍰
-</button>
-
-<button onclick="selectEmoji('🥪')">
-🥪
-</button>
-
-<button onclick="selectEmoji('🍎')">
-🍎
-</button>
-
-<button onclick="selectEmoji('🥤')">
-🥤
-</button>
-
-<button onclick="selectEmoji('🌙')">
-🌙
-</button>
-
-<button onclick="selectEmoji('💪')">
-💪
-</button>
-
-<button onclick="selectEmoji('🍲')">
-🍲
-</button>
-
-</div>
-
-
-<input 
-id="categoryEmoji"
-placeholder="Or type your own emoji"
->
-
-
-
-
-<button onclick="saveCategory()">
-
-Save
-
-</button>
-
-
-
-<button onclick="closeCategoryManager()">
-
-Close
-
-</button>
-
-
-</div>
-
-
-</div>
-
-<!-- ADD MEAL WINDOW -->
-
-
-<div class="modal" id="modal">
-
-
-<div class="modal-box">
-
-
-<h2 id="modalTitle">
-
-Add Meal
-
-</h2>
-
-
-
-<label>
-
-Meal Type
-
-</label>
-
-
-<select id="mealType">
-
-
-<option>🍳 Frukost</option>
-
-<option>🥗 Lunch</option>
-
-<option>🍝 Middag</option>
-
-<option>☕ Fika</option>
-
-
-</select>
-
-
-
-<label>
-
-Meal
-
-</label>
-
-
-<input
-id="mealName"
-placeholder="e.g. Spaghetti Bolognese"
->
-
-
-
-<label>
-
-People
-
-</label>
-
-
-<input
-id="people"
-type="number"
-value="4"
->
-
-
-
-<br>
-
-
-<button onclick="saveMeal()">
-
-Save
-
-</button>
-
-
-<button onclick="closeModal()">
-
-Cancel
-
-</button>
-
-
-</div>
-
-
-</div>
-
-
-
-
-
-<script>
-
-
-const days = [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday"
-];
-
-
-let meals = JSON.parse(
-    localStorage.getItem("foodflowMeals")
-) || {};
-
-let recipes = JSON.parse(
-localStorage.getItem("foodflowRecipes")
-) || [];    
-
-
-let selectedDay = null;
-let selectedMeal = null;
-
-
-
-// Load old FoodFlow v0.1 data
-function migrateOldData(){
-
-    let old = localStorage.getItem("foodflowMeals");
-
-    if(!old) return;
-
-
-    let data = JSON.parse(old);
-
-
-    days.forEach(day=>{
-
-        if(
-            data[day] &&
-            !Array.isArray(data[day])
-        ){
-
-            data[day] = [
-                {
-                    type:"🍝 Middag",
-                    name:data[day].name,
-                    people:data[day].people
-                }
-            ];
-
-        }
-
-    });
-
-
-    localStorage.setItem(
-        "foodflowMeals",
-        JSON.stringify(data)
-    );
-
-
-}
-
-
-
-migrateOldData();
-
-
-
-meals =
-JSON.parse(
-localStorage.getItem("foodflowMeals")
-)
-|| {};
-
-
-
-
-
-function render(){
-
-
-const week =
-document.getElementById("week");
-
-
-week.innerHTML="";
-
-
-
-days.forEach(day=>{
-
-
-let card =
-document.createElement("div");
-
-
-card.className="day";
-
-
-
-card.innerHTML = `
-
-<h2>${day}</h2>
-
-<button onclick="openModal('${day}')">
-➕ Add
-</button>
-
-`;
-
-
-
-if(meals[day]){
-
-
-meals[day].forEach((meal,index)=>{
-
-
-let box =
-document.createElement("div");
-
-
-box.className="meal";
-
-
-box.innerHTML = `
-
-<div class="meal-title">
-
-${meal.type}
-
-</div>
-
-
-<strong>
-${meal.name}
-</strong>
-
-
-<div class="small">
-
-👥 ${meal.people} people
-
-</div>
-
-
-<button class="edit"
-onclick="editMeal('${day}',${index})">
-
-✏️ Edit
-
-</button>
-
-
-<button class="delete"
-onclick="deleteMeal('${day}',${index})">
-
-🗑 Delete
-
-</button>
-
-`;
-
-
-
-card.appendChild(box);
-
-
-});
-
-
-}
-
-
-
-week.appendChild(card);
-
-
-});
-
-
-}
-
-
-
-
-
-
-function openModal(day){
-
-
-selectedDay = day;
-
-selectedMeal = null;
-
-
-document.getElementById("modalTitle")
-.innerText =
-"Add Meal"
-
-
-document.getElementById("mealName")
-.value="";
-
-
-document.getElementById("people")
-.value=4;
-
-
-document.getElementById("modal")
-.style.display="flex";
-
-
-}
-
-
-
-
-
-
-function editMeal(day,index){
-
-
-selectedDay=day;
-
-selectedMeal=index;
-
-
-let meal =
-meals[day][index];
-
-
-
-document.getElementById("modalTitle")
-.innerText =
-"Edit Meal"
-
-
-document.getElementById("mealType")
-.value =
-meal.type;
-
-
-
-document.getElementById("mealName")
-.value =
-meal.name;
-
-
-
-document.getElementById("people")
-.value =
-meal.people;
-
-
-
-document.getElementById("modal")
-.style.display="flex";
-
-
-}
-
-
-
-
-
-
-
-function closeModal(){
-
-
-document.getElementById("modal")
-.style.display="none";
-
-
-}
-
-
-
-
-
-
-
-function saveMeal(){
-
-
-let meal = {
-
-
-type:
-document.getElementById("mealType").value,
-
-
-name:
-document.getElementById("mealName").value,
-
-
-people:
-document.getElementById("people").value
-
-
-};
-
-
-
-if(!meal.name){
-
-alert("Please enter a meal name.");
-
-return;
-
-}
-
-
-
-
-if(!meals[selectedDay]){
-
-meals[selectedDay]=[];
-
-}
-
-
-
-
-if(selectedMeal === null){
-
-
-meals[selectedDay].push(meal);
-
-
-}else{
-
-
-meals[selectedDay][selectedMeal]=meal;
-
-
-}
-
-
-
-saveData();
-
-
-closeModal();
-
-
-render();
-
-
-}
-
-
-
-
-
-
-
-function deleteMeal(day,index){
-
-
-meals[day].splice(index,1);
-
-
-saveData();
-
-
-render();
-
-
-}
-
-
-
-
-
-
-
-function saveData(){
-
-
-localStorage.setItem(
-
-"foodflowMeals",
-
-JSON.stringify(meals)
-
-);
-
-
-}
-
-
-
-
-
-
-
-
-function toggleTheme(){
-
-
-document.body.classList.toggle("dark");
-
-
-
-localStorage.setItem(
-
-"foodflowTheme",
-
-document.body.classList.contains("dark")
-
-);
-
-
-}
-
-
-
-
-
-if(
-localStorage.getItem("foodflowTheme")
-==="true"
-){
-
-document.body.classList.add("dark");
-
-}
-
-
-// =======================
-// SETTINGS SYSTEM
-// =======================
-
-
-function openSettings(){
-
-document.getElementById("settingsModal")
-.style.display="flex";
-
-}
-
-
-
-function closeSettings(){
-
-document.getElementById("settingsModal")
-.style.display="none";
-
-}
-
-
-
-
-function setTheme(mode){
-
-
-if(mode==="dark"){
-
-document.body.classList.add("dark");
-
-localStorage.setItem(
-"foodflowTheme",
-"true"
-);
-
-
-}else{
-
-
-document.body.classList.remove("dark");
-
-localStorage.setItem(
-"foodflowTheme",
-"false"
-);
-
-
-}
-
-
-}
-
-
-
-
-
-function openCategoryManager(){
-
-document.getElementById("categoryModal")
-.style.display="flex";
-
-}
-
-
-function selectEmoji(emoji){
-
-document.getElementById("categoryEmoji")
-.value = emoji;
-
-}
-
-
-function closeCategoryManager(){
-
-document.getElementById("categoryModal")
-.style.display="none";
-
-}
-
-
-
-
-function saveCategory(){
-
-
-let name =
-document.getElementById("categoryName").value;
-
-
-let emoji =
-document.getElementById("categoryEmoji").value;
-
-
-
-if(!name){
-
-alert("Enter category name");
-
-return;
-
-}
-
-
-
-alert(
-"Category saved: "
-+
-emoji
-+
-" "
-+
-name
-);
-
-
-
-closeCategoryManager();
-
-
-}
-
-
-
-
-render();
-
-function openRecipeModal(){
-
-document.getElementById("recipeModal")
-.style.display="flex";
-
-}
-
-
-
-function closeRecipeModal(){
-
-document.getElementById("recipeModal")
-.style.display="none";
-
-}
-
-
-
-function saveRecipe(){
-
-let recipe = {
-
-name: document.getElementById("recipeName").value,
-
-people: Number(
-document.getElementById("recipePeople").value
-),
-
-ingredients:
-document.getElementById("recipeIngredients")
-.value
-.split("\n")
-.filter(item => item.trim() !== "")
-
-};
-
-
-if(recipe.name===""){
-
-alert("Please enter a recipe name.");
-
-return;
-
-}
-
-
-recipes.push(recipe);
-
-localStorage.setItem(
-"foodflowRecipes",
-JSON.stringify(recipes)
-);
-
-
-renderRecipes();
-
-closeRecipeModal();
-
-}  
-
-function renderRecipes(){
-
-const list =
-document.getElementById("recipeList");
-
-list.innerHTML = "";
-
-recipes.forEach((recipe,index)=>{
-
-let card =
-document.createElement("div");
-
-card.className="meal";
-
-card.innerHTML=`
-
-<h3>${recipe.name}</h3>
-
-<div class="small">
-
-👥 ${recipe.people} people
-
-</div>
-
-<div class="small">
-
-🥕 ${recipe.ingredients.length} ingredients
-
-</div>
-
-<button class="delete"
-onclick="deleteRecipe(${index})">
-
-🗑 Delete
-
-</button>
-
-`;
-
-list.appendChild(card);
-
-});
-
-}
-    
-
-function showPage(page){
-
-localStorage.setItem(
-"foodflowPage",
-page
-);    
-
-
-document.getElementById("plannerPage")
-.style.display="none";
-
-
-document.getElementById("recipesPage")
-.style.display="none";
-
-
-document.getElementById("shoppingPage")
-.style.display="none";
-
-
-
-if(page==="planner"){
-
-document.getElementById("plannerPage")
-.style.display="block";
-
-}
-
-
-
-if(page==="recipes"){
-
-document.getElementById("recipesPage")
-.style.display="block";
-
-}
-
-
-
-if(page==="shopping"){
-
-document.getElementById("shoppingPage")
-.style.display="block";
-
-}
-
-
-}
-
-let savedPage =
-localStorage.getItem("foodflowPage")
-|| "planner";
-
-
-showPage(savedPage);    
-
-render();
-
-
-</script>
+<!-- ADD RECIPE WINDOW -->
 
 <div class="modal" id="recipeModal">
 
@@ -2870,10 +777,715 @@ Cancel
 </div>    
 
 
-</body>
 
-</html>    
-    
+<script>
+
+
+const days = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday"
+];
+
+
+let meals = JSON.parse(
+    localStorage.getItem("foodflowMeals")
+) || {};
+
+let recipes = JSON.parse(
+localStorage.getItem("foodflowRecipes")
+) || [];    
+
+
+let selectedDay = null;
+let selectedMeal = null;
+
+
+
+// Load old FoodFlow v0.1 data
+function migrateOldData(){
+
+    let old = localStorage.getItem("foodflowMeals");
+
+    if(!old) return;
+
+
+    let data = JSON.parse(old);
+
+
+    days.forEach(day=>{
+
+        if(
+            data[day] &&
+            !Array.isArray(data[day])
+        ){
+
+            data[day] = [
+                {
+                    type:"🍝 Middag",
+                    name:data[day].name,
+                    people:data[day].people
+                }
+            ];
+
+        }
+
+    });
+
+
+    localStorage.setItem(
+        "foodflowMeals",
+        JSON.stringify(data)
+    );
+
+
+}
+
+
+
+migrateOldData();
+
+
+
+meals =
+JSON.parse(
+localStorage.getItem("foodflowMeals")
+)
+|| {};
+
+
+
+
+
+function render(){
+
+
+const week =
+document.getElementById("week");
+
+
+week.innerHTML="";
+
+
+
+days.forEach(day=>{
+
+
+let card =
+document.createElement("div");
+
+
+card.className="day";
+
+
+
+card.innerHTML = `
+
+<h2>${day}</h2>
+
+<button onclick="openModal('${day}')">
+➕ Add
+</button>
+
+`;
+
+
+
+if(meals[day]){
+
+
+meals[day].forEach((meal,index)=>{
+
+
+let box =
+document.createElement("div");
+
+
+box.className="meal";
+
+
+box.innerHTML = `
+
+<div class="meal-title">
+
+${meal.type}
+
+</div>
+
+
+<strong>
+${meal.name}
+</strong>
+
+
+<div class="small">
+
+👥 ${meal.people} people
+
+</div>
+
+
+<button class="edit"
+onclick="editMeal('${day}',${index})">
+
+✏️ Edit
+
+</button>
+
+
+<button class="delete"
+onclick="deleteMeal('${day}',${index})">
+
+🗑 Delete
+
+</button>
+
+`;
+
+
+
+card.appendChild(box);
+
+
+});
+
+
+}
+
+
+
+week.appendChild(card);
+
+
+});
+
+
+}
+
+
+
+
+
+
+function openModal(day){
+
+
+selectedDay = day;
+
+selectedMeal = null;
+
+
+document.getElementById("modalTitle")
+.innerText =
+"Add Meal"
+
+
+document.getElementById("mealName")
+.value="";
+
+
+document.getElementById("people")
+.value=4;
+
+
+document.getElementById("modal")
+.style.display="flex";
+
+
+}
+
+
+
+
+
+
+function editMeal(day,index){
+
+
+selectedDay=day;
+
+selectedMeal=index;
+
+
+let meal =
+meals[day][index];
+
+
+
+document.getElementById("modalTitle")
+.innerText =
+"Edit Meal"
+
+
+document.getElementById("mealType")
+.value =
+meal.type;
+
+
+
+document.getElementById("mealName")
+.value =
+meal.name;
+
+
+
+document.getElementById("people")
+.value =
+meal.people;
+
+
+
+document.getElementById("modal")
+.style.display="flex";
+
+
+}
+
+
+
+
+
+
+
+function closeModal(){
+
+
+document.getElementById("modal")
+.style.display="none";
+
+
+}
+
+
+
+
+
+
+
+function saveMeal(){
+
+
+let meal = {
+
+
+type:
+document.getElementById("mealType").value,
+
+
+name:
+document.getElementById("mealName").value,
+
+
+people:
+document.getElementById("people").value
+
+
+};
+
+
+
+if(!meal.name){
+
+alert("Please enter a meal name.");
+
+return;
+
+}
+
+
+
+
+if(!meals[selectedDay]){
+
+meals[selectedDay]=[];
+
+}
+
+
+
+
+if(selectedMeal === null){
+
+
+meals[selectedDay].push(meal);
+
+
+}else{
+
+
+meals[selectedDay][selectedMeal]=meal;
+
+
+}
+
+
+
+saveData();
+
+
+closeModal();
+
+
+render();
+
+
+}
+
+
+
+
+
+
+
+function deleteMeal(day,index){
+
+
+meals[day].splice(index,1);
+
+
+saveData();
+
+
+render();
+
+
+}
+
+
+
+
+
+
+
+function saveData(){
+
+
+localStorage.setItem(
+
+"foodflowMeals",
+
+JSON.stringify(meals)
+
+);
+
+
+}
+
+
+
+
+
+
+
+
+function toggleTheme(){
+
+
+document.body.classList.toggle("dark");
+
+
+
+localStorage.setItem(
+
+"foodflowTheme",
+
+document.body.classList.contains("dark")
+
+);
+
+
+}
+
+
+
+
+
+if(
+localStorage.getItem("foodflowTheme")
+==="true"
+){
+
+document.body.classList.add("dark");
+
+}
+
+
+// =======================
+// SETTINGS SYSTEM
+// =======================
+
+
+function openSettings(){
+
+document.getElementById("settingsModal")
+.style.display="flex";
+
+}
+
+
+
+function closeSettings(){
+
+document.getElementById("settingsModal")
+.style.display="none";
+
+}
+
+
+
+
+function setTheme(mode){
+
+
+if(mode==="dark"){
+
+document.body.classList.add("dark");
+
+localStorage.setItem(
+"foodflowTheme",
+"true"
+);
+
+
+}else{
+
+
+document.body.classList.remove("dark");
+
+localStorage.setItem(
+"foodflowTheme",
+"false"
+);
+
+
+}
+
+
+}
+
+
+// =======================
+// LANGUAGE SYSTEM
+// =======================
+
+function changeLanguage(lang){
+
+localStorage.setItem(
+"foodflowLanguage",
+lang
+);
+
+alert(
+lang === "en"
+? "Language set to English"
+: "Språk satt till Svenska"
+);
+
+}
+
+
+
+
+function openCategoryManager(){
+
+document.getElementById("categoryModal")
+.style.display="flex";
+
+}
+
+
+function selectEmoji(emoji){
+
+document.getElementById("categoryEmoji")
+.value = emoji;
+
+}
+
+
+function closeCategoryManager(){
+
+document.getElementById("categoryModal")
+.style.display="none";
+
+}
+
+
+
+
+function saveCategory(){
+
+
+let name =
+document.getElementById("categoryName").value;
+
+
+let emoji =
+document.getElementById("categoryEmoji").value;
+
+
+
+if(!name){
+
+alert("Enter category name");
+
+return;
+
+}
+
+
+
+alert(
+"Category saved: "
++
+emoji
++
+" "
++
+name
+);
+
+
+
+closeCategoryManager();
+
+
+}
+
+
+
+// =======================
+// RECIPES
+// =======================
+
+
+function openRecipeModal(){
+
+document.getElementById("recipeModal")
+.style.display="flex";
+
+}
+
+
+
+function closeRecipeModal(){
+
+document.getElementById("recipeModal")
+.style.display="none";
+
+}
+
+
+
+function saveRecipe(){
+
+let recipe = {
+
+name: document.getElementById("recipeName").value,
+
+people: Number(
+document.getElementById("recipePeople").value
+),
+
+ingredients:
+document.getElementById("recipeIngredients")
+.value
+.split("\n")
+.filter(item => item.trim() !== "")
+
+};
+
+
+if(recipe.name===""){
+
+alert("Please enter a recipe name.");
+
+return;
+
+}
+
+
+recipes.push(recipe);
+
+localStorage.setItem(
+"foodflowRecipes",
+JSON.stringify(recipes)
+);
+
+
+renderRecipes();
+
+closeRecipeModal();
+
+}  
+
+function renderRecipes(){
+
+const list =
+document.getElementById("recipeList");
+
+list.innerHTML = "";
+
+recipes.forEach((recipe,index)=>{
+
+let card =
+document.createElement("div");
+
+card.className="meal";
+
+card.innerHTML=`
+
+<h3>${recipe.name}</h3>
+
+<div class="small">
+
+👥 ${recipe.people} people
+
+</div>
+
+<div class="small">
+
+🥕 ${recipe.ingredients.length} ingredients
+
+</div>
+
+<button class="delete"
+onclick="deleteRecipe(${index})">
+
+🗑 Delete
+
+</button>
+
+`;
+
+list.appendChild(card);
+
+});
+
+}
+
+
+function deleteRecipe(index){
+
+recipes.splice(index,1);
+
+localStorage.setItem(
+"foodflowRecipes",
+JSON.stringify(recipes)
+);
+
+renderRecipes();
+
+}
+
+
+// =======================
+// PAGE NAVIGATION
+// =======================
+
 
 function showPage(page){
 
@@ -2937,91 +1549,6 @@ renderRecipes();
 
 
 </script>
-
-<div class="modal" id="recipeModal">
-
-
-<div class="modal-box">
-
-
-<h2>
-Add Recipe
-</h2>
-
-
-<label>
-Recipe Name
-</label>
-
-
-<input 
-id="recipeName"
-placeholder="Example: Spaghetti Bolognese"
->
-
-
-<label>
-Category
-</label>
-
-
-<select id="recipeCategory">
-
-<option>🍳 Frukost</option>
-
-<option>🥗 Lunch</option>
-
-<option>🍝 Middag</option>
-
-<option>☕ Fika</option>
-
-</select>
-
-
-
-<label>
-Servings
-</label>
-
-
-<input
-id="recipePeople"
-type="number"
-value="4"
->
-
-
-
-<label>
-Ingredients
-</label>
-
-
-<textarea
-id="recipeIngredients"
-placeholder="One ingredient per line"
-style="width:100%;height:120px;"
-></textarea>
-
-
-
-<br>
-
-
-<button onclick="saveRecipe()">
-Save
-</button>
-
-
-<button onclick="closeRecipeModal()">
-Cancel
-</button>
-
-
-</div>
-
-
-</div>    
 
 
 </body>
