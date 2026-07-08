@@ -1315,6 +1315,51 @@ closeRecipeModal();
 
 }  
 
+function renderRecipes(){
+
+const list =
+document.getElementById("recipeList");
+
+list.innerHTML = "";
+
+recipes.forEach((recipe,index)=>{
+
+let card =
+document.createElement("div");
+
+card.className="meal";
+
+card.innerHTML=`
+
+<h3>${recipe.name}</h3>
+
+<div class="small">
+
+👥 ${recipe.people} people
+
+</div>
+
+<div class="small">
+
+🥕 ${recipe.ingredients.length} ingredients
+
+</div>
+
+<button class="delete"
+onclick="deleteRecipe(${index})">
+
+🗑 Delete
+
+</button>
+
+`;
+
+list.appendChild(card);
+
+});
+
+}
+    
 
 function showPage(page){
 
