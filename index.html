@@ -710,6 +710,10 @@ let meals = JSON.parse(
     localStorage.getItem("foodflowMeals")
 ) || {};
 
+let recipes = JSON.parse(
+localStorage.getItem("foodflowRecipes")
+) || [];    
+
 
 let selectedDay = null;
 let selectedMeal = null;
