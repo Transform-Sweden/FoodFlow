@@ -1275,11 +1275,45 @@ document.getElementById("recipeModal")
 
 function saveRecipe(){
 
-alert("Recipe saved!");
+let recipe = {
+
+name: document.getElementById("recipeName").value,
+
+people: Number(
+document.getElementById("recipePeople").value
+),
+
+ingredients:
+document.getElementById("recipeIngredients")
+.value
+.split("\n")
+.filter(item => item.trim() !== "")
+
+};
+
+
+if(recipe.name===""){
+
+alert("Please enter a recipe name.");
+
+return;
+
+}
+
+
+recipes.push(recipe);
+
+localStorage.setItem(
+"foodflowRecipes",
+JSON.stringify(recipes)
+);
+
+
+renderRecipes();
 
 closeRecipeModal();
 
-}    
+}  
 
 
 function showPage(page){
