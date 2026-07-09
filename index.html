@@ -1611,6 +1611,52 @@ recipe.people;
 
 }    
 
+function updateRecipeSelector(){
+
+let select =
+document.getElementById("recipeSelect");
+
+
+if(!select){
+
+return;
+
+}
+
+
+select.innerHTML = `
+
+<option value="">
+
+-- Select Recipe --
+
+</option>
+
+`;
+
+
+recipes.forEach((recipe,index)=>{
+
+
+let option =
+document.createElement("option");
+
+
+option.value=index;
+
+
+option.innerText =
+recipe.name;
+
+
+select.appendChild(option);
+
+
+});
+
+
+}    
+
 const list =
 document.getElementById("recipeList");
 
