@@ -1379,7 +1379,9 @@ ingredients:
 document.getElementById("recipeIngredients")
 .value
 .split("\n")
-.filter(item => item.trim() !== "")
+.filter(item => item.trim() !== ""),
+
+expanded:false
 
 };
 
@@ -1405,7 +1407,7 @@ renderRecipes();
 
 closeRecipeModal();
 
-}  
+}
 
 function renderRecipes(){
 
