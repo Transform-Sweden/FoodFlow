@@ -1718,6 +1718,21 @@ document.querySelector("#recipeModal h2")
 document.getElementById("recipeModal")
 .style.display="flex";
 
+}   
+
+function openPlannerRecipe(index){
+
+plannerRecipeIndex = index;
+
+
+document.getElementById("plannerRecipePeople")
+.value =
+recipes[index].people;
+
+
+document.getElementById("plannerRecipeModal")
+.style.display="flex";
+
 }    
 
 function toggleRecipe(index){
