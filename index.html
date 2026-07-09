@@ -1468,6 +1468,20 @@ renderRecipes();
 
 }
 
+function toggleRecipe(index){
+
+recipes[index].expanded =
+!recipes[index].expanded;
+
+localStorage.setItem(
+"foodflowRecipes",
+JSON.stringify(recipes)
+);
+
+renderRecipes();
+
+}    
+
 
 // =======================
 // PAGE NAVIGATION
