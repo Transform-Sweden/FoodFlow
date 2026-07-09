@@ -761,6 +761,88 @@ Cancel
 
 </div>    
 
+<!-- ADD RECIPE TO PLANNER WINDOW -->
+
+<div class="modal" id="plannerRecipeModal">
+
+
+<div class="modal-box">
+
+
+<h2>
+📅 Add Recipe to Planner
+</h2>
+
+
+<label>
+Day
+</label>
+
+
+<select id="plannerRecipeDay">
+
+<option>Monday</option>
+<option>Tuesday</option>
+<option>Wednesday</option>
+<option>Thursday</option>
+<option>Friday</option>
+<option>Saturday</option>
+<option>Sunday</option>
+
+</select>
+
+
+<label>
+Meal Type
+</label>
+
+
+<select id="plannerRecipeType">
+
+<option>🍳 Frukost</option>
+
+<option>🥗 Lunch</option>
+
+<option>🍝 Middag</option>
+
+<option>☕ Fika</option>
+
+</select>
+
+
+<label>
+People
+</label>
+
+
+<input
+id="plannerRecipePeople"
+type="number"
+value="4"
+>
+
+
+<br>
+
+
+<button onclick="addRecipeToPlanner()">
+
+Add
+
+</button>
+
+
+<button onclick="closePlannerRecipeModal()">
+
+Cancel
+
+</button>
+
+
+</div>
+
+
+</div>    
 
 
 <script>
