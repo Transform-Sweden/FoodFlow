@@ -1559,6 +1559,35 @@ renderRecipes();
 
 }
 
+function editRecipe(index){
+
+let recipe = recipes[index];
+
+
+selectedRecipe = index;
+
+
+document.getElementById("recipeName")
+.value = recipe.name;
+
+
+document.getElementById("recipePeople")
+.value = recipe.people;
+
+
+document.getElementById("recipeIngredients")
+.value = recipe.ingredients.join("\n");
+
+
+document.querySelector("#recipeModal h2")
+.innerText = "Edit Recipe";
+
+
+document.getElementById("recipeModal")
+.style.display="flex";
+
+}    
+
 function toggleRecipe(index){
 
 recipes[index].expanded =
