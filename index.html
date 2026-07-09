@@ -783,7 +783,28 @@ let meals = JSON.parse(
 
 let recipes = JSON.parse(
 localStorage.getItem("foodflowRecipes")
-) || [];    
+) || [];
+
+
+recipes = recipes.map(recipe => {
+
+return {
+
+...recipe,
+
+expanded: recipe.expanded || false,
+
+favorite: recipe.favorite || false
+
+};
+
+});
+
+
+localStorage.setItem(
+"foodflowRecipes",
+JSON.stringify(recipes)
+);  
 
 
 let selectedDay = null;
