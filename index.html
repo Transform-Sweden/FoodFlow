@@ -1582,6 +1582,35 @@ closeRecipeModal();
 
 function renderRecipes(){
 
+function selectRecipeForMeal(){
+
+let index =
+document.getElementById("recipeSelect").value;
+
+
+if(index === ""){
+
+return;
+
+}
+
+
+let recipe =
+recipes[index];
+
+
+document.getElementById("mealName")
+.value =
+recipe.name;
+
+
+document.getElementById("people")
+.value =
+recipe.people;
+
+
+}    
+
 const list =
 document.getElementById("recipeList");
 
