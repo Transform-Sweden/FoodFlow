@@ -1742,6 +1742,57 @@ document.getElementById("plannerRecipeModal")
 
 }    
 
+function addRecipeToPlanner(){
+
+let recipe =
+recipes[plannerRecipeIndex];
+
+
+let day =
+document.getElementById("plannerRecipeDay")
+.value;
+
+
+let type =
+document.getElementById("plannerRecipeType")
+.value;
+
+
+let people =
+document.getElementById("plannerRecipePeople")
+.value;
+
+
+
+if(!meals[day]){
+
+meals[day]=[];
+
+}
+
+
+
+meals[day].push({
+
+type:type,
+
+name:recipe.name,
+
+people:people
+
+});
+
+
+saveData();
+
+
+render();
+
+
+closePlannerRecipeModal();
+
+}    
+
 function toggleRecipe(index){
 
 recipes[index].expanded =
