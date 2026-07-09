@@ -1416,16 +1416,21 @@ document.getElementById("recipeList");
 
 list.innerHTML = "";
 
+
 recipes.forEach((recipe,index)=>{
+
 
 let card =
 document.createElement("div");
 
+
 card.className="meal";
 
-card.innerHTML=`
+
+card.innerHTML = `
 
 <h3>${recipe.name}</h3>
+
 
 <div class="small">
 
@@ -1433,24 +1438,78 @@ card.innerHTML=`
 
 </div>
 
+
 <div class="small">
 
 🥕 ${recipe.ingredients.length} ingredients
 
 </div>
 
+
+${
+recipe.expanded
+
+?
+
+`
+
+<hr>
+
+<strong>
+Ingredients
+</strong>
+
+
+<ul>
+
+${recipe.ingredients.map(item=>`
+
+<li>${item}</li>
+
+`).join("")}
+
+</ul>
+
+
+<button onclick="toggleRecipe(${index})">
+
+▲ Hide
+
+</button>
+
+
 <button class="delete"
+
 onclick="deleteRecipe(${index})">
 
 🗑 Delete
 
 </button>
 
+`
+
+:
+
+`
+
+<button onclick="toggleRecipe(${index})">
+
+▼ View Recipe
+
+</button>
+
+`
+
+}
+
 `;
+
 
 list.appendChild(card);
 
+
 });
+
 
 }
 
