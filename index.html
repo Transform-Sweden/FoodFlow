@@ -1370,6 +1370,25 @@ closeCategoryManager();
 
 function openRecipeModal(){
 
+selectedRecipe = null;
+
+
+document.getElementById("recipeName")
+.value="";
+
+
+document.getElementById("recipePeople")
+.value=4;
+
+
+document.getElementById("recipeIngredients")
+.value="";
+
+
+document.querySelector("#recipeModal h2")
+.innerText = "Add Recipe";
+
+
 document.getElementById("recipeModal")
 .style.display="flex";
 
