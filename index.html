@@ -1450,8 +1450,13 @@ card.className="meal";
 
 card.innerHTML = `
 
-<h3>${recipe.name}</h3>
+<h3>
 
+${recipe.favorite ? "⭐ " : ""}
+
+${recipe.name}
+
+</h3>
 
 <div class="small">
 
