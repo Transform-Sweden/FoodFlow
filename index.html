@@ -1416,12 +1416,34 @@ return;
 }
 
 
+if(selectedRecipe === null){
+
 recipes.push(recipe);
+
+}else{
+
+recipes[selectedRecipe] = {
+
+...recipe,
+
+expanded:
+recipes[selectedRecipe].expanded,
+
+favorite:
+recipes[selectedRecipe].favorite
+
+};
+
+}
+
 
 localStorage.setItem(
 "foodflowRecipes",
 JSON.stringify(recipes)
 );
+
+
+selectedRecipe = null;
 
 
 renderRecipes();
