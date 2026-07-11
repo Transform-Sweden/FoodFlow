@@ -638,22 +638,18 @@ Meal Type
 
 
 <label>
-
 📖 Choose Recipe
-
 </label>
 
+<input
+id="recipeSearch"
+placeholder="🔍 Search recipes..."
+oninput="searchRecipesForMeal()"
+>
 
-<select id="recipeSelect"
-onchange="selectRecipeForMeal()">
+<div id="mealRecipeList"></div>
 
-<option value="">
-
--- Select Recipe --
-
-</option>
-
-</select>
+<input type="hidden" id="recipeSelect">
 
 
 
