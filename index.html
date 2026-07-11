@@ -1075,6 +1075,25 @@ ${meal.name}
 
 </div>
 
+${meal.recipe !== null && meal.recipe !== undefined
+
+?
+
+`
+
+<button onclick="openMealRecipe(${meal.recipe})">
+
+📖 Open Recipe
+
+</button>
+
+`
+
+:
+
+""
+
+}
 
 <button class="edit"
 onclick="editMeal('${day}',${index})">
