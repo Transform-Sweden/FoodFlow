@@ -1614,6 +1614,24 @@ expanded:false
 
 };
 
+recipes = recipes.map(recipe=>{
+
+if(!recipe.servings){
+
+recipe.servings =
+recipe.people || 4;
+
+}
+
+return recipe;
+
+});
+
+
+localStorage.setItem(
+"foodflowRecipes",
+JSON.stringify(recipes)
+);    
 
 if(recipe.name===""){
 
