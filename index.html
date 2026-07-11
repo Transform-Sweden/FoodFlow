@@ -891,6 +891,39 @@ let recipes = JSON.parse(
 localStorage.getItem("foodflowRecipes")
 ) || [];
 
+// Convert old ingredient format to new format
+
+recipes = recipes.map(recipe => {
+
+    recipe.ingredients =
+    recipe.ingredients.map(item => {
+
+        if(typeof item === "string"){
+
+            return {
+
+                name:item,
+                amount:"",
+                unit:""
+
+            };
+
+        }
+
+        return item;
+
+    });
+
+
+    return recipe;
+
+});
+
+
+localStorage.setItem(
+"foodflowRecipes",
+JSON.stringify(recipes)
+);    
 
 recipes = recipes.map(recipe => {
 
