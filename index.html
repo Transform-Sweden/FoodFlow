@@ -1199,6 +1199,10 @@ document.getElementById("modal")
 function saveMeal(){
 
 
+let selectedRecipeIndex =
+document.getElementById("recipeSelect").value;
+
+
 let meal = {
 
 
@@ -1211,7 +1215,13 @@ document.getElementById("mealName").value,
 
 
 people:
-document.getElementById("people").value
+document.getElementById("people").value,
+
+
+recipe:
+selectedRecipeIndex !== ""
+? Number(selectedRecipeIndex)
+: null
 
 
 };
