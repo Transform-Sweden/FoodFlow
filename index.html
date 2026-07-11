@@ -1135,38 +1135,36 @@ week.appendChild(card);
 
 function openModal(day){
 
-
 selectedDay = day;
 
 selectedMeal = null;
 
 
 document.getElementById("modalTitle")
-.innerText =
-"Add Meal"
+.innerText = "Add Meal";
 
 
 document.getElementById("mealName")
 .value="";
-
-updateRecipeSelector();    
-
-document.getElementById("recipeSelect")
-.value="";
-
-document.getElementById("recipeSearch")
-.value="";
-
-updateRecipeSelector();
 
 
 document.getElementById("people")
 .value=4;
 
 
+document.getElementById("recipeSelect")
+.value="";
+
+
+document.getElementById("recipeSearch")
+.value="";
+
+
+updateRecipeSelector();
+
+
 document.getElementById("modal")
 .style.display="flex";
-
 
 }
 
