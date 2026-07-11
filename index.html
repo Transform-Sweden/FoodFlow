@@ -1709,13 +1709,54 @@ recipe.servings;
 
 function updateRecipeSelector(){
 
-let select =
-document.getElementById("recipeSelect");
+let list =
+document.getElementById("mealRecipeList");
 
 
-if(!select){
+if(!list){
 
 return;
+
+}
+
+
+list.innerHTML = "";
+
+
+recipes.forEach((recipe,index)=>{
+
+
+let item =
+document.createElement("div");
+
+
+item.className="meal";
+
+
+item.innerHTML = `
+
+<strong>
+${recipe.name}
+</strong>
+
+<br>
+
+<button onclick="viewMealRecipe(${index})">
+📖 View Recipe
+</button>
+
+<button onclick="selectMealRecipe(${index})">
+✅ Select
+</button>
+
+`;
+
+
+list.appendChild(item);
+
+
+});
+
 
 }
 
