@@ -1861,38 +1861,7 @@ editRecipe(index);
 
 }    
 
-select.innerHTML = `
-
-<option value="">
-
--- Select Recipe --
-
-</option>
-
-`;
-
-
-recipes.forEach((recipe,index)=>{
-
-
-let option =
-document.createElement("option");
-
-
-option.value=index;
-
-
-option.innerText =
-recipe.name;
-
-
-select.appendChild(option);
-
-
-});
-
-
-}    
+  
 
 function renderRecipes(){
 
