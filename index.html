@@ -1760,6 +1760,101 @@ list.appendChild(item);
 
 }
 
+function searchRecipesForMeal(){
+
+let search =
+document.getElementById("recipeSearch")
+.value
+.toLowerCase();
+
+
+let list =
+document.getElementById("mealRecipeList");
+
+
+list.innerHTML="";
+
+
+recipes.forEach((recipe,index)=>{
+
+
+if(
+recipe.name.toLowerCase()
+.includes(search)
+){
+
+
+let item =
+document.createElement("div");
+
+
+item.className="meal";
+
+
+item.innerHTML = `
+
+<strong>
+${recipe.name}
+</strong>
+
+<br>
+
+<button onclick="viewMealRecipe(${index})">
+📖 View Recipe
+</button>
+
+<button onclick="selectMealRecipe(${index})">
+✅ Select
+</button>
+
+`;
+
+
+list.appendChild(item);
+
+
+}
+
+
+});
+
+
+}
+
+
+
+function selectMealRecipe(index){
+
+
+let recipe =
+recipes[index];
+
+
+document.getElementById("recipeSelect")
+.value=index;
+
+
+document.getElementById("mealName")
+.value=
+recipe.name;
+
+
+document.getElementById("people")
+.value=
+recipe.servings;
+
+
+}
+
+
+
+function viewMealRecipe(index){
+
+selectedRecipe=index;
+
+editRecipe(index);
+
+}    
 
 select.innerHTML = `
 
