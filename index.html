@@ -2122,6 +2122,27 @@ function getIngredientsFromRows(){
 
 }
 
+function openMealRecipe(index){
+
+let recipe = recipes[index];
+
+
+if(!recipe){
+
+alert("Recipe not found");
+
+return;
+
+}
+
+
+selectedRecipe = index;
+
+
+editRecipe(index);
+
+
+}    
 
 // =======================
 // PAGE NAVIGATION
