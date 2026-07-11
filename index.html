@@ -1199,13 +1199,14 @@ meal.type;
 updateRecipeSelector();
 
 
-let matchingRecipeIndex =
-recipes.findIndex(r => r.name === meal.name);
-
 document.getElementById("recipeSelect")
 .value =
-matchingRecipeIndex !== -1 ? matchingRecipeIndex : "";
-
+meal.recipe !== null &&
+meal.recipe !== undefined
+?
+meal.recipe
+:
+"";
 
 
 document.getElementById("mealName")
