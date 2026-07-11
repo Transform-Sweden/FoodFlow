@@ -759,12 +759,11 @@ value="4"
 Ingredients
 </label>
 
+<div id="ingredientList"></div>
 
-<textarea
-id="recipeIngredients"
-placeholder="One ingredient per line"
-style="width:100%;height:120px;"
-></textarea>
+<button type="button" onclick="addIngredientRow()">
+➕ Add Ingredient
+</button>
 
 
 
@@ -1506,8 +1505,10 @@ document.getElementById("recipePeople")
 .value=4;
 
 
-document.getElementById("recipeIngredients")
-.value="";
+document.getElementById("ingredientList")
+.innerHTML="";
+
+addIngredientRow();
 
 
 document.querySelector("#recipeModal h2")
@@ -1545,10 +1546,7 @@ document.getElementById("recipePeople").value
 ),
 
 ingredients:
-document.getElementById("recipeIngredients")
-.value
-.split("\n")
-.filter(item => item.trim() !== ""),
+getIngredientsFromRows(),
 
 expanded:false
 
@@ -1738,7 +1736,11 @@ Ingredients
 
 ${recipe.ingredients.map(item=>`
 
-<li>${item}</li>
+<li>${
+    typeof item === "string"
+    ? item
+    : `${item.amount || ""} ${item.unit || ""} ${item.name}`.trim()
+}</li>
 
 `).join("")}
 
@@ -1836,8 +1838,32 @@ document.getElementById("recipePeople")
 .value = recipe.people;
 
 
-document.getElementById("recipeIngredients")
-.value = recipe.ingredients.join("\n");
+document.getElementById("ingredientList")
+.innerHTML="";
+
+recipe.ingredients.forEach(ingredient=>{
+
+    if(typeof ingredient === "string"){
+
+        addIngredientRow(ingredient, "", "");
+
+    }else{
+
+        addIngredientRow(
+            ingredient.name,
+            ingredient.amount,
+            ingredient.unit
+        );
+
+    }
+
+});
+
+if(recipe.ingredients.length === 0){
+
+    addIngredientRow();
+
+}
 
 
 document.querySelector("#recipeModal h2")
@@ -1951,6 +1977,86 @@ JSON.stringify(recipes)
 renderRecipes();
 
 }    
+
+
+// =======================
+// INGREDIENT ROWS
+// =======================
+
+
+function addIngredientRow(name="", amount="", unit=""){
+
+    const list =
+    document.getElementById("ingredientList");
+
+    const row =
+    document.createElement("div");
+
+    row.style.display="flex";
+    row.style.gap="8px";
+    row.style.marginBottom="8px";
+
+    row.innerHTML = `
+        <input
+            class="ingredientName"
+            placeholder="Ingredient"
+            value="${name}"
+            style="flex:2;"
+        >
+
+        <input
+            class="ingredientAmount"
+            type="number"
+            placeholder="Amount"
+            value="${amount}"
+            style="width:80px;"
+        >
+
+        <input
+            class="ingredientUnit"
+            placeholder="Unit"
+            value="${unit}"
+            style="width:70px;"
+        >
+    `;
+
+    list.appendChild(row);
+
+}
+
+
+function getIngredientsFromRows(){
+
+    const names =
+    document.querySelectorAll("#ingredientList .ingredientName");
+
+    const amounts =
+    document.querySelectorAll("#ingredientList .ingredientAmount");
+
+    const units =
+    document.querySelectorAll("#ingredientList .ingredientUnit");
+
+    let ingredients = [];
+
+    names.forEach((nameInput,index)=>{
+
+        let name = nameInput.value.trim();
+
+        if(name === ""){
+            return;
+        }
+
+        ingredients.push({
+            name: name,
+            amount: amounts[index].value,
+            unit: units[index].value
+        });
+
+    });
+
+    return ingredients;
+
+}
 
 
 // =======================
