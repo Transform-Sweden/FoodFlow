@@ -1143,6 +1143,17 @@ document.getElementById("mealType")
 meal.type;
 
 
+updateRecipeSelector();
+
+
+let matchingRecipeIndex =
+recipes.findIndex(r => r.name === meal.name);
+
+document.getElementById("recipeSelect")
+.value =
+matchingRecipeIndex !== -1 ? matchingRecipeIndex : "";
+
+
 
 document.getElementById("mealName")
 .value =
@@ -1582,10 +1593,14 @@ closeRecipeModal();
 
 }
 
+// Moved out of renderRecipes() so they are globally reachable
+// (they're called from openModal() and from the recipeSelect's
+// onchange handler, both of which run outside renderRecipes' scope).
 function selectRecipeForMeal(){
 
 let index =
 document.getElementById("recipeSelect").value;
+
 
 if(index === ""){
 
@@ -1593,29 +1608,35 @@ return;
 
 }
 
+
 let recipe =
 recipes[index];
 
-document.getElementById("mealName").value =
+
+document.getElementById("mealName")
+.value =
 recipe.name;
 
-document.getElementById("people").value =
+
+document.getElementById("people")
+.value =
 recipe.people;
 
-}
 
-
+}    
 
 function updateRecipeSelector(){
 
 let select =
 document.getElementById("recipeSelect");
 
+
 if(!select){
 
 return;
 
 }
+
 
 select.innerHTML = `
 
@@ -1627,22 +1648,28 @@ select.innerHTML = `
 
 `;
 
+
 recipes.forEach((recipe,index)=>{
+
 
 let option =
 document.createElement("option");
 
-option.value = index;
 
-option.innerText = recipe.name;
+option.value=index;
+
+
+option.innerText =
+recipe.name;
+
 
 select.appendChild(option);
 
+
 });
 
-}
 
-
+}    
 
 function renderRecipes(){
 
@@ -1651,12 +1678,16 @@ document.getElementById("recipeList");
 
 list.innerHTML = "";
 
+
 recipes.forEach((recipe,index)=>{
+
 
 let card =
 document.createElement("div");
 
+
 card.className="meal";
+
 
 card.innerHTML = `
 
@@ -1674,20 +1705,27 @@ ${recipe.name}
 
 </div>
 
+
 <div class="small">
 
 🥕 ${recipe.ingredients.length} ingredients
 
 </div>
 
+
 ${
-recipe.expanded ?
+recipe.expanded
+
+?
 
 `
 
 <hr>
 
-<strong>Ingredients</strong>
+<strong>
+Ingredients
+</strong>
+
 
 <ul>
 
@@ -1706,6 +1744,7 @@ ${recipe.favorite ? "⭐ Remove Favorite" : "☆ Add Favorite"}
 </button>
 
 <button class="edit"
+
 onclick="editRecipe(${index})">
 
 ✏️ Edit
@@ -1724,7 +1763,9 @@ onclick="editRecipe(${index})">
 
 </button>
 
+
 <button class="delete"
+
 onclick="deleteRecipe(${index})">
 
 🗑 Delete
@@ -1749,11 +1790,17 @@ onclick="deleteRecipe(${index})">
 
 `;
 
+
 list.appendChild(card);
+
 
 });
 
+
 }
+
+
+function deleteRecipe(index){
 
 recipes.splice(index,1);
 
