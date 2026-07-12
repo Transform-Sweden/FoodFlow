@@ -1804,11 +1804,62 @@ document.getElementById("people")
 
 function viewMealRecipe(index){
 
-selectedRecipe=index;
+let recipe = recipes[index];
 
-editRecipe(index);
 
-}    
+if(!recipe){
+
+alert("Recipe not found");
+
+return;
+
+}
+
+
+document.getElementById("viewRecipeTitle")
+.innerText = recipe.name;
+
+
+document.getElementById("viewRecipeContent")
+.innerHTML = `
+
+<div class="small">
+👥 ${recipe.servings} servings
+</div>
+
+<hr>
+
+<strong>
+Ingredients
+</strong>
+
+<ul>
+
+${
+recipe.ingredients.map(item=>`
+
+<li>
+${
+item.amount || ""
+}
+${item.unit || ""}
+${item.name}
+</li>
+
+`).join("")
+
+}
+
+</ul>
+
+`;
+
+
+document.getElementById("viewRecipeModal")
+.style.display="flex";
+
+
+}  
 
   
 
