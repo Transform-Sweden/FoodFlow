@@ -1147,6 +1147,38 @@ ${meal.name}
 
 </button>
 
+${
+meal.expanded
+?
+
+`
+
+${meal.recipe !== null && meal.recipe !== undefined ?
+
+`
+<button onclick="openMealRecipe(${meal.recipe})">
+📖 Open Recipe
+</button>
+`
+
+: ""}
+
+<button class="edit"
+onclick="editMeal('${day}',${originalIndex})">
+✏️ Edit
+</button>
+
+<button class="delete"
+onclick="deleteMeal('${day}',${originalIndex})">
+🗑 Delete
+</button>
+
+`
+
+: ""
+
+}
+
 `;
 
 
