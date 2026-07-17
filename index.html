@@ -1159,6 +1159,18 @@ card.appendChild(box);
 
 }
 
+function toggleMeal(day,index){
+
+    if(!meals[day][index].expanded){
+        meals[day][index].expanded = true;
+    }else{
+        meals[day][index].expanded = false;
+    }
+
+    saveData();
+    render();
+
+}    
 
 
 week.appendChild(card);
