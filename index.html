@@ -2788,10 +2788,11 @@ function parseIngredientLine(line){
         return null;
     }
 
-    // Leading quantity: digits/fractions, optionally followed by
-    // a second fraction token for mixed numbers like "1 1/2"
+    // Leading quantity: a plain fraction (1/2), a whole number or
+    // decimal (500, 1,5), or a unicode fraction (½) — optionally
+    // followed by a second fraction token for mixed numbers like "1 1/2"
     let match = line.match(
-        /^([\d½¼¾⅓⅔]+(?:[.,]\d+)?)(?:\s+(\d+\/\d+|½|¼|¾|⅓|⅔))?\s*(.*)$/
+        /^(\d+\/\d+|[\d½¼¾⅓⅔]+(?:[.,]\d+)?)(?:\s+(\d+\/\d+|½|¼|¾|⅓|⅔))?\s*(.*)$/
     );
 
     if(!match || !/[\d½¼¾⅓⅔]/.test(match[1])){
