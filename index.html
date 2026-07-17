@@ -2405,6 +2405,125 @@ editRecipe(index);
 // SHOPPING LIST
 // =======================
 
+// Maps Swedish and English spellings of common ingredients to one
+// shared canonical name, so "lök" and "onion" are recognized as the
+// same thing when combining the shopping list — no manual editing needed.
+const ingredientTranslations = {
+
+    // vegetables
+    "lök":"onion", "gul lök":"onion", "onion":"onion", "onions":"onion",
+    "rödlök":"red onion", "röd lök":"red onion", "red onion":"red onion",
+    "vitlök":"garlic", "vitlöksklyfta":"garlic", "vitlöksklyftor":"garlic", "garlic":"garlic",
+    "morot":"carrot", "morötter":"carrot", "carrot":"carrot", "carrots":"carrot",
+    "potatis":"potato", "potatisar":"potato", "potato":"potato", "potatoes":"potato",
+    "tomat":"tomato", "tomater":"tomato", "tomato":"tomato", "tomatoes":"tomato",
+    "paprika":"bell pepper", "paprikor":"bell pepper", "bell pepper":"bell pepper", "bell peppers":"bell pepper",
+    "purjolök":"leek", "leek":"leek",
+    "selleri":"celery", "celery":"celery",
+    "svamp":"mushroom", "champinjoner":"mushroom", "champinjon":"mushroom", "mushroom":"mushroom", "mushrooms":"mushroom",
+    "broccoli":"broccoli",
+    "blomkål":"cauliflower", "cauliflower":"cauliflower",
+    "sallad":"lettuce", "lettuce":"lettuce",
+    "gurka":"cucumber", "cucumber":"cucumber",
+    "citron":"lemon", "lemon":"lemon",
+    "lime":"lime",
+    "äpple":"apple", "äpplen":"apple", "apple":"apple", "apples":"apple",
+    "banan":"banana", "bananer":"banana", "banana":"banana", "bananas":"banana",
+
+    // dairy & eggs
+    "mjölk":"milk", "milk":"milk",
+    "grädde":"cream", "vispgrädde":"cream", "cream":"cream",
+    "smör":"butter", "butter":"butter",
+    "ägg":"egg", "egg":"egg", "eggs":"egg",
+    "ost":"cheese", "cheese":"cheese",
+    "yoghurt":"yogurt", "yogurt":"yogurt",
+    "crème fraiche":"creme fraiche", "creme fraiche":"creme fraiche", "crème fraîche":"creme fraiche",
+
+    // meat & fish
+    "nötfärs":"ground beef", "ground beef":"ground beef",
+    "fläskfärs":"ground pork", "ground pork":"ground pork",
+    "kycklingfilé":"chicken breast", "kycklingfileer":"chicken breast", "chicken breast":"chicken breast", "chicken breasts":"chicken breast",
+    "kyckling":"chicken", "chicken":"chicken",
+    "fläskkotlett":"pork chop", "fläskkotletter":"pork chop", "pork chop":"pork chop", "pork chops":"pork chop",
+    "bacon":"bacon",
+    "lax":"salmon", "salmon":"salmon",
+    "torsk":"cod", "cod":"cod",
+    "räkor":"shrimp", "räka":"shrimp", "shrimp":"shrimp",
+
+    // pantry
+    "mjöl":"flour", "vetemjöl":"flour", "flour":"flour",
+    "socker":"sugar", "sugar":"sugar",
+    "salt":"salt",
+    "peppar":"pepper", "pepper":"pepper",
+    "ris":"rice", "rice":"rice",
+    "pasta":"pasta",
+    "spaghetti":"spaghetti",
+    "nudlar":"noodles", "noodles":"noodles",
+    "buljong":"broth", "buljongtärning":"broth", "broth":"broth", "stock":"broth",
+    "olja":"oil", "oil":"oil",
+    "olivolja":"olive oil", "olive oil":"olive oil",
+    "vinäger":"vinegar", "vinegar":"vinegar",
+    "senap":"mustard", "mustard":"mustard",
+    "ketchup":"ketchup",
+    "majonnäs":"mayonnaise", "mayonnaise":"mayonnaise", "mayo":"mayonnaise",
+    "ströbröd":"breadcrumbs", "breadcrumbs":"breadcrumbs",
+    "bröd":"bread", "bread":"bread",
+
+    // herbs & spices
+    "persilja":"parsley", "parsley":"parsley",
+    "basilika":"basil", "basil":"basil",
+    "timjan":"thyme", "thyme":"thyme",
+    "oregano":"oregano",
+    "curry":"curry",
+    "kanel":"cinnamon", "cinnamon":"cinnamon",
+    "vanilj":"vanilla", "vanilla":"vanilla"
+
+};
+
+// Descriptive words stripped only for matching purposes (so "gul lök"
+// and "yellow onion" both reduce down to "lök" / "onion" before lookup).
+const ingredientStopwords = [
+    "gul","gult","gula","röd","rött","röda","vit","vitt","vita",
+    "grön","grönt","gröna","färsk","färskt","färska","torkad","torkat","torkade",
+    "stor","stort","stora","liten","litet","små","hel","helt","hela",
+    "fresh","dried","yellow","red","white","green","large","small","whole","big","little"
+];
+
+// Every canonical value used above, so we know when to show a
+// translated display name vs. keep the ingredient's original spelling.
+const canonicalIngredientNames =
+    new Set(Object.values(ingredientTranslations));
+
+
+function normalizeIngredientName(name){
+
+    let cleaned = name
+        .toLowerCase()
+        .trim()
+        .split(/\s+/)
+        .filter(word => !ingredientStopwords.includes(word))
+        .join(" ");
+
+    if(ingredientTranslations[cleaned]){
+        return ingredientTranslations[cleaned];
+    }
+
+    // Try just the last word — catches things like "diced onion"
+    // or "gul lök" -> "lök" after "gul" was already stripped above.
+    let words = cleaned.split(" ");
+    let lastWord = words[words.length - 1];
+
+    if(ingredientTranslations[lastWord]){
+        return ingredientTranslations[lastWord];
+    }
+
+    // Not in the dictionary — fall back to the cleaned name itself,
+    // so at least identical spellings still combine as before.
+    return cleaned;
+
+}
+
+
 function generateShoppingList(){
 
     let items = {};
@@ -2433,9 +2552,9 @@ function generateShoppingList(){
 
                 recipe.ingredients.forEach(ingredient=>{
 
-                    let name = (ingredient.name || "").trim();
+                    let rawName = (ingredient.name || "").trim();
 
-                    if(name === ""){
+                    if(rawName === ""){
                         return;
                     }
 
@@ -2443,9 +2562,18 @@ function generateShoppingList(){
                     let amount = Number(ingredient.amount) || 0;
                     let scaled = amount * factor;
 
-                    // Same ingredient + same unit gets combined together
+                    let normalizedName = normalizeIngredientName(rawName);
+
+                    // Show a clean translated label for known ingredients,
+                    // otherwise keep whatever the person originally typed.
+                    let displayName = canonicalIngredientNames.has(normalizedName)
+                        ? normalizedName.charAt(0).toUpperCase() + normalizedName.slice(1)
+                        : rawName;
+
+                    // Same ingredient (regardless of language) + same unit
+                    // gets combined together.
                     let key =
-                        name.toLowerCase() + "|" + unit.toLowerCase();
+                        normalizedName + "|" + unit.toLowerCase();
 
                     if(items[key]){
 
@@ -2454,7 +2582,7 @@ function generateShoppingList(){
                     }else{
 
                         items[key] = {
-                            name: name,
+                            name: displayName,
                             unit: unit,
                             amount: scaled
                         };
