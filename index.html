@@ -1102,13 +1102,19 @@ if(meals[day]){
         "☕ Fika": 3
     };
 
-    const sortedMeals = [...meals[day]].sort((a,b)=>
-        mealOrder[a.type] - mealOrder[b.type]
-    );
+<button class="edit"
+onclick="editMeal('${day}',${originalIndex})">
 
-    sortedMeals.forEach((meal)=>{
+✏️ Edit
 
-        const originalIndex = meals[day].indexOf(meal);
+</button>
+
+<button class="delete"
+onclick="deleteMeal('${day}',${originalIndex})">
+
+🗑 Delete
+
+</button>
 
 let box =
 document.createElement("div");
