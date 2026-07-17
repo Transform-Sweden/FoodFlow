@@ -406,6 +406,10 @@ grid-template-columns:1fr;
 ➕ Add Recipe
 </button>
 
+<button onclick="openPasteModal()">
+📋 Paste from Web
+</button>
+
 <input
     id="recipeSearchPage"
     placeholder="🔍 Search recipes..."
@@ -751,6 +755,50 @@ Cancel
 
 </div>
 
+
+<!-- PASTE RECIPE FROM WEB WINDOW -->
+
+<div class="modal" id="pasteModal">
+
+
+<div class="modal-box">
+
+
+<h2>
+📋 Paste Recipe
+</h2>
+
+
+<p class="small">
+Go to your recipe on ica.se, select the title, portions, and ingredient list, copy it, and paste it below. This works best when it's just the ingredients — not the cooking steps.
+</p>
+
+
+<textarea
+id="pasteText"
+rows="12"
+placeholder="Paste the recipe text here, e.g.&#10;&#10;Köttbullar&#10;4 portioner&#10;500 g nötfärs&#10;1 gul lök&#10;1 dl ströbröd&#10;1 ägg"
+style="width:100%;padding:12px;border-radius:12px;border:1px solid #ccc;font-size:15px;font-family:inherit;"
+></textarea>
+
+
+<br><br>
+
+
+<button onclick="parsePastedRecipe()">
+✅ Parse Recipe
+</button>
+
+
+<button onclick="closePasteModal()">
+Cancel
+</button>
+
+
+</div>
+
+
+</div>
 
 <!-- ADD RECIPE WINDOW -->
 
@@ -2538,6 +2586,237 @@ function clearCheckedItems(){
     );
 
     renderShoppingList();
+
+}
+
+
+// =======================
+// PASTE RECIPE FROM WEB
+// =======================
+
+// Units commonly used in Swedish recipes (like ica.se)
+const knownUnits = [
+    "g","kg","dl","msk","tsk","st","ml","l","cl",
+    "förp","förpackning","burk","burkar","klyfta","klyftor",
+    "kruka","skiva","skivor","bunt","nypa","kryddmått","paket","påse"
+];
+
+const fractionMap = {
+    "½": 0.5,
+    "¼": 0.25,
+    "¾": 0.75,
+    "⅓": 1/3,
+    "⅔": 2/3
+};
+
+
+function openPasteModal(){
+
+    document.getElementById("pasteText").value = "";
+
+    document.getElementById("pasteModal")
+    .style.display = "flex";
+
+}
+
+
+function closePasteModal(){
+
+    document.getElementById("pasteModal")
+    .style.display = "none";
+
+}
+
+
+function parseQuantityToken(token){
+
+    if(fractionMap[token] !== undefined){
+        return fractionMap[token];
+    }
+
+    if(token.includes("/")){
+
+        let parts = token.split("/");
+        return Number(parts[0]) / Number(parts[1]);
+
+    }
+
+    return Number(token.replace(",","."));
+
+}
+
+
+function parseIngredientLine(line){
+
+    line = line.trim();
+
+    if(!line){
+        return null;
+    }
+
+    // Leading quantity: digits/fractions, optionally followed by
+    // a second fraction token for mixed numbers like "1 1/2"
+    let match = line.match(
+        /^([\d½¼¾⅓⅔]+(?:[.,]\d+)?)(?:\s+(\d+\/\d+|½|¼|¾|⅓|⅔))?\s*(.*)$/
+    );
+
+    if(!match || !/[\d½¼¾⅓⅔]/.test(match[1])){
+
+        // No leading number found — treat whole line as name only
+        return { amount:"", unit:"", name: line };
+
+    }
+
+    let amount = parseQuantityToken(match[1]);
+
+    if(match[2]){
+        amount += parseQuantityToken(match[2]);
+    }
+
+    let rest = (match[3] || "").trim();
+    let restTokens = rest.split(/\s+/);
+    let unit = "";
+
+    if(
+        restTokens.length &&
+        knownUnits.includes(restTokens[0].toLowerCase())
+    ){
+
+        unit = restTokens.shift();
+        rest = restTokens.join(" ");
+
+    }
+
+    return {
+        amount: amount || "",
+        unit: unit,
+        name: rest
+    };
+
+}
+
+
+function parsePastedRecipe(){
+
+    let raw = document.getElementById("pasteText").value;
+
+    if(!raw.trim()){
+
+        alert("Paste some recipe text first.");
+        return;
+
+    }
+
+    let lines = raw
+        .split("\n")
+        .map(l => l.trim())
+        .filter(l => l !== "");
+
+    // Guess servings, e.g. "4 port" / "4 portioner" / "4 personer"
+    let servings = 4;
+
+    let servingsMatch =
+        raw.match(/(\d+)\s*(portioner|port\.?|personer)\b/i);
+
+    if(servingsMatch){
+        servings = Number(servingsMatch[1]);
+    }
+
+    // Skip obvious section headers, non-ingredient lines, servings
+    // lines, and numbered instruction steps like "1. Blanda ihop..."
+    let skipPattern =
+        /^(ingredienser|gör så här|tillagning|instruktioner|steg|servering|tips)\b/i;
+
+    let servingsLinePattern =
+        /^\d+\s*(portioner|port\.?|personer)\b/i;
+
+    let numberedStepPattern =
+        /^\d+[.)]\s/;
+
+    // Guess title = first line that isn't a number, servings line, or header
+    let title = "";
+
+    for(let line of lines){
+
+        if(/^\d/.test(line)) continue;
+        if(skipPattern.test(line)) continue;
+        if(servingsLinePattern.test(line)) continue;
+
+        title = line;
+        break;
+
+    }
+
+    let ingredientLines = [];
+
+    lines.forEach(line=>{
+
+        if(skipPattern.test(line)){
+            return;
+        }
+
+        if(servingsLinePattern.test(line)){
+            return;
+        }
+
+        if(numberedStepPattern.test(line)){
+            return;
+        }
+
+        let parsed = parseIngredientLine(line);
+
+        if(parsed && parsed.amount !== ""){
+
+            // Guard against instruction steps that happen to start
+            // with a number, e.g. "1. Sätt ugnen på 200 grader..."
+            let wordCount =
+                parsed.name.split(/\s+/).filter(w => w !== "").length;
+
+            if(wordCount > 0 && wordCount <= 6){
+                ingredientLines.push(parsed);
+            }
+
+        }
+
+    });
+
+    if(ingredientLines.length === 0){
+
+        alert(
+            "Couldn't find any ingredient lines in that text. " +
+            "Try pasting just the ingredient list, then you can " +
+            "still fill things in by hand in the form that opens."
+        );
+
+    }
+
+    // Populate the Add Recipe form so the person can review before saving
+    selectedRecipe = null;
+
+    document.getElementById("recipeName").value = title;
+    document.getElementById("recipePeople").value = servings;
+
+    document.getElementById("ingredientList").innerHTML = "";
+
+    if(ingredientLines.length > 0){
+
+        ingredientLines.forEach(item=>{
+            addIngredientRow(item.name, item.amount, item.unit);
+        });
+
+    }else{
+
+        addIngredientRow();
+
+    }
+
+    document.querySelector("#recipeModal h2")
+    .innerText = "Add Recipe";
+
+    closePasteModal();
+
+    document.getElementById("recipeModal")
+    .style.display = "flex";
 
 }
 
