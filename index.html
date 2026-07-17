@@ -402,14 +402,17 @@ grid-template-columns:1fr;
 
 <h2>📖 Recipes</h2>
 
-
 <button onclick="openRecipeModal()">
 ➕ Add Recipe
 </button>
 
+<input
+    id="recipeSearchPage"
+    placeholder="🔍 Search recipes..."
+    oninput="renderRecipes()"
+>
 
 <div id="recipeList">
-
 </div>
 
 
