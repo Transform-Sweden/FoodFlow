@@ -1138,41 +1138,12 @@ ${meal.name}
 
 
 <div class="small">
-
 👥 ${meal.people} people
-
 </div>
 
-${meal.recipe !== null && meal.recipe !== undefined
+<button onclick="toggleMeal('${day}',${originalIndex})">
 
-?
-
-`
-
-<button onclick="openMealRecipe(${meal.recipe})">
-
-📖 Open Recipe
-
-</button>
-
-`
-
-:
-
-""
-
-}
-<button class="edit"
-onclick="editMeal('${day}',${originalIndex})">
-
-✏️ Edit
-
-</button>
-
-<button class="delete"
-onclick="deleteMeal('${day}',${originalIndex})">
-
-🗑 Delete
+▼ View
 
 </button>
 
