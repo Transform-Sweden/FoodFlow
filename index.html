@@ -1933,8 +1933,13 @@ document.getElementById("recipeList");
 
 list.innerHTML = "";
 
+let searchBox =
+document.getElementById("recipeSearchPage");
+
 let search =
-document.getElementById("recipeSearchPage").value.toLowerCase();
+searchBox
+? searchBox.value.toLowerCase()
+: "";
 
 recipes.forEach((recipe,index)=>{
 
