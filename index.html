@@ -808,6 +808,72 @@ Cancel
 
 </div>
 
+<!-- EDIT / ADD SHOPPING ITEM WINDOW -->
+
+<div class="modal" id="shoppingItemModal">
+
+
+<div class="modal-box">
+
+
+<h2 id="shoppingItemModalTitle">
+Edit Item
+</h2>
+
+
+<label>
+Item
+</label>
+
+
+<input
+id="shoppingItemName"
+placeholder="e.g. Tomatoes"
+>
+
+
+<label>
+Amount
+</label>
+
+
+<input
+id="shoppingItemAmount"
+type="number"
+step="any"
+placeholder="Leave blank for none"
+>
+
+
+<label>
+Unit
+</label>
+
+
+<input
+id="shoppingItemUnit"
+placeholder="e.g. g, dl, st"
+>
+
+
+<br>
+
+
+<button onclick="saveShoppingItem()">
+Save
+</button>
+
+
+<button onclick="closeShoppingItemModal()">
+Cancel
+</button>
+
+
+</div>
+
+
+</div>
+
 <!-- ADD RECIPE WINDOW -->
 
 <div class="modal" id="recipeModal">
@@ -2790,6 +2856,40 @@ function clearCheckedItems(){
 }
 
 
+// Tracks which item is being edited while the modal is open.
+// null key = adding a brand new item.
+let editingShoppingKey = null;
+let editingShoppingIsExtra = false;
+
+
+function openShoppingItemModal(title, name, amount, unit){
+
+    document.getElementById("shoppingItemModalTitle")
+    .innerText = title;
+
+    document.getElementById("shoppingItemName")
+    .value = name;
+
+    document.getElementById("shoppingItemAmount")
+    .value = amount;
+
+    document.getElementById("shoppingItemUnit")
+    .value = unit;
+
+    document.getElementById("shoppingItemModal")
+    .style.display = "flex";
+
+}
+
+
+function closeShoppingItemModal(){
+
+    document.getElementById("shoppingItemModal")
+    .style.display = "none";
+
+}
+
+
 function editShoppingItem(key){
 
     const { list } = generateShoppingList();
@@ -2799,34 +2899,63 @@ function editShoppingItem(key){
         return;
     }
 
-    let newName = prompt("Item name:", item.name);
-    if(newName === null) return;
+    editingShoppingKey = key;
+    editingShoppingIsExtra = item.isExtra;
 
-    let newAmount = prompt(
-        "Amount (leave blank for none):",
-        item.amount > 0 ? formatAmount(item.amount) : ""
-    );
-    if(newAmount === null) return;
-
-    let newUnit = prompt(
-        "Unit (e.g. g, dl, st — leave blank if none):",
+    openShoppingItemModal(
+        "Edit Item",
+        item.name,
+        item.amount > 0 ? formatAmount(item.amount) : "",
         item.unit || ""
     );
-    if(newUnit === null) return;
 
-    let parsedAmount =
-        Number(String(newAmount).replace(",",".")) || 0;
+}
 
-    if(item.isExtra){
 
-        let id = key.replace("extra:","");
+function saveShoppingItem(){
+
+    let name =
+        document.getElementById("shoppingItemName").value.trim();
+
+    let amountRaw =
+        document.getElementById("shoppingItemAmount").value;
+
+    let unit =
+        document.getElementById("shoppingItemUnit").value.trim();
+
+    if(!name){
+        alert("Please enter an item name.");
+        return;
+    }
+
+    let amount =
+        Number(String(amountRaw).replace(",",".")) || 0;
+
+    if(editingShoppingKey === null){
+
+        // Brand new manually-added item
+        shoppingExtras.push({
+            id: "x" + Date.now() + Math.floor(Math.random() * 1000),
+            name: name,
+            amount: amount,
+            unit: unit
+        });
+
+        localStorage.setItem(
+            "foodflowShoppingExtras",
+            JSON.stringify(shoppingExtras)
+        );
+
+    }else if(editingShoppingIsExtra){
+
+        let id = editingShoppingKey.replace("extra:","");
         let extra = shoppingExtras.find(e => e.id === id);
 
         if(extra){
 
-            extra.name = newName.trim() || extra.name;
-            extra.amount = parsedAmount;
-            extra.unit = newUnit.trim();
+            extra.name = name;
+            extra.amount = amount;
+            extra.unit = unit;
 
         }
 
@@ -2837,10 +2966,10 @@ function editShoppingItem(key){
 
     }else{
 
-        shoppingOverrides[key] = {
-            name: newName.trim() || item.name,
-            amount: parsedAmount,
-            unit: newUnit.trim()
+        shoppingOverrides[editingShoppingKey] = {
+            name: name,
+            amount: amount,
+            unit: unit
         };
 
         localStorage.setItem(
@@ -2849,6 +2978,10 @@ function editShoppingItem(key){
         );
 
     }
+
+    editingShoppingKey = null;
+
+    closeShoppingItemModal();
 
     renderShoppingList();
 
@@ -2904,27 +3037,10 @@ function deleteShoppingItem(key){
 
 function openAddShoppingItem(){
 
-    let name = prompt("Item name:");
-    if(!name || !name.trim()) return;
+    editingShoppingKey = null;
+    editingShoppingIsExtra = true;
 
-    let amount = prompt("Amount (leave blank for none):", "");
-    let unit = prompt("Unit (e.g. g, dl, st — leave blank if none):", "");
-
-    let extra = {
-        id: "x" + Date.now() + Math.floor(Math.random() * 1000),
-        name: name.trim(),
-        amount: Number(String(amount).replace(",",".")) || 0,
-        unit: (unit || "").trim()
-    };
-
-    shoppingExtras.push(extra);
-
-    localStorage.setItem(
-        "foodflowShoppingExtras",
-        JSON.stringify(shoppingExtras)
-    );
-
-    renderShoppingList();
+    openShoppingItemModal("Add Item", "", "", "");
 
 }
 
@@ -2962,9 +3078,10 @@ function resetShoppingEdits(){
 
 // Units commonly used in Swedish recipes (like ica.se)
 const knownUnits = [
-    "g","kg","dl","msk","tsk","st","ml","l","cl",
+    "g","kg","dl","msk","tsk","st","ml","l","cl","liter",
     "förp","förpackning","burk","burkar","klyfta","klyftor",
-    "kruka","skiva","skivor","bunt","nypa","kryddmått","paket","påse"
+    "kruka","skiva","skivor","bunt","nypa","kryddmått","paket","påse",
+    "port","portion","portioner","personer"
 ];
 
 const fractionMap = {
@@ -3015,6 +3132,24 @@ function parseQuantityToken(token){
 function parseIngredientLine(line){
 
     line = line.trim();
+
+    if(!line){
+        return null;
+    }
+
+    // Drop conversion notes like "(3 st motsvarar ca 100 g)" — they're
+    // not part of the ingredient name, just a helpful aside.
+    line = line
+        .replace(/\([^)]*\)/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    // Drop leading "ca"/"cirka"/"about" so "ca 1 liter X" still reads
+    // its quantity as 1, not as text with no number at all.
+    line = line.replace(
+        /^(ca\.?|cirka|ungefär|about|approx\.?|approximately)\s+/i,
+        ""
+    );
 
     if(!line){
         return null;
@@ -3094,8 +3229,11 @@ function parsePastedRecipe(){
     let skipPattern =
         /^(ingredienser|gör så här|tillagning|instruktioner|steg|servering|tips)\b/i;
 
+    // Only matches a line that is JUST the serving count (e.g. "4
+    // portioner" on its own) — not "4 portioner pasta ...", where
+    // "portioner" is actually describing the pasta itself.
     let servingsLinePattern =
-        /^\d+\s*(portioner|port\.?|personer)\b/i;
+        /^\d+\s*(portioner|port\.?|personer)\.?$/i;
 
     let numberedStepPattern =
         /^\d+[.)]\s/;
@@ -3132,14 +3270,25 @@ function parsePastedRecipe(){
 
         let parsed = parseIngredientLine(line);
 
-        if(parsed && parsed.amount !== ""){
+        if(parsed){
 
             // Guard against instruction steps that happen to start
             // with a number, e.g. "1. Sätt ugnen på 200 grader..."
             let wordCount =
                 parsed.name.split(/\s+/).filter(w => w !== "").length;
 
-            if(wordCount > 0 && wordCount <= 6){
+            let hasQuantity = parsed.amount !== "";
+
+            let looksLikeIngredient =
+                (hasQuantity && wordCount > 0 && wordCount <= 6) ||
+                // No quantity given at all (e.g. "salt", "svartpeppar")
+                // — only keep it if it's short and not a full sentence.
+                (!hasQuantity &&
+                    wordCount > 0 &&
+                    wordCount <= 3 &&
+                    !line.trim().endsWith("."));
+
+            if(looksLikeIngredient){
                 ingredientLines.push(parsed);
             }
 
