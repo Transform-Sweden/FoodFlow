@@ -1095,8 +1095,18 @@ card.innerHTML = `
 
 if(meals[day]){
 
+    const mealOrder = {
+        "🍳 Frukost": 0,
+        "🥗 Lunch": 1,
+        "🍝 Middag": 2,
+        "☕ Fika": 3
+    };
 
-meals[day].forEach((meal,index)=>{
+    const sortedMeals = [...meals[day]].sort((a,b)=>
+        mealOrder[a.type] - mealOrder[b.type]
+    );
+
+    sortedMeals.forEach((meal)=>{
 
 
 let box =
