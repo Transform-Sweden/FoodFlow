@@ -428,7 +428,16 @@ grid-template-columns:1fr;
 
 <h2>🛒 Shopping List</h2>
 
-<p>Shopping list coming soon...</p>
+<p class="small">
+Automatically built from every recipe in your meal planner, scaled to the number of people you set for each meal.
+</p>
+
+<button onclick="renderShoppingList()">🔄 Refresh</button>
+<button onclick="clearCheckedItems()">🧹 Clear Checked</button>
+
+<div id="shoppingList"></div>
+
+<div id="shoppingNotes"></div>
 
 </div>
 
@@ -1002,6 +1011,10 @@ let selectedMeal = null;
 let selectedRecipe = null;
 
 let plannerRecipeIndex = null;
+
+let shoppingChecked = JSON.parse(
+    localStorage.getItem("foodflowShoppingChecked")
+) || {};
 
 
 // Load old FoodFlow v0.1 data
@@ -2341,6 +2354,195 @@ editRecipe(index);
 }    
 
 // =======================
+// SHOPPING LIST
+// =======================
+
+function generateShoppingList(){
+
+    let items = {};
+    let manualMeals = [];
+
+    days.forEach(day=>{
+
+        if(!meals[day]) return;
+
+        meals[day].forEach(meal=>{
+
+            let hasRecipe =
+                meal.recipe !== null &&
+                meal.recipe !== undefined &&
+                recipes[meal.recipe];
+
+            if(hasRecipe){
+
+                let recipe = recipes[meal.recipe];
+
+                // How the recipe was written vs. how many people
+                // this specific planner meal is feeding.
+                let servings = Number(recipe.servings) || 1;
+                let people = Number(meal.people) || servings;
+                let factor = people / servings;
+
+                recipe.ingredients.forEach(ingredient=>{
+
+                    let name = (ingredient.name || "").trim();
+
+                    if(name === ""){
+                        return;
+                    }
+
+                    let unit = (ingredient.unit || "").trim();
+                    let amount = Number(ingredient.amount) || 0;
+                    let scaled = amount * factor;
+
+                    // Same ingredient + same unit gets combined together
+                    let key =
+                        name.toLowerCase() + "|" + unit.toLowerCase();
+
+                    if(items[key]){
+
+                        items[key].amount += scaled;
+
+                    }else{
+
+                        items[key] = {
+                            name: name,
+                            unit: unit,
+                            amount: scaled
+                        };
+
+                    }
+
+                });
+
+            }else{
+
+                // Manual meals (typed by hand, no recipe attached)
+                // have no ingredients to pull from.
+                manualMeals.push(meal.name);
+
+            }
+
+        });
+
+    });
+
+    let list = Object.keys(items)
+        .map(key => ({ key, ...items[key] }))
+        .sort((a,b) => a.name.localeCompare(b.name));
+
+    return { list, manualMeals };
+
+}
+
+
+function formatAmount(num){
+
+    let rounded = Math.round(num * 100) / 100;
+
+    if(rounded % 1 === 0){
+        return rounded.toString();
+    }
+
+    return rounded
+        .toFixed(2)
+        .replace(/0+$/,"")
+        .replace(/\.$/,"");
+
+}
+
+
+function renderShoppingList(){
+
+    const { list, manualMeals } = generateShoppingList();
+
+    const container = document.getElementById("shoppingList");
+    const notes = document.getElementById("shoppingNotes");
+
+    if(list.length === 0){
+
+        container.innerHTML = `
+            <p class="small">
+            No ingredients yet — add some recipes to your meal planner and they'll show up here.
+            </p>
+        `;
+
+    }else{
+
+        container.innerHTML = list.map(item=>{
+
+            let checked = shoppingChecked[item.key] ? "checked" : "";
+
+            let amountText = item.amount > 0
+                ? `${formatAmount(item.amount)}${item.unit ? " " + item.unit : ""} `
+                : "";
+
+            let safeKey = item.key.replace(/'/g,"\\'");
+
+            return `
+                <div class="meal" style="display:flex;align-items:center;gap:10px;">
+                    <input
+                        type="checkbox"
+                        style="width:auto;margin:0;"
+                        ${checked}
+                        onchange="toggleShoppingItem('${safeKey}')"
+                    >
+                    <span style="${checked ? "opacity:.5;text-decoration:line-through;" : ""}">
+                        ${amountText}${item.name}
+                    </span>
+                </div>
+            `;
+
+        }).join("");
+
+    }
+
+    if(manualMeals.length > 0){
+
+        notes.innerHTML = `
+            <p class="small">
+            ℹ️ Not included: ${manualMeals.join(", ")} — these were typed in manually without a linked recipe, so there are no ingredients to pull from.
+            </p>
+        `;
+
+    }else{
+
+        notes.innerHTML = "";
+
+    }
+
+}
+
+
+function toggleShoppingItem(key){
+
+    shoppingChecked[key] = !shoppingChecked[key];
+
+    localStorage.setItem(
+        "foodflowShoppingChecked",
+        JSON.stringify(shoppingChecked)
+    );
+
+    renderShoppingList();
+
+}
+
+
+function clearCheckedItems(){
+
+    shoppingChecked = {};
+
+    localStorage.setItem(
+        "foodflowShoppingChecked",
+        JSON.stringify(shoppingChecked)
+    );
+
+    renderShoppingList();
+
+}
+
+
+// =======================
 // PAGE NAVIGATION
 // =======================
 
@@ -2388,6 +2590,8 @@ if(page==="shopping"){
 
 document.getElementById("shoppingPage")
 .style.display="block";
+
+renderShoppingList();
 
 }
 
