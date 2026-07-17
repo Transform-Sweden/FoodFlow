@@ -444,6 +444,8 @@ Automatically built from every recipe in your meal planner, scaled to the number
 
 <button onclick="renderShoppingList()">🔄 Refresh</button>
 <button onclick="clearCheckedItems()">🧹 Clear Checked</button>
+<button onclick="openAddShoppingItem()">➕ Add Item</button>
+<button onclick="resetShoppingEdits()">↩️ Undo My Edits</button>
 
 <div id="shoppingList"></div>
 
@@ -1069,6 +1071,26 @@ let plannerRecipeIndex = null;
 let shoppingChecked = JSON.parse(
     localStorage.getItem("foodflowShoppingChecked")
 ) || {};
+
+// Ingredient keys the person has hidden from the list (e.g. pantry
+// staples like salt/sugar they always have on hand).
+
+// Ingredients hidden from the auto-generated list (e.g. pantry
+// staples like salt or sugar the person already has).
+let shoppingRemoved = JSON.parse(
+    localStorage.getItem("foodflowShoppingRemoved")
+) || {};
+
+// Manual corrections to an auto-generated item's name/amount/unit.
+let shoppingOverrides = JSON.parse(
+    localStorage.getItem("foodflowShoppingOverrides")
+) || {};
+
+// Items added by hand that aren't tied to any recipe at all
+// (e.g. paper towels, dish soap).
+let shoppingExtras = JSON.parse(
+    localStorage.getItem("foodflowShoppingExtras")
+) || [];
 
 
 // Load old FoodFlow v0.1 data
@@ -2609,8 +2631,37 @@ function generateShoppingList(){
 
     });
 
+    // Hide ingredients the person has marked as already-have
+    // (e.g. pantry staples like salt or sugar).
+    Object.keys(shoppingRemoved).forEach(key=>{
+        delete items[key];
+    });
+
+    // Apply any manual corrections to amount/unit/name
+    Object.keys(shoppingOverrides).forEach(key=>{
+
+        if(items[key]){
+
+            items[key] = {
+                ...items[key],
+                ...shoppingOverrides[key]
+            };
+
+        }
+
+    });
+
     let list = Object.keys(items)
-        .map(key => ({ key, ...items[key] }))
+        .map(key => ({ key, ...items[key], isExtra:false }))
+        .concat(
+            shoppingExtras.map(extra => ({
+                key: "extra:" + extra.id,
+                name: extra.name,
+                unit: extra.unit,
+                amount: Number(extra.amount) || 0,
+                isExtra: true
+            }))
+        )
         .sort((a,b) => a.name.localeCompare(b.name));
 
     return { list, manualMeals };
@@ -2662,16 +2713,31 @@ function renderShoppingList(){
             let safeKey = item.key.replace(/'/g,"\\'");
 
             return `
-                <div class="meal" style="display:flex;align-items:center;gap:10px;">
+                <div class="meal" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
                     <input
                         type="checkbox"
                         style="width:auto;margin:0;"
                         ${checked}
                         onchange="toggleShoppingItem('${safeKey}')"
                     >
-                    <span style="${checked ? "opacity:.5;text-decoration:line-through;" : ""}">
+                    <span style="flex:1;${checked ? "opacity:.5;text-decoration:line-through;" : ""}">
                         ${amountText}${item.name}
+                        ${item.isExtra ? `<span class="small">(added by you)</span>` : ""}
                     </span>
+                    <button
+                        class="edit"
+                        style="margin:0;padding:6px 10px;font-size:13px;"
+                        onclick="editShoppingItem('${safeKey}')"
+                    >
+                        ✏️
+                    </button>
+                    <button
+                        class="delete"
+                        style="margin:0;padding:6px 10px;font-size:13px;"
+                        onclick="deleteShoppingItem('${safeKey}')"
+                    >
+                        🗑
+                    </button>
                 </div>
             `;
 
@@ -2717,6 +2783,172 @@ function clearCheckedItems(){
     localStorage.setItem(
         "foodflowShoppingChecked",
         JSON.stringify(shoppingChecked)
+    );
+
+    renderShoppingList();
+
+}
+
+
+function editShoppingItem(key){
+
+    const { list } = generateShoppingList();
+    let item = list.find(i => i.key === key);
+
+    if(!item){
+        return;
+    }
+
+    let newName = prompt("Item name:", item.name);
+    if(newName === null) return;
+
+    let newAmount = prompt(
+        "Amount (leave blank for none):",
+        item.amount > 0 ? formatAmount(item.amount) : ""
+    );
+    if(newAmount === null) return;
+
+    let newUnit = prompt(
+        "Unit (e.g. g, dl, st — leave blank if none):",
+        item.unit || ""
+    );
+    if(newUnit === null) return;
+
+    let parsedAmount =
+        Number(String(newAmount).replace(",",".")) || 0;
+
+    if(item.isExtra){
+
+        let id = key.replace("extra:","");
+        let extra = shoppingExtras.find(e => e.id === id);
+
+        if(extra){
+
+            extra.name = newName.trim() || extra.name;
+            extra.amount = parsedAmount;
+            extra.unit = newUnit.trim();
+
+        }
+
+        localStorage.setItem(
+            "foodflowShoppingExtras",
+            JSON.stringify(shoppingExtras)
+        );
+
+    }else{
+
+        shoppingOverrides[key] = {
+            name: newName.trim() || item.name,
+            amount: parsedAmount,
+            unit: newUnit.trim()
+        };
+
+        localStorage.setItem(
+            "foodflowShoppingOverrides",
+            JSON.stringify(shoppingOverrides)
+        );
+
+    }
+
+    renderShoppingList();
+
+}
+
+
+function deleteShoppingItem(key){
+
+    if(!confirm("Remove this item from the shopping list?")){
+        return;
+    }
+
+    const { list } = generateShoppingList();
+    let item = list.find(i => i.key === key);
+
+    if(item && item.isExtra){
+
+        let id = key.replace("extra:","");
+
+        shoppingExtras =
+            shoppingExtras.filter(e => e.id !== id);
+
+        localStorage.setItem(
+            "foodflowShoppingExtras",
+            JSON.stringify(shoppingExtras)
+        );
+
+    }else{
+
+        // Persist the removal so it stays hidden next time the
+        // list is regenerated — handy for pantry staples.
+        shoppingRemoved[key] = true;
+
+        // Any earlier manual edit for this key no longer applies
+        delete shoppingOverrides[key];
+
+        localStorage.setItem(
+            "foodflowShoppingRemoved",
+            JSON.stringify(shoppingRemoved)
+        );
+
+        localStorage.setItem(
+            "foodflowShoppingOverrides",
+            JSON.stringify(shoppingOverrides)
+        );
+
+    }
+
+    renderShoppingList();
+
+}
+
+
+function openAddShoppingItem(){
+
+    let name = prompt("Item name:");
+    if(!name || !name.trim()) return;
+
+    let amount = prompt("Amount (leave blank for none):", "");
+    let unit = prompt("Unit (e.g. g, dl, st — leave blank if none):", "");
+
+    let extra = {
+        id: "x" + Date.now() + Math.floor(Math.random() * 1000),
+        name: name.trim(),
+        amount: Number(String(amount).replace(",",".")) || 0,
+        unit: (unit || "").trim()
+    };
+
+    shoppingExtras.push(extra);
+
+    localStorage.setItem(
+        "foodflowShoppingExtras",
+        JSON.stringify(shoppingExtras)
+    );
+
+    renderShoppingList();
+
+}
+
+
+function resetShoppingEdits(){
+
+    if(!confirm(
+        "This brings back any removed or edited auto-generated " +
+        "items. Items you added by hand will stay. Continue?"
+    )){
+        return;
+    }
+
+    shoppingRemoved = {};
+    shoppingOverrides = {};
+
+    localStorage.setItem(
+        "foodflowShoppingRemoved",
+        JSON.stringify(shoppingRemoved)
+    );
+
+    localStorage.setItem(
+        "foodflowShoppingOverrides",
+        JSON.stringify(shoppingOverrides)
     );
 
     renderShoppingList();
