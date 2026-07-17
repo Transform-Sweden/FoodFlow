@@ -1933,8 +1933,14 @@ document.getElementById("recipeList");
 
 list.innerHTML = "";
 
+let search =
+document.getElementById("recipeSearchPage").value.toLowerCase();
 
 recipes.forEach((recipe,index)=>{
+
+if(!recipe.name.toLowerCase().includes(search)){
+    return;
+}
 
 
 let card =
