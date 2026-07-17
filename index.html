@@ -1056,7 +1056,12 @@ localStorage.getItem("foodflowMeals")
 || {};
 
 
-
+const mealOrder = {
+    "🍳 Frukost": 0,
+    "🥗 Lunch": 1,
+    "🍝 Middag": 2,
+    "☕ Fika": 3
+};
 
 
 function render(){
@@ -1095,114 +1100,89 @@ card.innerHTML = `
 
 if(meals[day]){
 
-    const mealOrder = {
-        "🍳 Frukost": 0,
-        "🥗 Lunch": 1,
-        "🍝 Middag": 2,
-        "☕ Fika": 3
-    };
+    // Keep each meal's original index (needed for edit/delete)
+    // while sorting the displayed order by meal type.
+    let sortedMeals = meals[day]
+        .map((meal, originalIndex) => ({ meal, originalIndex }))
+        .sort((a, b) =>
+            (mealOrder[a.meal.type] ?? 99) - (mealOrder[b.meal.type] ?? 99)
+        );
 
-<button class="edit"
-onclick="editMeal('${day}',${originalIndex})">
+    sortedMeals.forEach(({ meal, originalIndex }) => {
 
-✏️ Edit
-
-</button>
-
-<button class="delete"
-onclick="deleteMeal('${day}',${originalIndex})">
-
-🗑 Delete
-
-</button>
-
-let box =
-document.createElement("div");
+        let box =
+        document.createElement("div");
 
 
-box.className="meal";
+        box.className="meal";
 
 
-box.innerHTML = `
+        box.innerHTML = `
 
-<div class="meal-title">
+        <div class="meal-title">
 
-${meal.type}
+        ${meal.type}
 
-</div>
-
-
-<strong>
-${meal.name}
-</strong>
+        </div>
 
 
-<div class="small">
-👥 ${meal.people} people
-</div>
-
-<button onclick="toggleMeal('${day}',${originalIndex})">
-
-▼ View
-
-</button>
-
-${
-meal.expanded
-?
-
-`
-
-${meal.recipe !== null && meal.recipe !== undefined ?
-
-`
-<button onclick="openMealRecipe(${meal.recipe})">
-📖 Open Recipe
-</button>
-`
-
-: ""}
-
-<button class="edit"
-onclick="editMeal('${day}',${originalIndex})">
-✏️ Edit
-</button>
-
-<button class="delete"
-onclick="deleteMeal('${day}',${originalIndex})">
-🗑 Delete
-</button>
-
-`
-
-: ""
-
-}
-
-`;
+        <strong>
+        ${meal.name}
+        </strong>
 
 
+        <div class="small">
+        👥 ${meal.people} people
+        </div>
 
-card.appendChild(box);
+        <button onclick="toggleMeal('${day}',${originalIndex})">
+
+        ${meal.expanded ? "▲ Hide" : "▼ View"}
+
+        </button>
+
+        ${
+        meal.expanded
+        ?
+
+        `
+
+        ${meal.recipe !== null && meal.recipe !== undefined ?
+
+        `
+        <button onclick="openMealRecipe(${meal.recipe})">
+        📖 Open Recipe
+        </button>
+        `
+
+        : ""}
+
+        <button class="edit"
+        onclick="editMeal('${day}',${originalIndex})">
+        ✏️ Edit
+        </button>
+
+        <button class="delete"
+        onclick="deleteMeal('${day}',${originalIndex})">
+        🗑 Delete
+        </button>
+
+        `
+
+        : ""
+
+        }
+
+        `;
 
 
-});
+        card.appendChild(box);
+
+
+    });
 
 
 }
-
-function toggleMeal(day,index){
-
-    if(!meals[day][index].expanded){
-        meals[day][index].expanded = true;
-    }else{
-        meals[day][index].expanded = false;
-    }
-
-    saveData();
-    render();
-
-}    
 
 
 week.appendChild(card);
@@ -1212,6 +1192,16 @@ week.appendChild(card);
 
 
 }
+
+
+function toggleMeal(day,index){
+
+    meals[day][index].expanded = !meals[day][index].expanded;
+
+    saveData();
+    render();
+
+}    
 
 
 
@@ -1695,28 +1685,12 @@ document.getElementById("recipePeople").value
 ingredients:
 getIngredientsFromRows(),
 
-expanded:false
+expanded:false,
+
+favorite:false
 
 };
 
-recipes = recipes.map(recipe=>{
-
-if(!recipe.servings){
-
-recipe.servings =
-recipe.people || 4;
-
-}
-
-return recipe;
-
-});
-
-
-localStorage.setItem(
-"foodflowRecipes",
-JSON.stringify(recipes)
-);    
 
 if(recipe.name===""){
 
