@@ -343,8 +343,80 @@ grid-template-columns:1fr;
 }
 
 
+/* PRINT (shopping list only) */
+
+#printArea {
+
+display:none;
+
+}
+
+
+@media print {
+
+body * {
+
+visibility:hidden;
+
+}
+
+#printArea,
+#printArea * {
+
+visibility:visible;
+
+}
+
+#printArea {
+
+display:block;
+
+position:absolute;
+
+left:0;
+
+top:0;
+
+width:100%;
+
+color:#000;
+
+background:#fff;
+
+}
+
+#printArea h1 {
+
+font-size:24px;
+
+margin-bottom:4px;
+
+}
+
+#printArea .print-item {
+
+padding:8px 0;
+
+border-bottom:1px solid #ccc;
+
+font-size:15px;
+
+}
+
+#printArea .print-checked {
+
+text-decoration:line-through;
+
+opacity:.6;
+
+}
+
+}
+
+
 
 </style>
+
 
 
 </head>
@@ -446,6 +518,7 @@ Automatically built from every recipe in your meal planner, scaled to the number
 <button onclick="clearCheckedItems()">🧹 Clear Checked</button>
 <button onclick="openAddShoppingItem()">➕ Add Item</button>
 <button onclick="resetShoppingEdits()">↩️ Undo My Edits</button>
+<button onclick="printShoppingList()">🖨️ Print / Save as PDF</button>
 
 <div id="shoppingList"></div>
 
@@ -533,6 +606,30 @@ Manage Categories
 </button>
 
 
+<h3>
+💾 Backup
+</h3>
+
+<p class="small">
+Your data lives only in this browser. Export it now and then to keep a safe copy, or to move it to another device.
+</p>
+
+<button onclick="exportData()">
+⬇️ Export Data
+</button>
+
+<button onclick="triggerImport()">
+⬆️ Import Data
+</button>
+
+<input
+type="file"
+id="importFileInput"
+accept="application/json"
+style="display:none;"
+onchange="importData(event)"
+>
+
 
 <br><br>
 
@@ -565,6 +662,12 @@ Close
 
 </h2>
 
+
+<p class="small">
+Your current categories:
+</p>
+
+<div id="categoryListDisplay"></div>
 
 
 <p>
@@ -643,6 +746,50 @@ Save
 
 Close
 
+</button>
+
+
+</div>
+
+
+</div>
+
+<!-- COPY DAY WINDOW -->
+
+<div class="modal" id="copyDayModal">
+
+
+<div class="modal-box">
+
+
+<h2>
+📋 Copy Day
+</h2>
+
+
+<p class="small">
+Copy all meals from <strong id="copyDaySourceLabel"></strong> into:
+</p>
+
+
+<div id="copyDayTargets"></div>
+
+
+<p class="small">
+This adds to whatever's already planned on those days — it won't remove anything.
+</p>
+
+
+<br>
+
+
+<button onclick="copyDayToTargets()">
+Copy
+</button>
+
+
+<button onclick="closeCopyDayModal()">
+Cancel
 </button>
 
 
@@ -1211,12 +1358,50 @@ localStorage.getItem("foodflowMeals")
 || {};
 
 
-const mealOrder = {
-    "🍳 Frukost": 0,
-    "🥗 Lunch": 1,
-    "🍝 Middag": 2,
-    "☕ Fika": 3
-};
+// Meal type categories — the built-in four, plus any custom ones
+// added through Settings -> Manage Categories.
+let mealCategories = JSON.parse(
+    localStorage.getItem("foodflowCategories")
+) || ["🍳 Frukost","🥗 Lunch","🍝 Middag","☕ Fika"];
+
+
+function getMealOrder(){
+
+    let order = {};
+
+    mealCategories.forEach((cat, index)=>{
+        order[cat] = index;
+    });
+
+    return order;
+
+}
+
+
+function renderMealTypeOptions(){
+
+    let optionsHtml = mealCategories
+        .map(cat => `<option>${cat}</option>`)
+        .join("");
+
+    let mealTypeSelect = document.getElementById("mealType");
+    let plannerTypeSelect = document.getElementById("plannerRecipeType");
+
+    [mealTypeSelect, plannerTypeSelect].forEach(select=>{
+
+        if(!select) return;
+
+        let current = select.value;
+
+        select.innerHTML = optionsHtml;
+
+        if(mealCategories.includes(current)){
+            select.value = current;
+        }
+
+    });
+
+}
 
 
 function render(){
@@ -1228,6 +1413,8 @@ document.getElementById("week");
 
 week.innerHTML="";
 
+
+let mealOrder = getMealOrder();
 
 
 days.forEach(day=>{
@@ -1247,6 +1434,10 @@ card.innerHTML = `
 
 <button onclick="openModal('${day}')">
 ➕ Add
+</button>
+
+<button onclick="openCopyDayModal('${day}')">
+📋 Copy Day
 </button>
 
 `;
@@ -1578,7 +1769,89 @@ render();
 }
 
 
+// =======================
+// COPY DAY
+// =======================
 
+let copyDaySource = null;
+
+
+function openCopyDayModal(day){
+
+    if(!meals[day] || meals[day].length === 0){
+
+        alert("There are no meals on " + day + " yet to copy.");
+        return;
+
+    }
+
+    copyDaySource = day;
+
+    document.getElementById("copyDaySourceLabel")
+    .innerText = day;
+
+    let targets = days.filter(d => d !== day);
+
+    document.getElementById("copyDayTargets").innerHTML =
+        targets.map(d => `
+            <label style="display:flex;align-items:center;gap:8px;font-weight:normal;">
+                <input
+                    type="checkbox"
+                    class="copyDayTarget"
+                    value="${d}"
+                    style="width:auto;margin:0;"
+                >
+                ${d}
+            </label>
+        `).join("");
+
+    document.getElementById("copyDayModal")
+    .style.display = "flex";
+
+}
+
+
+function closeCopyDayModal(){
+
+    document.getElementById("copyDayModal")
+    .style.display = "none";
+
+}
+
+
+function copyDayToTargets(){
+
+    let checkboxes =
+        document.querySelectorAll(".copyDayTarget:checked");
+
+    if(checkboxes.length === 0){
+
+        alert("Pick at least one day to copy into.");
+        return;
+
+    }
+
+    checkboxes.forEach(checkbox=>{
+
+        let targetDay = checkbox.value;
+
+        if(!meals[targetDay]){
+            meals[targetDay] = [];
+        }
+
+        meals[copyDaySource].forEach(meal=>{
+            meals[targetDay].push({ ...meal, expanded:false });
+        });
+
+    });
+
+    saveData();
+
+    closeCopyDayModal();
+
+    render();
+
+}
 
 
 
@@ -1710,12 +1983,181 @@ lang === "en"
 }
 
 
+// =======================
+// BACKUP (EXPORT / IMPORT)
+// =======================
+
+// Every localStorage key FoodFlow uses, gathered into one file so it
+// can be saved elsewhere or moved to a different device/browser.
+const foodflowStorageKeys = [
+    "foodflowMeals",
+    "foodflowRecipes",
+    "foodflowTheme",
+    "foodflowLanguage",
+    "foodflowPage",
+    "foodflowCategories",
+    "foodflowShoppingChecked",
+    "foodflowShoppingRemoved",
+    "foodflowShoppingOverrides",
+    "foodflowShoppingExtras"
+];
+
+
+function exportData(){
+
+    let data = {};
+
+    foodflowStorageKeys.forEach(key=>{
+        data[key] = localStorage.getItem(key);
+    });
+
+    let blob = new Blob(
+        [JSON.stringify(data, null, 2)],
+        { type: "application/json" }
+    );
+
+    let url = URL.createObjectURL(blob);
+
+    let a = document.createElement("a");
+    a.href = url;
+    a.download =
+        "foodflow-backup-" +
+        new Date().toISOString().slice(0,10) +
+        ".json";
+
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    URL.revokeObjectURL(url);
+
+}
+
+
+function triggerImport(){
+
+    document.getElementById("importFileInput").click();
+
+}
+
+
+function importData(event){
+
+    let file = event.target.files[0];
+
+    if(!file){
+        return;
+    }
+
+    if(!confirm(
+        "This will replace your current recipes, meal planner, " +
+        "settings, and shopping list with what's in this backup " +
+        "file. Continue?"
+    )){
+
+        event.target.value = "";
+        return;
+
+    }
+
+    let reader = new FileReader();
+
+    reader.onload = function(e){
+
+        try{
+
+            let data = JSON.parse(e.target.result);
+
+            foodflowStorageKeys.forEach(key=>{
+
+                if(data[key] !== null && data[key] !== undefined){
+                    localStorage.setItem(key, data[key]);
+                }
+
+            });
+
+            alert("Import complete! The app will now reload.");
+
+            location.reload();
+
+        }catch(err){
+
+            alert(
+                "Couldn't read that file — make sure it's a " +
+                "FoodFlow backup .json file."
+            );
+
+        }
+
+    };
+
+    reader.readAsText(file);
+
+    event.target.value = "";
+
+}
 
 
 function openCategoryManager(){
 
 document.getElementById("categoryModal")
 .style.display="flex";
+
+renderCategoryList();
+
+}
+
+
+function renderCategoryList(){
+
+    let container = document.getElementById("categoryListDisplay");
+
+    if(!container) return;
+
+    container.innerHTML = mealCategories.map((cat, index) => `
+
+        <div class="meal" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;">
+            <span>${cat}</span>
+            <button
+                class="delete"
+                style="margin:0;padding:6px 10px;font-size:13px;"
+                onclick="deleteCategory(${index})"
+            >
+                🗑
+            </button>
+        </div>
+
+    `).join("");
+
+}
+
+
+function deleteCategory(index){
+
+    if(mealCategories.length <= 1){
+
+        alert("You need at least one category.");
+        return;
+
+    }
+
+    if(!confirm(
+        "Delete this category? Meals already using it will keep " +
+        "showing it, but it won't be selectable for new meals."
+    )){
+        return;
+    }
+
+    mealCategories.splice(index, 1);
+
+    localStorage.setItem(
+        "foodflowCategories",
+        JSON.stringify(mealCategories)
+    );
+
+    renderMealTypeOptions();
+    renderCategoryList();
+    render();
 
 }
 
@@ -1742,11 +2184,11 @@ function saveCategory(){
 
 
 let name =
-document.getElementById("categoryName").value;
+document.getElementById("categoryName").value.trim();
 
 
 let emoji =
-document.getElementById("categoryEmoji").value;
+document.getElementById("categoryEmoji").value.trim() || "🍽️";
 
 
 
@@ -1759,15 +2201,34 @@ return;
 }
 
 
+let newCategory = emoji + " " + name;
+
+if(mealCategories.includes(newCategory)){
+
+    alert("That category already exists.");
+    return;
+
+}
+
+mealCategories.push(newCategory);
+
+localStorage.setItem(
+    "foodflowCategories",
+    JSON.stringify(mealCategories)
+);
+
+renderMealTypeOptions();
+renderCategoryList();
+
+
+document.getElementById("categoryName").value = "";
+document.getElementById("categoryEmoji").value = "";
+
 
 alert(
 "Category saved: "
 +
-emoji
-+
-" "
-+
-name
+newCategory
 );
 
 
@@ -2523,6 +2984,11 @@ const ingredientTranslations = {
     "lime":"lime",
     "äpple":"apple", "äpplen":"apple", "apple":"apple", "apples":"apple",
     "banan":"banana", "bananer":"banana", "banana":"banana", "bananas":"banana",
+    "kantareller":"chanterelle mushroom", "kantarell":"chanterelle mushroom",
+    "chanterelle":"chanterelle mushroom", "chanterelles":"chanterelle mushroom",
+    "schalottenlök":"shallot", "schalottenlökar":"shallot",
+    "bananschalottenlök":"shallot", "bananschalottenlökar":"shallot",
+    "shallot":"shallot", "shallots":"shallot",
 
     // dairy & eggs
     "mjölk":"milk", "milk":"milk",
@@ -2530,6 +2996,7 @@ const ingredientTranslations = {
     "smör":"butter", "butter":"butter",
     "ägg":"egg", "egg":"egg", "eggs":"egg",
     "ost":"cheese", "cheese":"cheese",
+    "parmesan":"parmesan", "riven parmesan":"parmesan",
     "yoghurt":"yogurt", "yogurt":"yogurt",
     "crème fraiche":"creme fraiche", "creme fraiche":"creme fraiche", "crème fraîche":"creme fraiche",
 
@@ -2549,6 +3016,8 @@ const ingredientTranslations = {
     "socker":"sugar", "sugar":"sugar",
     "salt":"salt",
     "peppar":"pepper", "pepper":"pepper",
+    "svartpeppar":"pepper", "vitpeppar":"pepper",
+    "black pepper":"pepper", "white pepper":"pepper",
     "ris":"rice", "rice":"rice",
     "pasta":"pasta",
     "spaghetti":"spaghetti",
@@ -2562,6 +3031,8 @@ const ingredientTranslations = {
     "majonnäs":"mayonnaise", "mayonnaise":"mayonnaise", "mayo":"mayonnaise",
     "ströbröd":"breadcrumbs", "breadcrumbs":"breadcrumbs",
     "bröd":"bread", "bread":"bread",
+    "vitt vin":"white wine", "white wine":"white wine",
+    "vitt matlagningsvin":"white wine", "matlagningsvin":"white wine",
 
     // herbs & spices
     "persilja":"parsley", "parsley":"parsley",
@@ -2580,13 +3051,98 @@ const ingredientStopwords = [
     "gul","gult","gula","röd","rött","röda","vit","vitt","vita",
     "grön","grönt","gröna","färsk","färskt","färska","torkad","torkat","torkade",
     "stor","stort","stora","liten","litet","små","hel","helt","hela",
-    "fresh","dried","yellow","red","white","green","large","small","whole","big","little"
+    "riven","rivet","rivna","hackad","hackat","hackade",
+    "fresh","dried","yellow","red","white","green","large","small","whole","big","little",
+    "grated","shredded","chopped","diced","minced"
 ];
 
 // Every canonical value used above, so we know when to show a
 // translated display name vs. keep the ingredient's original spelling.
 const canonicalIngredientNames =
     new Set(Object.values(ingredientTranslations));
+
+
+// Which store-aisle-style section each canonical ingredient belongs
+// to, used to group the shopping list. Anything not listed here
+// falls into "Other".
+const ingredientCategories = {
+
+    "onion":"Produce", "red onion":"Produce", "garlic":"Produce",
+    "carrot":"Produce", "potato":"Produce", "tomato":"Produce",
+    "bell pepper":"Produce", "leek":"Produce", "celery":"Produce",
+    "mushroom":"Produce", "chanterelle mushroom":"Produce", "shallot":"Produce",
+    "broccoli":"Produce", "cauliflower":"Produce", "lettuce":"Produce",
+    "cucumber":"Produce", "lemon":"Produce", "lime":"Produce",
+    "apple":"Produce", "banana":"Produce", "parsley":"Produce",
+    "basil":"Produce",
+
+    "milk":"Dairy & Eggs", "cream":"Dairy & Eggs", "butter":"Dairy & Eggs",
+    "egg":"Dairy & Eggs", "cheese":"Dairy & Eggs", "yogurt":"Dairy & Eggs",
+    "creme fraiche":"Dairy & Eggs", "parmesan":"Dairy & Eggs",
+
+    "ground beef":"Meat & Fish", "ground pork":"Meat & Fish",
+    "chicken breast":"Meat & Fish", "chicken":"Meat & Fish",
+    "pork chop":"Meat & Fish", "bacon":"Meat & Fish",
+    "salmon":"Meat & Fish", "cod":"Meat & Fish", "shrimp":"Meat & Fish",
+
+    "flour":"Pantry", "sugar":"Pantry", "salt":"Pantry", "pepper":"Pantry",
+    "rice":"Pantry", "pasta":"Pantry", "spaghetti":"Pantry", "noodles":"Pantry",
+    "broth":"Pantry", "oil":"Pantry", "olive oil":"Pantry", "vinegar":"Pantry",
+    "mustard":"Pantry", "ketchup":"Pantry", "mayonnaise":"Pantry",
+    "breadcrumbs":"Pantry", "bread":"Pantry", "white wine":"Pantry",
+
+    "thyme":"Herbs & Spices", "oregano":"Herbs & Spices", "curry":"Herbs & Spices",
+    "cinnamon":"Herbs & Spices", "vanilla":"Herbs & Spices"
+
+};
+
+// The order categories appear in on the shopping list.
+const categoryOrder = [
+    "Produce", "Dairy & Eggs", "Meat & Fish",
+    "Pantry", "Herbs & Spices", "Other"
+];
+
+const categoryIcons = {
+    "Produce":"🥕",
+    "Dairy & Eggs":"🥛",
+    "Meat & Fish":"🥩",
+    "Pantry":"🧂",
+    "Herbs & Spices":"🌿",
+    "Other":"🛒"
+};
+
+
+function getIngredientCategory(normalizedName){
+    return ingredientCategories[normalizedName] || "Other";
+}
+
+
+// Converts an amount up to a bigger unit once it gets unwieldy —
+// e.g. 1200 g -> 1.2 kg, 12 dl -> 1.2 l — so the list stays readable.
+const unitConversions = {
+    "g": { threshold: 1000, factor: 1000, to: "kg" },
+    "ml": { threshold: 1000, factor: 1000, to: "l" },
+    "dl": { threshold: 10, factor: 10, to: "l" },
+    "cl": { threshold: 100, factor: 100, to: "l" }
+};
+
+
+function simplifyUnit(amount, unit){
+
+    let conversion = unitConversions[(unit || "").toLowerCase()];
+
+    if(conversion && amount >= conversion.threshold){
+
+        return {
+            amount: amount / conversion.factor,
+            unit: conversion.to
+        };
+
+    }
+
+    return { amount, unit };
+
+}
 
 
 function normalizeIngredientName(name){
@@ -2678,7 +3234,8 @@ function generateShoppingList(){
                         items[key] = {
                             name: displayName,
                             unit: unit,
-                            amount: scaled
+                            amount: scaled,
+                            category: getIngredientCategory(normalizedName)
                         };
 
                     }
@@ -2703,6 +3260,22 @@ function generateShoppingList(){
         delete items[key];
     });
 
+    // Round up to a bigger, cleaner unit where it makes sense
+    // (1200 g -> 1.2 kg), but only for items the person hasn't
+    // manually corrected themselves.
+    Object.keys(items).forEach(key=>{
+
+        if(shoppingOverrides[key]){
+            return;
+        }
+
+        let simplified = simplifyUnit(items[key].amount, items[key].unit);
+
+        items[key].amount = simplified.amount;
+        items[key].unit = simplified.unit;
+
+    });
+
     // Apply any manual corrections to amount/unit/name
     Object.keys(shoppingOverrides).forEach(key=>{
 
@@ -2720,13 +3293,20 @@ function generateShoppingList(){
     let list = Object.keys(items)
         .map(key => ({ key, ...items[key], isExtra:false }))
         .concat(
-            shoppingExtras.map(extra => ({
-                key: "extra:" + extra.id,
-                name: extra.name,
-                unit: extra.unit,
-                amount: Number(extra.amount) || 0,
-                isExtra: true
-            }))
+            shoppingExtras.map(extra => {
+
+                let normalizedName = normalizeIngredientName(extra.name);
+
+                return {
+                    key: "extra:" + extra.id,
+                    name: extra.name,
+                    unit: extra.unit,
+                    amount: Number(extra.amount) || 0,
+                    category: getIngredientCategory(normalizedName),
+                    isExtra: true
+                };
+
+            })
         )
         .sort((a,b) => a.name.localeCompare(b.name));
 
@@ -2751,6 +3331,69 @@ function formatAmount(num){
 }
 
 
+function renderShoppingItemRow(item){
+
+    let checked = shoppingChecked[item.key] ? "checked" : "";
+
+    let amountText = item.amount > 0
+        ? `${formatAmount(item.amount)}${item.unit ? " " + item.unit : ""} `
+        : "";
+
+    let safeKey = item.key.replace(/'/g,"\\'");
+
+    return `
+        <div class="meal" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <input
+                type="checkbox"
+                style="width:auto;margin:0;"
+                ${checked}
+                onchange="toggleShoppingItem('${safeKey}')"
+            >
+            <span style="flex:1;${checked ? "opacity:.5;text-decoration:line-through;" : ""}">
+                ${amountText}${item.name}
+                ${item.isExtra ? `<span class="small">(added by you)</span>` : ""}
+            </span>
+            <button
+                class="edit"
+                style="margin:0;padding:6px 10px;font-size:13px;"
+                onclick="editShoppingItem('${safeKey}')"
+            >
+                ✏️
+            </button>
+            <button
+                class="delete"
+                style="margin:0;padding:6px 10px;font-size:13px;"
+                onclick="deleteShoppingItem('${safeKey}')"
+            >
+                🗑
+            </button>
+        </div>
+    `;
+
+}
+
+
+function groupItemsByCategory(list){
+
+    let groups = {};
+
+    list.forEach(item=>{
+
+        let cat = item.category || "Other";
+
+        if(!groups[cat]){
+            groups[cat] = [];
+        }
+
+        groups[cat].push(item);
+
+    });
+
+    return groups;
+
+}
+
+
 function renderShoppingList(){
 
     const { list, manualMeals } = generateShoppingList();
@@ -2768,46 +3411,17 @@ function renderShoppingList(){
 
     }else{
 
-        container.innerHTML = list.map(item=>{
+        let groups = groupItemsByCategory(list);
 
-            let checked = shoppingChecked[item.key] ? "checked" : "";
-
-            let amountText = item.amount > 0
-                ? `${formatAmount(item.amount)}${item.unit ? " " + item.unit : ""} `
-                : "";
-
-            let safeKey = item.key.replace(/'/g,"\\'");
-
-            return `
-                <div class="meal" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                    <input
-                        type="checkbox"
-                        style="width:auto;margin:0;"
-                        ${checked}
-                        onchange="toggleShoppingItem('${safeKey}')"
-                    >
-                    <span style="flex:1;${checked ? "opacity:.5;text-decoration:line-through;" : ""}">
-                        ${amountText}${item.name}
-                        ${item.isExtra ? `<span class="small">(added by you)</span>` : ""}
-                    </span>
-                    <button
-                        class="edit"
-                        style="margin:0;padding:6px 10px;font-size:13px;"
-                        onclick="editShoppingItem('${safeKey}')"
-                    >
-                        ✏️
-                    </button>
-                    <button
-                        class="delete"
-                        style="margin:0;padding:6px 10px;font-size:13px;"
-                        onclick="deleteShoppingItem('${safeKey}')"
-                    >
-                        🗑
-                    </button>
-                </div>
-            `;
-
-        }).join("");
+        container.innerHTML = categoryOrder
+            .filter(cat => groups[cat] && groups[cat].length > 0)
+            .map(cat => `
+                <h3 style="margin:20px 0 8px;">
+                    ${categoryIcons[cat] || ""} ${cat}
+                </h3>
+                ${groups[cat].map(renderShoppingItemRow).join("")}
+            `)
+            .join("");
 
     }
 
@@ -3068,6 +3682,64 @@ function resetShoppingEdits(){
     );
 
     renderShoppingList();
+
+}
+
+
+function printShoppingList(){
+
+    const { list } = generateShoppingList();
+
+    let dateStr = new Date().toLocaleDateString();
+
+    let itemsHtml;
+
+    if(list.length === 0){
+
+        itemsHtml = `<p>No items on the list.</p>`;
+
+    }else{
+
+        let groups = groupItemsByCategory(list);
+
+        itemsHtml = categoryOrder
+            .filter(cat => groups[cat] && groups[cat].length > 0)
+            .map(cat => {
+
+                let rows = groups[cat].map(item=>{
+
+                    let amountText = item.amount > 0
+                        ? `${formatAmount(item.amount)}${item.unit ? " " + item.unit : ""} — `
+                        : "";
+
+                    let checked = shoppingChecked[item.key] ? "print-checked" : "";
+                    let box = shoppingChecked[item.key] ? "☑" : "☐";
+
+                    return `
+                        <div class="print-item ${checked}">
+                            ${box} &nbsp; ${amountText}${item.name}
+                        </div>
+                    `;
+
+                }).join("");
+
+                return `
+                    <h3>${categoryIcons[cat] || ""} ${cat}</h3>
+                    ${rows}
+                `;
+
+            })
+            .join("");
+
+    }
+
+    document.getElementById("printArea").innerHTML = `
+        <h1>🍃 FoodFlow — Shopping List</h1>
+        <p style="color:#555;margin-top:0;">${dateStr}</p>
+        ${itemsHtml}
+    `;
+
+    window.print();
 
 }
 
@@ -3400,6 +4072,8 @@ localStorage.getItem("foodflowPage")
 
 showPage(savedPage);
 
+renderMealTypeOptions();
+
 render();
 
 renderRecipes();
@@ -3407,6 +4081,8 @@ renderRecipes();
 
 </script>
 
+
+<div id="printArea"></div>
 
 </body>
 
