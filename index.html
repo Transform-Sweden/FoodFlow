@@ -1354,7 +1354,33 @@ migrateOldData();
 // MULTI-WEEK PLANNING
 // =======================
 
-// Returns the ISO date (YYYY-MM-DD) of the Monday that starts the
+// Formats a Date as "YYYY-MM-DD" using its LOCAL date fields —
+// unlike toISOString(), this can't shift the day backward for
+// timezones ahead of UTC.
+function formatDateKey(date){
+
+    let year = date.getFullYear();
+    let month = String(date.getMonth() + 1).padStart(2, "0");
+    let day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+
+}
+
+
+// Parses a "YYYY-MM-DD" key as a LOCAL date. Using `new Date("YYYY-MM-DD")`
+// directly would parse it as UTC midnight instead, which combined with
+// local-time methods elsewhere caused week navigation to get stuck.
+function parseDateKey(key){
+
+    let [year, month, day] = key.split("-").map(Number);
+
+    return new Date(year, month - 1, day);
+
+}
+
+
+// Returns the date key (YYYY-MM-DD) of the Monday that starts the
 // week containing the given date — used as each week's storage key.
 function getMondayKey(date){
 
@@ -1365,7 +1391,7 @@ function getMondayKey(date){
     d.setDate(d.getDate() + diff);
     d.setHours(0,0,0,0);
 
-    return d.toISOString().slice(0,10);
+    return formatDateKey(d);
 
 }
 
@@ -1404,6 +1430,68 @@ if(weeks === null){
     localStorage.setItem("foodflowWeeks", JSON.stringify(weeks));
 
 }
+
+// One-time repair: an earlier version of week-key math could save a
+// week under a date one day off from the actual Monday for timezones
+// ahead of UTC. Realign any such keys so that data isn't stranded
+// under a key the app will never navigate to again.
+(function repairMisalignedWeekKeys(){
+
+    let changed = false;
+
+    Object.keys(weeks).forEach(key=>{
+
+        let parsed = parseDateKey(key);
+
+        if(isNaN(parsed.getTime())){
+            return;
+        }
+
+        // The old bug always landed one day early — on a Sunday
+        // instead of the Monday it meant to store. Shift those
+        // forward by a day; anything already on a Monday is fine.
+        if(parsed.getDay() !== 0){
+            return;
+        }
+
+        let corrected = new Date(parsed);
+        corrected.setDate(corrected.getDate() + 1);
+        let correctKey = formatDateKey(corrected);
+
+        changed = true;
+
+        if(!weeks[correctKey]){
+            weeks[correctKey] = {};
+        }
+
+        let misalignedWeek = weeks[key];
+
+        days.forEach(day=>{
+
+            if(misalignedWeek[day] && misalignedWeek[day].length > 0){
+
+                if(!weeks[correctKey][day]){
+                    weeks[correctKey][day] = [];
+                }
+
+                weeks[correctKey][day] =
+                    weeks[correctKey][day].concat(misalignedWeek[day]);
+
+            }
+
+        });
+
+        delete weeks[key];
+
+    });
+
+    if(changed){
+
+        localStorage.setItem("foodflowWeeks", JSON.stringify(weeks));
+
+    }
+
+})();
 
 // `meals` always points at the currently displayed week's data.
 // Since it's the same object as weeks[currentWeekKey], anything
@@ -1485,6 +1573,80 @@ if(shoppingExtrasByWeek === null){
         JSON.stringify(shoppingExtrasByWeek)
     );
 
+}
+
+
+// Same repair as the meals data above, applied to the per-week
+// shopping-list containers in case any got saved under a
+// timezone-misaligned key.
+function repairMisalignedWeekKeyedObject(container, isArrayValued){
+
+    let changed = false;
+
+    Object.keys(container).forEach(key=>{
+
+        let parsed = parseDateKey(key);
+
+        if(isNaN(parsed.getTime())){
+            return;
+        }
+
+        // Same off-by-one-day issue as the meals repair above.
+        if(parsed.getDay() !== 0){
+            return;
+        }
+
+        let corrected = new Date(parsed);
+        corrected.setDate(corrected.getDate() + 1);
+        let correctKey = formatDateKey(corrected);
+
+        changed = true;
+
+        if(isArrayValued){
+
+            if(!container[correctKey]){
+                container[correctKey] = [];
+            }
+
+            container[correctKey] =
+                container[correctKey].concat(container[key]);
+
+        }else{
+
+            container[correctKey] = {
+                ...container[key],
+                ...(container[correctKey] || {})
+            };
+
+        }
+
+        delete container[key];
+
+    });
+
+    return changed;
+
+}
+
+if(repairMisalignedWeekKeyedObject(shoppingCheckedByWeek, false)){
+    localStorage.setItem(
+        "foodflowShoppingCheckedByWeek",
+        JSON.stringify(shoppingCheckedByWeek)
+    );
+}
+
+if(repairMisalignedWeekKeyedObject(shoppingOverridesByWeek, false)){
+    localStorage.setItem(
+        "foodflowShoppingOverridesByWeek",
+        JSON.stringify(shoppingOverridesByWeek)
+    );
+}
+
+if(repairMisalignedWeekKeyedObject(shoppingExtrasByWeek, true)){
+    localStorage.setItem(
+        "foodflowShoppingExtrasByWeek",
+        JSON.stringify(shoppingExtrasByWeek)
+    );
 }
 
 
@@ -1575,7 +1737,7 @@ function switchToWeek(weekKey){
 
 function goToPreviousWeek(){
 
-    let d = new Date(currentWeekKey);
+    let d = parseDateKey(currentWeekKey);
     d.setDate(d.getDate() - 7);
 
     switchToWeek(getMondayKey(d));
@@ -1585,7 +1747,7 @@ function goToPreviousWeek(){
 
 function goToNextWeek(){
 
-    let d = new Date(currentWeekKey);
+    let d = parseDateKey(currentWeekKey);
     d.setDate(d.getDate() + 7);
 
     switchToWeek(getMondayKey(d));
@@ -1602,8 +1764,8 @@ function goToThisWeek(){
 
 function updateWeekLabel(){
 
-    let start = new Date(currentWeekKey);
-    let end = new Date(currentWeekKey);
+    let start = parseDateKey(currentWeekKey);
+    let end = parseDateKey(currentWeekKey);
     end.setDate(end.getDate() + 6);
 
     let options = { month:"short", day:"numeric" };
@@ -1635,7 +1797,7 @@ function copyWeekToNext(){
 
     }
 
-    let d = new Date(currentWeekKey);
+    let d = parseDateKey(currentWeekKey);
     d.setDate(d.getDate() + 7);
     let nextWeekKey = getMondayKey(d);
 
