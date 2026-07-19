@@ -3032,12 +3032,11 @@ searchBox
 ? searchBox.value.toLowerCase()
 : "";
 
-recipes.forEach((recipe,index)=>{
-
-if(!recipe.name.toLowerCase().includes(search)){
-    return;
-}
-
+recipes
+    .map((recipe, index) => ({ recipe, index }))
+    .filter(({recipe}) => recipe.name.toLowerCase().includes(search))
+    .sort((a, b) => (b.recipe.favorite ? 1 : 0) - (a.recipe.favorite ? 1 : 0))
+    .forEach(({recipe, index})=>{
 
 let card =
 document.createElement("div");
