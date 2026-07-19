@@ -468,6 +468,21 @@ opacity:.6;
 
 <div class="container">
 
+<div id="weekNav" style="display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:15px;">
+
+<button onclick="goToPreviousWeek()">◀ Previous</button>
+
+<div style="text-align:center;">
+<div id="weekLabel" style="font-weight:bold;font-size:18px;"></div>
+<button onclick="goToThisWeek()" style="margin-top:4px;">📍 This Week</button>
+</div>
+
+<button onclick="goToNextWeek()">Next ▶</button>
+
+<button onclick="copyWeekToNext()">📆 Copy Week Forward</button>
+
+</div>
+
 <div class="week" id="week"></div>
 
 </div>
@@ -1212,10 +1227,6 @@ const days = [
 ];
 
 
-let meals = JSON.parse(
-    localStorage.getItem("foodflowMeals")
-) || {};
-
 let recipes = JSON.parse(
 localStorage.getItem("foodflowRecipes")
 ) || [];
@@ -1281,29 +1292,12 @@ let selectedRecipe = null;
 
 let plannerRecipeIndex = null;
 
-let shoppingChecked = JSON.parse(
-    localStorage.getItem("foodflowShoppingChecked")
-) || {};
-
-// Ingredient keys the person has hidden from the list (e.g. pantry
-// staples like salt/sugar they always have on hand).
-
 // Ingredients hidden from the auto-generated list (e.g. pantry
-// staples like salt or sugar the person already has).
+// staples like salt or sugar the person already has). This one
+// stays global — it applies no matter which week you're viewing.
 let shoppingRemoved = JSON.parse(
     localStorage.getItem("foodflowShoppingRemoved")
 ) || {};
-
-// Manual corrections to an auto-generated item's name/amount/unit.
-let shoppingOverrides = JSON.parse(
-    localStorage.getItem("foodflowShoppingOverrides")
-) || {};
-
-// Items added by hand that aren't tied to any recipe at all
-// (e.g. paper towels, dish soap).
-let shoppingExtras = JSON.parse(
-    localStorage.getItem("foodflowShoppingExtras")
-) || [];
 
 
 // Load old FoodFlow v0.1 data
@@ -1350,12 +1344,321 @@ function migrateOldData(){
 migrateOldData();
 
 
+// =======================
+// MULTI-WEEK PLANNING
+// =======================
 
-meals =
-JSON.parse(
-localStorage.getItem("foodflowMeals")
-)
-|| {};
+// Returns the ISO date (YYYY-MM-DD) of the Monday that starts the
+// week containing the given date — used as each week's storage key.
+function getMondayKey(date){
+
+    let d = new Date(date);
+    let dayNum = d.getDay(); // 0 = Sunday ... 6 = Saturday
+    let diff = (dayNum === 0 ? -6 : 1) - dayNum;
+
+    d.setDate(d.getDate() + diff);
+    d.setHours(0,0,0,0);
+
+    return d.toISOString().slice(0,10);
+
+}
+
+
+function ensureWeek(weekKey){
+
+    if(!weeks[weekKey]){
+        weeks[weekKey] = {};
+    }
+
+    return weeks[weekKey];
+
+}
+
+
+let weeks = JSON.parse(
+    localStorage.getItem("foodflowWeeks")
+) || null;
+
+let currentWeekKey = getMondayKey(new Date());
+
+if(weeks === null){
+
+    // First time using multi-week planning — bring the existing
+    // single repeating plan across as "this week's" plan.
+    let oldMeals = JSON.parse(
+        localStorage.getItem("foodflowMeals")
+    ) || null;
+
+    weeks = {};
+
+    if(oldMeals){
+        weeks[currentWeekKey] = oldMeals;
+    }
+
+    localStorage.setItem("foodflowWeeks", JSON.stringify(weeks));
+
+}
+
+// `meals` always points at the currently displayed week's data.
+// Since it's the same object as weeks[currentWeekKey], anything
+// that edits `meals` is automatically editing that week already —
+// saveData() just needs to persist the whole `weeks` object.
+let meals = ensureWeek(currentWeekKey);
+
+
+// Per-week shopping-list state: what's checked off, manual
+// corrections, and anything added by hand — all scoped to whichever
+// week's list is showing, so ticking off "milk" this week doesn't
+// wrongly show it as already done next week too.
+let shoppingCheckedByWeek = JSON.parse(
+    localStorage.getItem("foodflowShoppingCheckedByWeek")
+) || null;
+
+let shoppingOverridesByWeek = JSON.parse(
+    localStorage.getItem("foodflowShoppingOverridesByWeek")
+) || null;
+
+let shoppingExtrasByWeek = JSON.parse(
+    localStorage.getItem("foodflowShoppingExtrasByWeek")
+) || null;
+
+if(shoppingCheckedByWeek === null){
+
+    // First time using per-week lists — bring any existing
+    // (previously global) checked-off state across as "this week's".
+    shoppingCheckedByWeek = {};
+
+    let oldChecked = JSON.parse(
+        localStorage.getItem("foodflowShoppingChecked")
+    );
+
+    if(oldChecked){
+        shoppingCheckedByWeek[currentWeekKey] = oldChecked;
+    }
+
+    localStorage.setItem(
+        "foodflowShoppingCheckedByWeek",
+        JSON.stringify(shoppingCheckedByWeek)
+    );
+
+}
+
+if(shoppingOverridesByWeek === null){
+
+    shoppingOverridesByWeek = {};
+
+    let oldOverrides = JSON.parse(
+        localStorage.getItem("foodflowShoppingOverrides")
+    );
+
+    if(oldOverrides){
+        shoppingOverridesByWeek[currentWeekKey] = oldOverrides;
+    }
+
+    localStorage.setItem(
+        "foodflowShoppingOverridesByWeek",
+        JSON.stringify(shoppingOverridesByWeek)
+    );
+
+}
+
+if(shoppingExtrasByWeek === null){
+
+    shoppingExtrasByWeek = {};
+
+    let oldExtras = JSON.parse(
+        localStorage.getItem("foodflowShoppingExtras")
+    );
+
+    if(oldExtras){
+        shoppingExtrasByWeek[currentWeekKey] = oldExtras;
+    }
+
+    localStorage.setItem(
+        "foodflowShoppingExtrasByWeek",
+        JSON.stringify(shoppingExtrasByWeek)
+    );
+
+}
+
+
+function ensureWeekShoppingChecked(weekKey){
+
+    if(!shoppingCheckedByWeek[weekKey]){
+        shoppingCheckedByWeek[weekKey] = {};
+    }
+
+    return shoppingCheckedByWeek[weekKey];
+
+}
+
+
+function ensureWeekShoppingOverrides(weekKey){
+
+    if(!shoppingOverridesByWeek[weekKey]){
+        shoppingOverridesByWeek[weekKey] = {};
+    }
+
+    return shoppingOverridesByWeek[weekKey];
+
+}
+
+
+function ensureWeekShoppingExtras(weekKey){
+
+    if(!shoppingExtrasByWeek[weekKey]){
+        shoppingExtrasByWeek[weekKey] = [];
+    }
+
+    return shoppingExtrasByWeek[weekKey];
+
+}
+
+
+let shoppingChecked = ensureWeekShoppingChecked(currentWeekKey);
+let shoppingOverrides = ensureWeekShoppingOverrides(currentWeekKey);
+let shoppingExtras = ensureWeekShoppingExtras(currentWeekKey);
+
+
+// Saves all shopping-list state — the three per-week pieces plus
+// the global "always hide these" pantry-staples list.
+function saveShoppingState(){
+
+    shoppingCheckedByWeek[currentWeekKey] = shoppingChecked;
+    shoppingOverridesByWeek[currentWeekKey] = shoppingOverrides;
+    shoppingExtrasByWeek[currentWeekKey] = shoppingExtras;
+
+    localStorage.setItem(
+        "foodflowShoppingCheckedByWeek",
+        JSON.stringify(shoppingCheckedByWeek)
+    );
+
+    localStorage.setItem(
+        "foodflowShoppingOverridesByWeek",
+        JSON.stringify(shoppingOverridesByWeek)
+    );
+
+    localStorage.setItem(
+        "foodflowShoppingExtrasByWeek",
+        JSON.stringify(shoppingExtrasByWeek)
+    );
+
+    localStorage.setItem(
+        "foodflowShoppingRemoved",
+        JSON.stringify(shoppingRemoved)
+    );
+
+}
+
+
+function switchToWeek(weekKey){
+
+    currentWeekKey = weekKey;
+    meals = ensureWeek(weekKey);
+
+    shoppingChecked = ensureWeekShoppingChecked(weekKey);
+    shoppingOverrides = ensureWeekShoppingOverrides(weekKey);
+    shoppingExtras = ensureWeekShoppingExtras(weekKey);
+
+    updateWeekLabel();
+    render();
+    renderShoppingList();
+
+}
+
+
+function goToPreviousWeek(){
+
+    let d = new Date(currentWeekKey);
+    d.setDate(d.getDate() - 7);
+
+    switchToWeek(getMondayKey(d));
+
+}
+
+
+function goToNextWeek(){
+
+    let d = new Date(currentWeekKey);
+    d.setDate(d.getDate() + 7);
+
+    switchToWeek(getMondayKey(d));
+
+}
+
+
+function goToThisWeek(){
+
+    switchToWeek(getMondayKey(new Date()));
+
+}
+
+
+function updateWeekLabel(){
+
+    let start = new Date(currentWeekKey);
+    let end = new Date(currentWeekKey);
+    end.setDate(end.getDate() + 6);
+
+    let options = { month:"short", day:"numeric" };
+    let startStr = start.toLocaleDateString(undefined, options);
+    let endStr = end.toLocaleDateString(undefined, { ...options, year:"numeric" });
+
+    let isThisWeek = currentWeekKey === getMondayKey(new Date());
+
+    let label = document.getElementById("weekLabel");
+
+    if(label){
+        label.innerText =
+            startStr + " – " + endStr +
+            (isThisWeek ? "  (this week)" : "");
+    }
+
+}
+
+
+function copyWeekToNext(){
+
+    let hasAnyMeals = Object.values(meals)
+        .some(dayMeals => dayMeals && dayMeals.length > 0);
+
+    if(!hasAnyMeals){
+
+        alert("This week doesn't have any meals planned yet.");
+        return;
+
+    }
+
+    let d = new Date(currentWeekKey);
+    d.setDate(d.getDate() + 7);
+    let nextWeekKey = getMondayKey(d);
+
+    let nextWeekHasMeals =
+        weeks[nextWeekKey] &&
+        Object.values(weeks[nextWeekKey]).some(dm => dm && dm.length > 0);
+
+    if(nextWeekHasMeals && !confirm(
+        "Next week already has meals planned. This will replace " +
+        "that plan with a copy of this week. Continue?"
+    )){
+        return;
+    }
+
+    // Deep copy so editing next week later doesn't also change this week
+    weeks[nextWeekKey] = JSON.parse(JSON.stringify(meals));
+
+    // Collapse any expanded state so it opens tidy
+    days.forEach(day=>{
+        if(weeks[nextWeekKey][day]){
+            weeks[nextWeekKey][day].forEach(m => m.expanded = false);
+        }
+    });
+
+    saveData();
+
+    alert("Copied to next week!");
+
+}
 
 
 // Meal type categories — the built-in four, plus any custom ones
@@ -1861,9 +2164,9 @@ function saveData(){
 
 localStorage.setItem(
 
-"foodflowMeals",
+"foodflowWeeks",
 
-JSON.stringify(meals)
+JSON.stringify(weeks)
 
 );
 
@@ -1990,16 +2293,16 @@ lang === "en"
 // Every localStorage key FoodFlow uses, gathered into one file so it
 // can be saved elsewhere or moved to a different device/browser.
 const foodflowStorageKeys = [
-    "foodflowMeals",
+    "foodflowWeeks",
     "foodflowRecipes",
     "foodflowTheme",
     "foodflowLanguage",
     "foodflowPage",
     "foodflowCategories",
-    "foodflowShoppingChecked",
+    "foodflowShoppingCheckedByWeek",
     "foodflowShoppingRemoved",
-    "foodflowShoppingOverrides",
-    "foodflowShoppingExtras"
+    "foodflowShoppingOverridesByWeek",
+    "foodflowShoppingExtrasByWeek"
 ];
 
 
@@ -3446,10 +3749,7 @@ function toggleShoppingItem(key){
 
     shoppingChecked[key] = !shoppingChecked[key];
 
-    localStorage.setItem(
-        "foodflowShoppingChecked",
-        JSON.stringify(shoppingChecked)
-    );
+    saveShoppingState();
 
     renderShoppingList();
 
@@ -3460,10 +3760,7 @@ function clearCheckedItems(){
 
     shoppingChecked = {};
 
-    localStorage.setItem(
-        "foodflowShoppingChecked",
-        JSON.stringify(shoppingChecked)
-    );
+    saveShoppingState();
 
     renderShoppingList();
 
@@ -3555,11 +3852,6 @@ function saveShoppingItem(){
             unit: unit
         });
 
-        localStorage.setItem(
-            "foodflowShoppingExtras",
-            JSON.stringify(shoppingExtras)
-        );
-
     }else if(editingShoppingIsExtra){
 
         let id = editingShoppingKey.replace("extra:","");
@@ -3573,11 +3865,6 @@ function saveShoppingItem(){
 
         }
 
-        localStorage.setItem(
-            "foodflowShoppingExtras",
-            JSON.stringify(shoppingExtras)
-        );
-
     }else{
 
         shoppingOverrides[editingShoppingKey] = {
@@ -3586,12 +3873,9 @@ function saveShoppingItem(){
             unit: unit
         };
 
-        localStorage.setItem(
-            "foodflowShoppingOverrides",
-            JSON.stringify(shoppingOverrides)
-        );
-
     }
+
+    saveShoppingState();
 
     editingShoppingKey = null;
 
@@ -3618,31 +3902,19 @@ function deleteShoppingItem(key){
         shoppingExtras =
             shoppingExtras.filter(e => e.id !== id);
 
-        localStorage.setItem(
-            "foodflowShoppingExtras",
-            JSON.stringify(shoppingExtras)
-        );
-
     }else{
 
         // Persist the removal so it stays hidden next time the
-        // list is regenerated — handy for pantry staples.
+        // list is regenerated — handy for pantry staples. This one
+        // applies to every week, not just the one you're viewing.
         shoppingRemoved[key] = true;
 
         // Any earlier manual edit for this key no longer applies
         delete shoppingOverrides[key];
 
-        localStorage.setItem(
-            "foodflowShoppingRemoved",
-            JSON.stringify(shoppingRemoved)
-        );
-
-        localStorage.setItem(
-            "foodflowShoppingOverrides",
-            JSON.stringify(shoppingOverrides)
-        );
-
     }
+
+    saveShoppingState();
 
     renderShoppingList();
 
@@ -3671,15 +3943,7 @@ function resetShoppingEdits(){
     shoppingRemoved = {};
     shoppingOverrides = {};
 
-    localStorage.setItem(
-        "foodflowShoppingRemoved",
-        JSON.stringify(shoppingRemoved)
-    );
-
-    localStorage.setItem(
-        "foodflowShoppingOverrides",
-        JSON.stringify(shoppingOverrides)
-    );
+    saveShoppingState();
 
     renderShoppingList();
 
@@ -4074,9 +4338,13 @@ showPage(savedPage);
 
 renderMealTypeOptions();
 
+updateWeekLabel();
+
 render();
 
 renderRecipes();
+
+renderShoppingList();
 
 
 </script>
