@@ -535,6 +535,12 @@ Automatically built from every recipe in your meal planner, scaled to the number
 <button onclick="resetShoppingEdits()">↩️ Undo My Edits</button>
 <button onclick="printShoppingList()">🖨️ Print / Save as PDF</button>
 
+<input
+id="shoppingSearch"
+placeholder="🔍 Search shopping list..."
+oninput="renderShoppingList()"
+>
+
 <div id="shoppingList"></div>
 
 <div id="shoppingNotes"></div>
@@ -940,7 +946,7 @@ Cancel
 
 
 <p class="small">
-Go to your recipe on ica.se, select the title, portions, and ingredient list, copy it, and paste it below. This works best when it's just the ingredients — not the cooking steps.
+Copy a recipe's title, portions, and ingredient list from pretty much any website and paste it below. This works best when it's just the ingredients — not the cooking steps.
 </p>
 
 
@@ -3699,16 +3705,31 @@ function groupItemsByCategory(list){
 
 function renderShoppingList(){
 
-    const { list, manualMeals } = generateShoppingList();
+    const { list: fullList, manualMeals } = generateShoppingList();
 
     const container = document.getElementById("shoppingList");
     const notes = document.getElementById("shoppingNotes");
 
-    if(list.length === 0){
+    let searchBox = document.getElementById("shoppingSearch");
+    let search = searchBox ? searchBox.value.trim().toLowerCase() : "";
+
+    let list = search
+        ? fullList.filter(item => item.name.toLowerCase().includes(search))
+        : fullList;
+
+    if(fullList.length === 0){
 
         container.innerHTML = `
             <p class="small">
             No ingredients yet — add some recipes to your meal planner and they'll show up here.
+            </p>
+        `;
+
+    }else if(list.length === 0){
+
+        container.innerHTML = `
+            <p class="small">
+            No items match "${search}".
             </p>
         `;
 
