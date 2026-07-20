@@ -327,6 +327,63 @@ font-size:16px;
 
 
 
+/* WEEK NAVIGATION */
+
+#weekNav {
+
+margin-bottom:15px;
+
+}
+
+.week-nav-row {
+
+display:flex;
+
+align-items:center;
+
+justify-content:center;
+
+gap:12px;
+
+}
+
+.week-nav-center {
+
+text-align:center;
+
+min-width:150px;
+
+}
+
+#weekLabel {
+
+font-weight:bold;
+
+font-size:18px;
+
+}
+
+.week-nav-secondary {
+
+display:flex;
+
+justify-content:center;
+
+gap:10px;
+
+margin-top:10px;
+
+flex-wrap:wrap;
+
+}
+
+.nav-short {
+
+display:none;
+
+}
+
+
 /* MOBILE */
 
 
@@ -339,6 +396,77 @@ grid-template-columns:1fr;
 
 }
 
+
+}
+
+
+@media(max-width:600px){
+
+.week-nav-row {
+
+gap:8px;
+
+}
+
+.week-nav-row button {
+
+padding:10px 14px;
+
+font-size:16px;
+
+min-width:44px;
+
+min-height:44px;
+
+}
+
+.nav-full {
+
+display:none;
+
+}
+
+.nav-short {
+
+display:inline;
+
+}
+
+.week-nav-center {
+
+min-width:0;
+
+flex:1;
+
+}
+
+#weekLabel {
+
+font-size:14px;
+
+}
+
+.week-nav-secondary {
+
+gap:8px;
+
+margin-top:8px;
+
+}
+
+.week-nav-secondary button {
+
+flex:1;
+
+font-size:12px;
+
+padding:8px 6px;
+
+white-space:nowrap;
+
+min-width:0;
+
+}
 
 }
 
@@ -734,18 +862,39 @@ padding-bottom:70px;
 
 <div class="container">
 
-<div id="weekNav" style="display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:15px;">
+<div id="weekNav">
 
-<button onclick="goToPreviousWeek()">◀ Previous</button>
+<div class="week-nav-row">
 
-<div style="text-align:center;">
-<div id="weekLabel" style="font-weight:bold;font-size:18px;"></div>
-<button onclick="goToThisWeek()" style="margin-top:4px;">📍 This Week</button>
+<button onclick="goToPreviousWeek()">
+<span class="nav-full">◀ Previous</span>
+<span class="nav-short">◀</span>
+</button>
+
+<div class="week-nav-center">
+<div id="weekLabel"></div>
 </div>
 
-<button onclick="goToNextWeek()">Next ▶</button>
+<button onclick="goToNextWeek()">
+<span class="nav-full">Next ▶</span>
+<span class="nav-short">▶</span>
+</button>
 
-<button onclick="copyWeekToNext()">📆 Copy Week Forward</button>
+</div>
+
+<div class="week-nav-secondary">
+
+<button onclick="goToThisWeek()" class="week-nav-today">
+<span class="nav-full">📍 This Week</span>
+<span class="nav-short">📍 Today</span>
+</button>
+
+<button onclick="copyWeekToNext()" class="week-nav-copy">
+<span class="nav-full">📆 Copy Week Forward</span>
+<span class="nav-short">📆 Copy Forward</span>
+</button>
+
+</div>
 
 </div>
 
@@ -4197,6 +4346,8 @@ const ingredientTranslations = {
 
     // meat & fish
     "nötfärs":"ground beef", "ground beef":"ground beef",
+    "minced meat":"ground beef", "minced beef":"ground beef", "ground meat":"ground beef",
+    "hushållsfärs":"ground beef", "husfärs":"ground beef", "blandfärs":"ground beef",
     "fläskfärs":"ground pork", "ground pork":"ground pork",
     "kycklingfilé":"chicken breast", "kycklingfileer":"chicken breast", "chicken breast":"chicken breast", "chicken breasts":"chicken breast",
     "kyckling":"chicken", "chicken":"chicken",
@@ -4217,8 +4368,14 @@ const ingredientTranslations = {
     "pasta":"pasta",
     "spaghetti":"spaghetti",
     "nudlar":"noodles", "noodles":"noodles",
-    "buljong":"broth", "buljongtärning":"broth", "broth":"broth", "stock":"broth",
-    "olja":"oil", "oil":"oil",
+    "buljong":"broth", "buljongtärning":"broth", "buljongtärningar":"broth", "broth":"broth", "stock":"broth",
+    "kycklingbuljong":"chicken broth", "kycklingbuljongtärning":"chicken broth", "kycklingbuljongtärningar":"chicken broth",
+    "chicken broth":"chicken broth", "chicken stock":"chicken broth", "chicken bouillon":"chicken broth",
+    "nötbuljong":"beef broth", "köttbuljong":"beef broth", "köttbuljongtärning":"beef broth",
+    "beef broth":"beef broth", "beef stock":"beef broth", "beef bouillon":"beef broth",
+    "grönsaksbuljong":"vegetable broth", "grönsaksbuljongtärning":"vegetable broth",
+    "vegetable broth":"vegetable broth", "vegetable stock":"vegetable broth",
+    "olja":"oil", "matolja":"oil", "oil":"oil", "cooking oil":"oil",
     "olivolja":"olive oil", "olive oil":"olive oil",
     "vinäger":"vinegar", "vinegar":"vinegar",
     "senap":"mustard", "mustard":"mustard",
@@ -4226,6 +4383,9 @@ const ingredientTranslations = {
     "majonnäs":"mayonnaise", "mayonnaise":"mayonnaise", "mayo":"mayonnaise",
     "ströbröd":"breadcrumbs", "breadcrumbs":"breadcrumbs",
     "bröd":"bread", "bread":"bread",
+    "soja":"soy sauce", "kinesisk soja":"soy sauce", "japansk soja":"soy sauce",
+    "soy sauce":"soy sauce", "soya sauce":"soy sauce",
+    "vatten":"water", "water":"water",
     "vitt vin":"white wine", "white wine":"white wine",
     "vitt matlagningsvin":"white wine", "matlagningsvin":"white wine",
 
@@ -4282,7 +4442,8 @@ const ingredientCategories = {
 
     "flour":"Pantry", "sugar":"Pantry", "salt":"Pantry", "pepper":"Pantry",
     "rice":"Pantry", "pasta":"Pantry", "spaghetti":"Pantry", "noodles":"Pantry",
-    "broth":"Pantry", "oil":"Pantry", "olive oil":"Pantry", "vinegar":"Pantry",
+    "broth":"Pantry", "chicken broth":"Pantry", "beef broth":"Pantry", "vegetable broth":"Pantry",
+    "oil":"Pantry", "olive oil":"Pantry", "vinegar":"Pantry", "soy sauce":"Pantry", "water":"Pantry",
     "mustard":"Pantry", "ketchup":"Pantry", "mayonnaise":"Pantry",
     "breadcrumbs":"Pantry", "bread":"Pantry", "white wine":"Pantry",
 
@@ -4353,10 +4514,23 @@ function simplifyUnit(amount, unit){
 
 function normalizeIngredientName(name){
 
-    let cleaned = name
+    let base = name
         .toLowerCase()
         .trim()
-        .split(/\s+/)
+        .replace(/\([^)]*\)/g, "")   // strip parenthetical asides
+        .replace(/[.,;:!?]+$/g, "")  // strip trailing punctuation
+        .trim()
+        .replace(/\s+/g, " ");
+
+    // Try the full phrase first, before stripping any descriptive
+    // words — otherwise a dictionary entry like "minced meat" would
+    // never match, since "minced" also doubles as a stopword.
+    if(ingredientTranslations[base]){
+        return ingredientTranslations[base];
+    }
+
+    let cleaned = base
+        .split(" ")
         .filter(word => !ingredientStopwords.includes(word))
         .join(" ");
 
