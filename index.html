@@ -343,6 +343,30 @@ grid-template-columns:1fr;
 }
 
 
+/* WIDE SCREENS: give recipes more breathing room */
+
+@media(min-width:1000px){
+
+#recipeList {
+
+display:grid;
+
+grid-template-columns:repeat(2,1fr);
+
+gap:15px;
+align-items:start;
+
+}
+
+#recipeList .meal {
+
+margin-top:0;
+
+}
+
+}
+
+
 /* PRINT (shopping list only) */
 
 #printArea {
@@ -408,6 +432,248 @@ font-size:15px;
 text-decoration:line-through;
 
 opacity:.6;
+
+}
+
+}
+
+
+
+/* TOASTS */
+
+#toastContainer {
+
+position:fixed;
+
+bottom:20px;
+
+left:50%;
+
+transform:translateX(-50%);
+
+display:flex;
+
+flex-direction:column;
+
+gap:10px;
+
+z-index:2000;
+
+width:90%;
+
+max-width:400px;
+
+align-items:center;
+
+}
+
+.toast {
+
+background:var(--card);
+
+color:var(--text);
+
+box-shadow:var(--shadow);
+
+border-radius:14px;
+
+padding:14px 16px;
+
+display:flex;
+
+align-items:center;
+
+gap:12px;
+
+width:100%;
+
+box-sizing:border-box;
+
+animation:toastIn .25s ease;
+
+border-left:5px solid var(--primary);
+
+}
+
+.toast.error {
+
+border-left-color:#e53935;
+
+}
+
+.toast span.msg {
+
+flex:1;
+
+font-size:14px;
+
+}
+
+.toast button {
+
+background:transparent;
+
+color:var(--primary);
+
+border:1px solid var(--primary);
+
+padding:6px 12px;
+
+font-size:13px;
+
+margin:0;
+
+}
+
+@keyframes toastIn {
+
+from { opacity:0; transform:translateY(20px); }
+to { opacity:1; transform:translateY(0); }
+
+}
+
+@keyframes fadeInExpand {
+
+from { opacity:0; transform:translateY(-6px); }
+to { opacity:1; transform:translateY(0); }
+
+}
+
+.expand-content {
+
+animation:fadeInExpand .2s ease;
+
+}
+
+
+/* MEAL TYPE / CATEGORY COLOR ACCENTS */
+
+.meal {
+
+border-left:5px solid var(--accent, transparent);
+
+}
+
+
+/* SHOPPING LIST PROGRESS */
+
+#shoppingProgressWrap {
+
+background:rgba(120,120,120,.15);
+
+border-radius:20px;
+
+height:10px;
+
+overflow:hidden;
+
+margin:12px 0;
+
+}
+
+#shoppingProgressBar {
+
+height:100%;
+
+background:var(--primary);
+
+transition:width .3s ease;
+
+}
+
+
+/* BIGGER TOUCH TARGETS ON PHONES/TABLETS */
+
+@media(pointer:coarse){
+
+button {
+
+padding:12px 16px;
+
+min-height:44px;
+
+}
+
+button.edit,
+button.delete {
+
+padding:10px 14px !important;
+
+min-width:44px;
+
+min-height:40px;
+
+}
+
+}
+
+
+/* STACK INGREDIENT ROWS ON NARROW SCREENS */
+
+@media(max-width:480px){
+
+.ingredient-row {
+
+flex-direction:column !important;
+
+gap:6px !important;
+
+}
+
+.ingredient-row input {
+
+width:100% !important;
+
+}
+
+}
+
+
+/* STICKY BOTTOM NAV ON PHONES */
+
+@media(max-width:600px){
+
+#navbar {
+
+position:fixed;
+
+bottom:0;
+
+left:0;
+
+right:0;
+
+background:var(--card);
+
+box-shadow:0 -4px 12px rgba(0,0,0,.15);
+
+padding:8px;
+
+z-index:500;
+
+display:flex;
+
+justify-content:space-around;
+
+}
+
+#navbar button {
+
+flex:1;
+
+margin:2px;
+
+font-size:13px;
+
+padding:10px 6px;
+
+box-shadow:none;
+
+}
+
+body {
+
+padding-bottom:70px;
 
 }
 
@@ -540,6 +806,12 @@ id="shoppingSearch"
 placeholder="🔍 Search shopping list..."
 oninput="renderShoppingList()"
 >
+
+<div id="shoppingProgressText" class="small" style="margin-top:10px;"></div>
+
+<div id="shoppingProgressWrap">
+<div id="shoppingProgressBar" style="width:0%;"></div>
+</div>
 
 <div id="shoppingList"></div>
 
@@ -755,7 +1027,7 @@ placeholder="Or type your own emoji"
 
 
 
-<button onclick="saveCategory()">
+<button data-primary onclick="saveCategory()">
 
 Save
 
@@ -804,7 +1076,7 @@ This adds to whatever's already planned on those days — it won't remove anythi
 <br>
 
 
-<button onclick="copyDayToTargets()">
+<button data-primary onclick="copyDayToTargets()">
 Copy
 </button>
 
@@ -912,7 +1184,7 @@ value="4"
 <br>
 
 
-<button onclick="saveMeal()">
+<button data-primary onclick="saveMeal()">
 
 Save
 
@@ -961,7 +1233,7 @@ style="width:100%;padding:12px;border-radius:12px;border:1px solid #ccc;font-siz
 <br><br>
 
 
-<button onclick="parsePastedRecipe()">
+<button data-primary onclick="parsePastedRecipe()">
 ✅ Parse Recipe
 </button>
 
@@ -1027,7 +1299,7 @@ placeholder="e.g. g, dl, st"
 <br>
 
 
-<button onclick="saveShoppingItem()">
+<button data-primary onclick="saveShoppingItem()">
 Save
 </button>
 
@@ -1098,7 +1370,7 @@ Ingredients
 <br>
 
 
-<button onclick="saveRecipe()">
+<button data-primary onclick="saveRecipe()">
 Save
 </button>
 
@@ -1199,7 +1471,7 @@ value="4"
 <br>
 
 
-<button onclick="addRecipeToPlanner()">
+<button data-primary onclick="addRecipeToPlanner()">
 
 Add
 
@@ -1231,6 +1503,344 @@ const days = [
     "Saturday",
     "Sunday"
 ];
+
+
+// =======================
+// TOASTS
+// =======================
+
+function showToast(message, options={}){
+
+    let container = document.getElementById("toastContainer");
+
+    if(!container) return;
+
+    let toast = document.createElement("div");
+    toast.className = "toast" + (options.type === "error" ? " error" : "");
+
+    let msg = document.createElement("span");
+    msg.className = "msg";
+    msg.innerText = message;
+    toast.appendChild(msg);
+
+    let dismissed = false;
+
+    let removeToast = () => {
+        if(dismissed) return;
+        dismissed = true;
+        toast.remove();
+    };
+
+    if(options.actionLabel && options.onAction){
+
+        let btn = document.createElement("button");
+        btn.innerText = options.actionLabel;
+
+        btn.onclick = () => {
+            removeToast();
+            options.onAction();
+        };
+
+        toast.appendChild(btn);
+
+    }
+
+    container.appendChild(toast);
+
+    setTimeout(removeToast, options.duration || 5000);
+
+}
+
+
+// =======================
+// CUSTOM CONFIRM (replaces native confirm())
+// =======================
+
+let customConfirmResolver = null;
+
+function customConfirm(message, title){
+
+    document.getElementById("customConfirmTitle").innerText =
+        title || "Are you sure?";
+
+    document.getElementById("customConfirmMessage").innerText = message;
+
+    document.getElementById("customConfirmModal").style.display = "flex";
+
+    return new Promise(resolve=>{
+        customConfirmResolver = resolve;
+    });
+
+}
+
+function resolveCustomConfirm(result){
+
+    document.getElementById("customConfirmModal").style.display = "none";
+
+    if(customConfirmResolver){
+        customConfirmResolver(result);
+        customConfirmResolver = null;
+    }
+
+}
+
+
+// =======================
+// DRAG & DROP MEALS BETWEEN DAYS (desktop)
+// =======================
+
+let draggedMealInfo = null;
+
+
+function setupMealDragSource(box, day, index){
+
+    box.draggable = true;
+
+    box.addEventListener("dragstart", (e)=>{
+
+        draggedMealInfo = { day, index };
+        box.style.opacity = "0.5";
+
+        if(e.dataTransfer){
+            e.dataTransfer.effectAllowed = "move";
+        }
+
+    });
+
+    box.addEventListener("dragend", ()=>{
+        box.style.opacity = "1";
+    });
+
+}
+
+
+function setupDayDropZone(card, targetDay){
+
+    card.addEventListener("dragover", (e)=>{
+        e.preventDefault();
+        card.style.outline = "2px dashed var(--primary)";
+    });
+
+    card.addEventListener("dragleave", ()=>{
+        card.style.outline = "none";
+    });
+
+    card.addEventListener("drop", (e)=>{
+
+        e.preventDefault();
+        card.style.outline = "none";
+
+        if(!draggedMealInfo){
+            return;
+        }
+
+        let { day: sourceDay, index: sourceIndex } = draggedMealInfo;
+        draggedMealInfo = null;
+
+        if(!meals[sourceDay] || !meals[sourceDay][sourceIndex]){
+            return;
+        }
+
+        let movedMeal = meals[sourceDay][sourceIndex];
+
+        meals[sourceDay].splice(sourceIndex, 1);
+
+        if(!meals[targetDay]){
+            meals[targetDay] = [];
+        }
+
+        meals[targetDay].push(movedMeal);
+
+        saveData();
+        render();
+
+        if(sourceDay !== targetDay){
+            showToast(`Moved "${movedMeal.name}" to ${targetDay}`);
+        }
+
+    });
+
+}
+
+
+// =======================
+// SWIPE TO DELETE (mobile)
+// =======================
+
+function attachSwipeToDelete(element, onDelete){
+
+    let startX = 0;
+    let deltaX = 0;
+    let dragging = false;
+    const threshold = 80;
+
+    element.addEventListener("touchstart", (e)=>{
+
+        startX = e.touches[0].clientX;
+        dragging = true;
+        element.style.transition = "none";
+
+    }, { passive: true });
+
+    element.addEventListener("touchmove", (e)=>{
+
+        if(!dragging) return;
+
+        deltaX = e.touches[0].clientX - startX;
+
+        if(deltaX < 0){
+
+            element.style.transform = `translateX(${deltaX}px)`;
+
+            let intensity = Math.min(1, Math.abs(deltaX) / threshold);
+            element.style.background =
+                `rgba(229,57,53,${intensity * 0.25})`;
+
+        }
+
+    }, { passive: true });
+
+    element.addEventListener("touchend", ()=>{
+
+        dragging = false;
+        element.style.transition = "transform 0.2s ease, opacity 0.2s ease";
+
+        if(deltaX < -threshold){
+
+            element.style.transform = "translateX(-100%)";
+            element.style.opacity = "0";
+
+            setTimeout(onDelete, 200);
+
+        }else{
+
+            element.style.transform = "translateX(0)";
+            element.style.background = "";
+
+        }
+
+        deltaX = 0;
+
+    });
+
+}
+
+
+// =======================
+// KEYBOARD SHORTCUTS (desktop)
+// =======================
+
+document.addEventListener("keydown", function(e){
+
+    let tag = (e.target.tagName || "").toLowerCase();
+    let typing = tag === "input" || tag === "textarea" || tag === "select";
+
+    // Esc closes whichever modal is open
+    if(e.key === "Escape"){
+
+        document.querySelectorAll(".modal").forEach(modal=>{
+            if(modal.style.display === "flex"){
+                modal.style.display = "none";
+            }
+        });
+
+        return;
+
+    }
+
+    // Enter inside a modal triggers its primary action button —
+    // but not inside a textarea, where Enter should just add a
+    // new line (e.g. while composing a pasted recipe).
+    if(e.key === "Enter" && typing){
+
+        if(tag === "textarea"){
+            return;
+        }
+
+        let openModal = Array.from(document.querySelectorAll(".modal"))
+            .find(m => m.style.display === "flex");
+
+        if(openModal){
+
+            let primaryButton =
+                openModal.querySelector("[data-primary]") ||
+                openModal.querySelector(".modal-box button");
+
+            if(primaryButton){
+                e.preventDefault();
+                primaryButton.click();
+            }
+
+        }
+
+        return;
+
+    }
+
+    // Left/Right arrows switch weeks, but only when not typing and
+    // the planner page is the one showing
+    if(!typing){
+
+        let plannerVisible =
+            document.getElementById("plannerPage") &&
+            document.getElementById("plannerPage").style.display !== "none";
+
+        if(plannerVisible && e.key === "ArrowLeft"){
+            goToPreviousWeek();
+        }
+
+        if(plannerVisible && e.key === "ArrowRight"){
+            goToNextWeek();
+        }
+
+    }
+
+});
+
+
+// =======================
+// SWIPE NAVIGATION BETWEEN WEEKS (mobile)
+// =======================
+
+(function setupWeekSwipe(){
+
+    let touchStartX = null;
+    let touchStartY = null;
+
+    document.addEventListener("touchstart", function(e){
+
+        let weekEl = document.getElementById("week");
+        if(!weekEl || !weekEl.contains(e.target)) return;
+
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+
+    }, { passive:true });
+
+    document.addEventListener("touchend", function(e){
+
+        if(touchStartX === null) return;
+
+        let dx = e.changedTouches[0].clientX - touchStartX;
+        let dy = e.changedTouches[0].clientY - touchStartY;
+
+        touchStartX = null;
+        touchStartY = null;
+
+        // Require a mostly-horizontal swipe of decent length
+        if(Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5){
+
+            if(dx < 0){
+                goToNextWeek();
+            }else{
+                goToPreviousWeek();
+            }
+
+        }
+
+    }, { passive:true });
+
+})();
 
 
 let recipes = JSON.parse(
@@ -1785,14 +2395,14 @@ function updateWeekLabel(){
 }
 
 
-function copyWeekToNext(){
+async function copyWeekToNext(){
 
     let hasAnyMeals = Object.values(meals)
         .some(dayMeals => dayMeals && dayMeals.length > 0);
 
     if(!hasAnyMeals){
 
-        alert("This week doesn't have any meals planned yet.");
+        showToast("This week doesn't have any meals planned yet.", { type:"error" });
         return;
 
     }
@@ -1805,11 +2415,16 @@ function copyWeekToNext(){
         weeks[nextWeekKey] &&
         Object.values(weeks[nextWeekKey]).some(dm => dm && dm.length > 0);
 
-    if(nextWeekHasMeals && !confirm(
-        "Next week already has meals planned. This will replace " +
-        "that plan with a copy of this week. Continue?"
-    )){
-        return;
+    if(nextWeekHasMeals){
+
+        let ok = await customConfirm(
+            "Next week already has meals planned. This will replace " +
+            "that plan with a copy of this week. Continue?",
+            "Replace next week's plan?"
+        );
+
+        if(!ok) return;
+
     }
 
     // Deep copy so editing next week later doesn't also change this week
@@ -1824,7 +2439,7 @@ function copyWeekToNext(){
 
     saveData();
 
-    alert("Copied to next week!");
+    showToast("Copied to next week!");
 
 }
 
@@ -1834,6 +2449,34 @@ function copyWeekToNext(){
 let mealCategories = JSON.parse(
     localStorage.getItem("foodflowCategories")
 ) || ["🍳 Frukost","🥗 Lunch","🍝 Middag","☕ Fika"];
+
+
+// A distinct accent color per meal type, so the planner is scannable
+// at a glance. Cycles through the palette if there are more custom
+// categories than colors.
+const accentPalette = [
+    "#4caf50", // green
+    "#2196f3", // blue
+    "#ff9800", // orange
+    "#9c27b0", // purple
+    "#e53935", // red
+    "#00bcd4", // cyan
+    "#8bc34a", // light green
+    "#ff5722"  // deep orange
+];
+
+
+function getMealTypeAccent(mealType){
+
+    let idx = mealCategories.indexOf(mealType);
+
+    if(idx === -1){
+        idx = 0;
+    }
+
+    return accentPalette[idx % accentPalette.length];
+
+}
 
 
 function getMealOrder(){
@@ -1915,7 +2558,7 @@ card.innerHTML = `
 
 
 
-if(meals[day]){
+if(meals[day] && meals[day].length > 0){
 
     // Keep each meal's original index (needed for edit/delete)
     // while sorting the displayed order by meal type.
@@ -1932,6 +2575,8 @@ if(meals[day]){
 
 
         box.className="meal";
+
+        box.style.setProperty("--accent", getMealTypeAccent(meal.type));
 
 
         box.innerHTML = `
@@ -1995,15 +2640,33 @@ if(meals[day]){
 
         card.appendChild(box);
 
+        // Desktop: drag this meal onto another day to move it there
+        setupMealDragSource(box, day, originalIndex);
+
+        // Mobile: swipe left to delete
+        attachSwipeToDelete(box, () => deleteMeal(day, originalIndex));
+
 
     });
 
+
+}else{
+
+    let emptyMsg = document.createElement("p");
+    emptyMsg.className = "small";
+    emptyMsg.style.textAlign = "center";
+    emptyMsg.style.opacity = "0.7";
+    emptyMsg.innerText = "No meals planned yet";
+
+    card.appendChild(emptyMsg);
 
 }
 
 
 week.appendChild(card);
 
+// Desktop: let this day accept a dragged meal from another day
+setupDayDropZone(card, day);
 
 });
 
@@ -2174,7 +2837,7 @@ selectedRecipeIndex !== ""
 
 if(!meal.name){
 
-alert("Please enter a meal name.");
+showToast("Please enter a meal name.", { type:"error" });
 
 return;
 
@@ -2228,6 +2891,8 @@ render();
 function deleteMeal(day,index){
 
 
+let removedMeal = meals[day][index];
+
 meals[day].splice(index,1);
 
 
@@ -2235,6 +2900,23 @@ saveData();
 
 
 render();
+
+
+showToast(`Removed "${removedMeal.name}"`, {
+    actionLabel: "Undo",
+    onAction: () => {
+
+        if(!meals[day]){
+            meals[day] = [];
+        }
+
+        meals[day].push(removedMeal);
+
+        saveData();
+        render();
+
+    }
+});
 
 
 }
@@ -2251,7 +2933,7 @@ function openCopyDayModal(day){
 
     if(!meals[day] || meals[day].length === 0){
 
-        alert("There are no meals on " + day + " yet to copy.");
+        showToast("There are no meals on " + day + " yet to copy.", { type:"error" });
         return;
 
     }
@@ -2297,7 +2979,7 @@ function copyDayToTargets(){
 
     if(checkboxes.length === 0){
 
-        alert("Pick at least one day to copy into.");
+        showToast("Pick at least one day to copy into.", { type:"error" });
         return;
 
     }
@@ -2445,7 +3127,7 @@ localStorage.setItem(
 lang
 );
 
-alert(
+showToast(
 lang === "en"
 ? "Language set to English"
 : "Språk satt till Svenska"
@@ -2512,7 +3194,7 @@ function triggerImport(){
 }
 
 
-function importData(event){
+async function importData(event){
 
     let file = event.target.files[0];
 
@@ -2520,11 +3202,14 @@ function importData(event){
         return;
     }
 
-    if(!confirm(
+    let ok = await customConfirm(
         "This will replace your current recipes, meal planner, " +
         "settings, and shopping list with what's in this backup " +
-        "file. Continue?"
-    )){
+        "file. Continue?",
+        "Import backup?"
+    );
+
+    if(!ok){
 
         event.target.value = "";
         return;
@@ -2547,15 +3232,16 @@ function importData(event){
 
             });
 
-            alert("Import complete! The app will now reload.");
+            showToast("Import complete! Reloading...");
 
-            location.reload();
+            setTimeout(() => location.reload(), 900);
 
         }catch(err){
 
-            alert(
+            showToast(
                 "Couldn't read that file — make sure it's a " +
-                "FoodFlow backup .json file."
+                "FoodFlow backup .json file.",
+                { type:"error" }
             );
 
         }
@@ -2603,19 +3289,22 @@ function renderCategoryList(){
 }
 
 
-function deleteCategory(index){
+async function deleteCategory(index){
 
     if(mealCategories.length <= 1){
 
-        alert("You need at least one category.");
+        showToast("You need at least one category.", { type:"error" });
         return;
 
     }
 
-    if(!confirm(
+    let ok = await customConfirm(
         "Delete this category? Meals already using it will keep " +
-        "showing it, but it won't be selectable for new meals."
-    )){
+        "showing it, but it won't be selectable for new meals.",
+        "Delete category?"
+    );
+
+    if(!ok){
         return;
     }
 
@@ -2665,7 +3354,7 @@ document.getElementById("categoryEmoji").value.trim() || "🍽️";
 
 if(!name){
 
-alert("Enter category name");
+showToast("Enter category name", { type:"error" });
 
 return;
 
@@ -2676,7 +3365,7 @@ let newCategory = emoji + " " + name;
 
 if(mealCategories.includes(newCategory)){
 
-    alert("That category already exists.");
+    showToast("That category already exists.", { type:"error" });
     return;
 
 }
@@ -2696,7 +3385,7 @@ document.getElementById("categoryName").value = "";
 document.getElementById("categoryEmoji").value = "";
 
 
-alert(
+showToast(
 "Category saved: "
 +
 newCategory
@@ -2781,7 +3470,7 @@ favorite:false
 
 if(recipe.name===""){
 
-alert("Please enter a recipe name.");
+showToast("Please enter a recipe name.", { type:"error" });
 
 return;
 
@@ -2956,7 +3645,7 @@ let recipe = recipes[index];
 
 if(!recipe){
 
-alert("Recipe not found");
+showToast("Recipe not found", { type:"error" });
 
 return;
 
@@ -3032,11 +3721,29 @@ searchBox
 ? searchBox.value.toLowerCase()
 : "";
 
-recipes
+let filteredRecipes = recipes
     .map((recipe, index) => ({ recipe, index }))
     .filter(({recipe}) => recipe.name.toLowerCase().includes(search))
-    .sort((a, b) => (b.recipe.favorite ? 1 : 0) - (a.recipe.favorite ? 1 : 0))
-    .forEach(({recipe, index})=>{
+    .sort((a, b) => (b.recipe.favorite ? 1 : 0) - (a.recipe.favorite ? 1 : 0));
+
+if(filteredRecipes.length === 0){
+
+    let emptyMsg = document.createElement("p");
+    emptyMsg.className = "small";
+    emptyMsg.style.textAlign = "center";
+    emptyMsg.style.opacity = "0.7";
+
+    emptyMsg.innerText = recipes.length === 0
+        ? "No recipes yet — tap ➕ Add Recipe or 📋 Paste from Web to get started"
+        : `No recipes match "${search}"`;
+
+    list.appendChild(emptyMsg);
+
+    return;
+
+}
+
+filteredRecipes.forEach(({recipe, index})=>{
 
 let card =
 document.createElement("div");
@@ -3156,6 +3863,8 @@ list.appendChild(card);
 
 function deleteRecipe(index){
 
+let removedRecipe = recipes[index];
+
 recipes.splice(index,1);
 
 localStorage.setItem(
@@ -3164,6 +3873,22 @@ JSON.stringify(recipes)
 );
 
 renderRecipes();
+
+showToast(`Removed "${removedRecipe.name}"`, {
+    actionLabel: "Undo",
+    onAction: () => {
+
+        recipes.push(removedRecipe);
+
+        localStorage.setItem(
+            "foodflowRecipes",
+            JSON.stringify(recipes)
+        );
+
+        renderRecipes();
+
+    }
+});
 
 }
 
@@ -3411,7 +4136,7 @@ let recipe = recipes[index];
 
 if(!recipe){
 
-alert("Recipe not found");
+showToast("Recipe not found", { type:"error" });
 
 return;
 
@@ -3579,6 +4304,17 @@ const categoryIcons = {
     "Pantry":"🧂",
     "Herbs & Spices":"🌿",
     "Other":"🛒"
+};
+
+// A distinct accent color per store-section, for the same at-a-glance
+// scannability as the meal-type colors in the planner.
+const categoryAccents = {
+    "Produce":"#4caf50",
+    "Dairy & Eggs":"#2196f3",
+    "Meat & Fish":"#e53935",
+    "Pantry":"#ff9800",
+    "Herbs & Spices":"#8bc34a",
+    "Other":"#9e9e9e"
 };
 
 
@@ -3810,9 +4546,10 @@ function renderShoppingItemRow(item){
         : "";
 
     let safeKey = item.key.replace(/'/g,"\\'");
+    let accent = categoryAccents[item.category] || categoryAccents["Other"];
 
     return `
-        <div class="meal" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div class="meal" data-swipe-key="${safeKey}" style="--accent:${accent};display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
             <input
                 type="checkbox"
                 style="width:auto;margin:0;"
@@ -3878,6 +4615,25 @@ function renderShoppingList(){
         ? fullList.filter(item => item.name.toLowerCase().includes(search))
         : fullList;
 
+    // Progress bar reflects the FULL list (not just search results),
+    // so it stays a true picture of the whole shopping trip.
+    let progressText = document.getElementById("shoppingProgressText");
+    let progressBar = document.getElementById("shoppingProgressBar");
+
+    if(progressText && progressBar){
+
+        let total = fullList.length;
+        let checkedCount = fullList.filter(item => shoppingChecked[item.key]).length;
+        let percent = total > 0 ? Math.round((checkedCount / total) * 100) : 0;
+
+        progressText.innerText = total > 0
+            ? `${checkedCount} / ${total} checked`
+            : "";
+
+        progressBar.style.width = percent + "%";
+
+    }
+
     if(fullList.length === 0){
 
         container.innerHTML = `
@@ -3907,6 +4663,15 @@ function renderShoppingList(){
                 ${groups[cat].map(renderShoppingItemRow).join("")}
             `)
             .join("");
+
+        // Mobile: swipe left on an item to delete it
+        container.querySelectorAll("[data-swipe-key]").forEach(row=>{
+
+            let key = row.getAttribute("data-swipe-key");
+
+            attachSwipeToDelete(row, () => deleteShoppingItem(key));
+
+        });
 
     }
 
@@ -4017,7 +4782,7 @@ function saveShoppingItem(){
         document.getElementById("shoppingItemUnit").value.trim();
 
     if(!name){
-        alert("Please enter an item name.");
+        showToast("Please enter an item name.", { type:"error" });
         return;
     }
 
@@ -4070,21 +4835,38 @@ function saveShoppingItem(){
 
 function deleteShoppingItem(key){
 
-    if(!confirm("Remove this item from the shopping list?")){
-        return;
-    }
-
     const { list } = generateShoppingList();
     let item = list.find(i => i.key === key);
 
-    if(item && item.isExtra){
+    if(!item) return;
+
+    if(item.isExtra){
 
         let id = key.replace("extra:","");
+        let removedExtra = shoppingExtras.find(e => e.id === id);
 
-        shoppingExtras =
-            shoppingExtras.filter(e => e.id !== id);
+        shoppingExtras = shoppingExtras.filter(e => e.id !== id);
+
+        saveShoppingState();
+        renderShoppingList();
+
+        showToast(`Removed "${item.name}"`, {
+            actionLabel: "Undo",
+            onAction: () => {
+
+                if(removedExtra){
+                    shoppingExtras.push(removedExtra);
+                    saveShoppingState();
+                    renderShoppingList();
+                }
+
+            }
+        });
 
     }else{
+
+        // Remember any prior override so Undo can restore it exactly
+        let previousOverride = shoppingOverrides[key];
 
         // Persist the removal so it stays hidden next time the
         // list is regenerated — handy for pantry staples. This one
@@ -4094,11 +4876,26 @@ function deleteShoppingItem(key){
         // Any earlier manual edit for this key no longer applies
         delete shoppingOverrides[key];
 
+        saveShoppingState();
+        renderShoppingList();
+
+        showToast(`Removed "${item.name}"`, {
+            actionLabel: "Undo",
+            onAction: () => {
+
+                delete shoppingRemoved[key];
+
+                if(previousOverride){
+                    shoppingOverrides[key] = previousOverride;
+                }
+
+                saveShoppingState();
+                renderShoppingList();
+
+            }
+        });
+
     }
-
-    saveShoppingState();
-
-    renderShoppingList();
 
 }
 
@@ -4113,12 +4910,15 @@ function openAddShoppingItem(){
 }
 
 
-function resetShoppingEdits(){
+async function resetShoppingEdits(){
 
-    if(!confirm(
+    let confirmed = await customConfirm(
         "This brings back any removed or edited auto-generated " +
-        "items. Items you added by hand will stay. Continue?"
-    )){
+        "items. Items you added by hand will stay. Continue?",
+        "Undo my edits?"
+    );
+
+    if(!confirmed){
         return;
     }
 
@@ -4322,7 +5122,7 @@ function parsePastedRecipe(){
 
     if(!raw.trim()){
 
-        alert("Paste some recipe text first.");
+        showToast("Paste some recipe text first.", { type:"error" });
         return;
 
     }
@@ -4416,10 +5216,11 @@ function parsePastedRecipe(){
 
     if(ingredientLines.length === 0){
 
-        alert(
-            "Couldn't find any ingredient lines in that text. " +
-            "Try pasting just the ingredient list, then you can " +
-            "still fill things in by hand in the form that opens."
+        showToast(
+            "Couldn't find any ingredient lines in that text — try " +
+            "pasting just the ingredient list, then fill things in " +
+            "by hand in the form that opens.",
+            { type:"error", duration:6000 }
         );
 
     }
@@ -4531,6 +5332,27 @@ renderShoppingList();
 
 </script>
 
+
+<div id="toastContainer"></div>
+
+<!-- CUSTOM CONFIRM WINDOW -->
+
+<div class="modal" id="customConfirmModal">
+
+<div class="modal-box">
+
+<h2 id="customConfirmTitle">Are you sure?</h2>
+
+<p id="customConfirmMessage" class="small"></p>
+
+<br>
+
+<button onclick="resolveCustomConfirm(true)">Yes, continue</button>
+<button onclick="resolveCustomConfirm(false)">Cancel</button>
+
+</div>
+
+</div>
 
 <div id="printArea"></div>
 
