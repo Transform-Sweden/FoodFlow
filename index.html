@@ -1826,6 +1826,36 @@ function resolveCustomConfirm(result){
 }
 
 
+// Closes any modal safely — customConfirmModal needs to resolve its
+// pending promise (as "cancelled") rather than just being hidden,
+// or code awaiting it would hang forever. Used by Escape, clicking
+// outside a modal, and anywhere else that closes modals generically.
+function closeAnyModal(modal){
+
+    if(!modal || modal.style.display !== "flex"){
+        return;
+    }
+
+    if(modal.id === "customConfirmModal"){
+        resolveCustomConfirm(false);
+    }else{
+        modal.style.display = "none";
+    }
+
+}
+
+
+// Clicking the dimmed backdrop (not the modal-box content itself)
+// closes whichever modal is open.
+document.addEventListener("click", function(e){
+
+    if(e.target.classList && e.target.classList.contains("modal")){
+        closeAnyModal(e.target);
+    }
+
+});
+
+
 // =======================
 // DRAG & DROP MEALS BETWEEN DAYS (desktop)
 // =======================
@@ -1980,9 +2010,7 @@ document.addEventListener("keydown", function(e){
     if(e.key === "Escape"){
 
         document.querySelectorAll(".modal").forEach(modal=>{
-            if(modal.style.display === "flex"){
-                modal.style.display = "none";
-            }
+            closeAnyModal(modal);
         });
 
         return;
