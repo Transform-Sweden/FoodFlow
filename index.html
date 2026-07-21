@@ -399,6 +399,32 @@ margin:0;
 
 }
 
+.shopping-range-row {
+
+display:flex;
+
+align-items:center;
+
+gap:8px;
+
+flex-wrap:wrap;
+
+margin-top:6px;
+
+}
+
+.shopping-range-row input {
+
+width:auto;
+
+flex:1;
+
+min-width:130px;
+
+margin:0;
+
+}
+
 .nav-short {
 
 display:none;
@@ -968,6 +994,28 @@ Automatically built from every recipe in your meal planner, scaled to the number
 
 <button onclick="openAddShoppingItem()">➕ Add Item</button>
 <button onclick="openShoppingMoreMenu()">⋯ More</button>
+
+<div class="small" style="margin-top:12px;">
+🗓️ Shopping for:
+</div>
+
+<div class="shopping-range-row">
+
+<input type="date" id="shoppingRangeStartInput" onchange="onShoppingRangeChange()">
+
+<span class="small">to</span>
+
+<input type="date" id="shoppingRangeEndInput" onchange="onShoppingRangeChange()">
+
+</div>
+
+<div id="shoppingRangeSummary" class="small" style="margin-top:4px;"></div>
+
+<div class="week-nav-secondary" style="margin-top:8px;">
+<button onclick="setShoppingRangePreset('thisWeek')" style="font-size:13px;padding:8px 10px;">This Week</button>
+<button onclick="setShoppingRangePreset('restOfWeek')" style="font-size:13px;padding:8px 10px;">📍 Rest of Week</button>
+<button onclick="setShoppingRangePreset('next7')" style="font-size:13px;padding:8px 10px;">Next 7 Days</button>
+</div>
 
 <input
 id="shoppingSearch"
@@ -2199,6 +2247,54 @@ function getMondayKey(date){
 }
 
 
+// Adds N days (can be negative) to a "YYYY-MM-DD" key and returns
+// the resulting key.
+function addDaysToKey(key, n){
+
+    let d = parseDateKey(key);
+    d.setDate(d.getDate() + n);
+
+    return formatDateKey(d);
+
+}
+
+
+// Walks every calendar day from startKey to endKey (inclusive),
+// regardless of week boundaries, returning which week/day-name each
+// one belongs to — this is what lets the shopping list span across
+// two different weeks (e.g. Wed this week through Wed next week).
+function getDateRangeDays(startKey, endKey){
+
+    let result = [];
+
+    let current = parseDateKey(startKey);
+    let end = parseDateKey(endKey);
+
+    let count = 0;
+    const maxDays = 60; // safety cap against a reversed/bad range
+
+    while(current.getTime() <= end.getTime() && count < maxDays){
+
+        let weekKey = getMondayKey(current);
+        let dayIndex = (current.getDay() + 6) % 7; // Monday=0 ... Sunday=6
+        let dayName = days[dayIndex];
+
+        result.push({
+            weekKey: weekKey,
+            day: dayName,
+            dateKey: formatDateKey(current)
+        });
+
+        current.setDate(current.getDate() + 1);
+        count++;
+
+    }
+
+    return result;
+
+}
+
+
 function ensureWeek(weekKey){
 
     if(!weeks[weekKey]){
@@ -2318,6 +2414,21 @@ let shoppingOverridesByWeek = JSON.parse(
 let shoppingExtrasByWeek = JSON.parse(
     localStorage.getItem("foodflowShoppingExtrasByWeek")
 ) || null;
+
+// The date range currently being shopped for — a plain start/end
+// date, independent of the week you happen to be viewing in the
+// planner, so it can span across a week boundary (e.g. Wednesday
+// this week through Wednesday next week).
+let shoppingRangeStart = localStorage.getItem("foodflowShoppingRangeStart");
+let shoppingRangeEnd = localStorage.getItem("foodflowShoppingRangeEnd");
+
+if(!shoppingRangeStart || !shoppingRangeEnd){
+
+    // Default: the current week's Monday through Sunday.
+    shoppingRangeStart = currentWeekKey;
+    shoppingRangeEnd = addDaysToKey(currentWeekKey, 6);
+
+}
 
 if(shoppingCheckedByWeek === null){
 
@@ -2518,6 +2629,9 @@ function saveShoppingState(){
         "foodflowShoppingRemoved",
         JSON.stringify(shoppingRemoved)
     );
+
+    localStorage.setItem("foodflowShoppingRangeStart", shoppingRangeStart);
+    localStorage.setItem("foodflowShoppingRangeEnd", shoppingRangeEnd);
 
 }
 
@@ -4603,11 +4717,15 @@ function generateShoppingList(){
     let items = {};
     let manualMeals = [];
 
-    days.forEach(day=>{
+    let rangeDays = getDateRangeDays(shoppingRangeStart, shoppingRangeEnd);
 
-        if(!meals[day]) return;
+    rangeDays.forEach(({ weekKey, day })=>{
 
-        meals[day].forEach(meal=>{
+        let weekMeals = weeks[weekKey] ? weeks[weekKey][day] : null;
+
+        if(!weekMeals) return;
+
+        weekMeals.forEach(meal=>{
 
             let hasRecipe =
                 meal.recipe !== null &&
@@ -4819,7 +4937,109 @@ function groupItemsByCategory(list){
 }
 
 
+function updateShoppingRangeInputs(){
+
+    let startInput = document.getElementById("shoppingRangeStartInput");
+    let endInput = document.getElementById("shoppingRangeEndInput");
+
+    if(startInput){
+        startInput.value = shoppingRangeStart;
+    }
+
+    if(endInput){
+        endInput.value = shoppingRangeEnd;
+    }
+
+    let summary = document.getElementById("shoppingRangeSummary");
+
+    if(summary){
+
+        let count = getDateRangeDays(shoppingRangeStart, shoppingRangeEnd).length;
+
+        summary.innerText = count === 1
+            ? "1 day selected"
+            : `${count} days selected`;
+
+    }
+
+}
+
+
+function onShoppingRangeChange(){
+
+    let startInput = document.getElementById("shoppingRangeStartInput");
+    let endInput = document.getElementById("shoppingRangeEndInput");
+
+    let newStart = startInput.value;
+    let newEnd = endInput.value;
+
+    if(!newStart || !newEnd){
+        return;
+    }
+
+    if(parseDateKey(newStart).getTime() > parseDateKey(newEnd).getTime()){
+
+        showToast("Start date needs to be on or before the end date.", { type:"error" });
+        updateShoppingRangeInputs();
+
+        return;
+
+    }
+
+    shoppingRangeStart = newStart;
+    shoppingRangeEnd = newEnd;
+
+    saveShoppingState();
+
+    updateShoppingRangeInputs();
+    renderShoppingList();
+
+}
+
+
+function setShoppingRangePreset(preset){
+
+    let today = new Date();
+
+    if(preset === "thisWeek"){
+
+        // The Monday-to-Sunday of whichever week you're currently
+        // viewing in the planner.
+        shoppingRangeStart = currentWeekKey;
+        shoppingRangeEnd = addDaysToKey(currentWeekKey, 6);
+
+    }else if(preset === "restOfWeek"){
+
+        // From today through the end of today's actual week —
+        // useful for a mid-week shopping trip.
+        let todayKey = formatDateKey(today);
+        let todayWeekKey = getMondayKey(today);
+
+        shoppingRangeStart = todayKey;
+        shoppingRangeEnd = addDaysToKey(todayWeekKey, 6);
+
+    }else if(preset === "next7"){
+
+        // A rolling 7-day window starting today — can span across
+        // into next week.
+        let todayKey = formatDateKey(today);
+
+        shoppingRangeStart = todayKey;
+        shoppingRangeEnd = addDaysToKey(todayKey, 6);
+
+    }
+
+    saveShoppingState();
+
+    updateShoppingRangeInputs();
+    renderShoppingList();
+
+}
+
+
 function renderShoppingList(){
+
+    updateShoppingRangeInputs();
 
     const { list: fullList, manualMeals } = generateShoppingList();
 
