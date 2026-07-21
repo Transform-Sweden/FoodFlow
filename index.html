@@ -377,6 +377,28 @@ flex-wrap:wrap;
 
 }
 
+.action-list {
+
+display:flex;
+
+flex-direction:column;
+
+gap:8px;
+
+margin:15px 0;
+
+}
+
+.action-list button {
+
+width:100%;
+
+text-align:left;
+
+margin:0;
+
+}
+
 .nav-short {
 
 display:none;
@@ -944,11 +966,8 @@ padding-bottom:70px;
 Automatically built from every recipe in your meal planner, scaled to the number of people you set for each meal.
 </p>
 
-<button onclick="renderShoppingList()">🔄 Refresh</button>
-<button onclick="clearCheckedItems()">🧹 Clear Checked</button>
 <button onclick="openAddShoppingItem()">➕ Add Item</button>
-<button onclick="resetShoppingEdits()">↩️ Undo My Edits</button>
-<button onclick="printShoppingList()">🖨️ Print / Save as PDF</button>
+<button onclick="openShoppingMoreMenu()">⋯ More</button>
 
 <input
 id="shoppingSearch"
@@ -1394,6 +1413,31 @@ Cancel
 
 </div>
 
+
+</div>
+
+<!-- SHOPPING LIST MORE ACTIONS MENU -->
+
+<div class="modal" id="shoppingMoreMenu">
+
+<div class="modal-box">
+
+<h2>🛒 More Actions</h2>
+
+<div class="action-list">
+
+<button onclick="closeShoppingMoreMenu(); renderShoppingList();">🔄 Refresh</button>
+<button onclick="closeShoppingMoreMenu(); clearCheckedItems();">🧹 Clear Checked</button>
+<button onclick="closeShoppingMoreMenu(); resetShoppingEdits();">↩️ Undo My Edits</button>
+<button onclick="closeShoppingMoreMenu(); printShoppingList();">🖨️ Print / Save as PDF</button>
+
+</div>
+
+<br>
+
+<button onclick="closeShoppingMoreMenu()">Close</button>
+
+</div>
 
 </div>
 
@@ -5080,6 +5124,22 @@ function openAddShoppingItem(){
     editingShoppingIsExtra = true;
 
     openShoppingItemModal("Add Item", "", "", "");
+
+}
+
+
+function openShoppingMoreMenu(){
+
+    document.getElementById("shoppingMoreMenu")
+    .style.display = "flex";
+
+}
+
+
+function closeShoppingMoreMenu(){
+
+    document.getElementById("shoppingMoreMenu")
+    .style.display = "none";
 
 }
 
