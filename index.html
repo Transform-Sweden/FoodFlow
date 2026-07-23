@@ -43,6 +43,21 @@ box-sizing:border-box;
 }
 
 
+/* Clear outline when navigating by keyboard (Tab), but not when
+clicking with a mouse — keeps things visually clean either way. */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+
+outline:3px solid var(--primary);
+
+outline-offset:2px;
+
+}
+
+
 
 body {
 
@@ -76,6 +91,25 @@ padding:30px;
 text-align:center;
 
 padding:10px;
+
+}
+
+
+/* Sticky on desktop so switching pages doesn't require scrolling
+back to the top of a long recipe or shopping list. */
+@media(min-width:601px){
+
+#navbar {
+
+position:sticky;
+
+top:0;
+
+z-index:400;
+
+background:var(--bg);
+
+}
 
 }
 
@@ -285,6 +319,8 @@ align-items:center;
 
 justify-content:center;
 
+z-index:1000;
+
 }
 
 
@@ -305,6 +341,53 @@ max-height:90vh;
 
 overflow-y:auto;
 
+animation:modalPopIn .15s ease;
+
+}
+
+@keyframes modalPopIn {
+
+from { opacity:0; transform:scale(.96); }
+
+to { opacity:1; transform:scale(1); }
+
+}
+
+
+/* On phones, modals slide up as a bottom sheet instead of a small
+centered box — easier to reach and read one-handed. */
+@media(max-width:600px){
+
+.modal {
+
+align-items:flex-end;
+
+}
+
+.modal-box {
+
+width:100%;
+
+max-width:none;
+
+max-height:85vh;
+
+border-radius:20px 20px 0 0;
+
+padding:20px 20px calc(20px + env(safe-area-inset-bottom));
+
+animation:sheetSlideUp .2s ease;
+
+}
+
+@keyframes sheetSlideUp {
+
+from { transform:translateY(100%); }
+
+to { transform:translateY(0); }
+
+}
+
 }
 
 
@@ -322,6 +405,48 @@ border-radius:12px;
 border:1px solid #ccc;
 
 font-size:16px;
+
+}
+
+.stepper {
+
+display:flex;
+
+align-items:center;
+
+gap:10px;
+
+margin:8px 0;
+
+}
+
+.stepper button {
+
+width:44px;
+
+height:44px;
+
+min-width:44px;
+
+padding:0;
+
+font-size:20px;
+
+line-height:1;
+
+border-radius:50%;
+
+flex-shrink:0;
+
+}
+
+.stepper input {
+
+text-align:center;
+
+margin:0;
+
+flex:1;
 
 }
 
@@ -758,6 +883,36 @@ transition:width .3s ease;
 }
 
 
+/* Small satisfying "pop" when checking an item off the shopping list */
+#shoppingList input[type="checkbox"]{
+
+transition:transform .15s ease;
+
+}
+
+#shoppingList input[type="checkbox"]:checked{
+
+animation:checkPop .3s ease;
+
+}
+
+@keyframes checkPop{
+
+0% { transform:scale(1); }
+
+45% { transform:scale(1.35); }
+
+100% { transform:scale(1); }
+
+}
+
+#shoppingList .meal span{
+
+transition:opacity .25s ease;
+
+}
+
+
 /* BIGGER TOUCH TARGETS ON PHONES/TABLETS */
 
 @media(pointer:coarse){
@@ -850,6 +1005,51 @@ box-shadow:none;
 body {
 
 padding-bottom:70px;
+
+}
+
+}
+
+
+/* FLOATING QUICK-ADD BUTTON (phones, planner page only) */
+
+#quickAddFab {
+
+display:none;
+
+position:fixed;
+
+right:20px;
+
+bottom:20px;
+
+width:56px;
+
+height:56px;
+
+border-radius:50%;
+
+font-size:26px;
+
+padding:0;
+
+box-shadow:0 4px 14px rgba(0,0,0,.35);
+
+z-index:600;
+
+}
+
+@media(max-width:600px){
+
+#quickAddFab.show-fab {
+
+display:flex;
+
+align-items:center;
+
+justify-content:center;
+
+bottom:90px;
 
 }
 
@@ -1025,6 +1225,8 @@ oninput="renderShoppingList()"
 
 <div id="shoppingProgressText" class="small" style="margin-top:10px;"></div>
 
+<div id="shoppingSelectionBar" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0;padding:10px;background:rgba(120,120,120,.12);border-radius:14px;"></div>
+
 <div id="shoppingProgressWrap">
 <div id="shoppingProgressBar" style="width:0%;"></div>
 </div>
@@ -1084,6 +1286,13 @@ oninput="renderShoppingList()"
 <h3>
 🎨 Theme
 </h3>
+
+
+<button onclick="setTheme('auto')">
+
+🌗 Auto (match device)
+
+</button>
 
 
 <button onclick="setTheme('light')">
@@ -1389,11 +1598,11 @@ People
 </label>
 
 
-<input
-id="people"
-type="number"
-value="4"
->
+<div class="stepper">
+<button type="button" onclick="adjustStepper('people',-1)">−</button>
+<input id="people" type="number" value="4" readonly>
+<button type="button" onclick="adjustStepper('people',1)">+</button>
+</div>
 
 
 
@@ -1475,8 +1684,10 @@ Cancel
 <div class="action-list">
 
 <button onclick="closeShoppingMoreMenu(); renderShoppingList();">🔄 Refresh</button>
+<button onclick="closeShoppingMoreMenu(); toggleShoppingSelectionMode();">☑️ Select Multiple</button>
 <button onclick="closeShoppingMoreMenu(); clearCheckedItems();">🧹 Clear Checked</button>
 <button onclick="closeShoppingMoreMenu(); resetShoppingEdits();">↩️ Undo My Edits</button>
+<button onclick="closeShoppingMoreMenu(); shareShoppingList();">📤 Share</button>
 <button onclick="closeShoppingMoreMenu(); printShoppingList();">🖨️ Print / Save as PDF</button>
 
 </div>
@@ -1588,11 +1799,11 @@ Servings
 </label>
 
 
-<input
-id="recipePeople"
-type="number"
-value="4"
->
+<div class="stepper">
+<button type="button" onclick="adjustStepper('recipePeople',-1)">−</button>
+<input id="recipePeople" type="number" value="4" readonly>
+<button type="button" onclick="adjustStepper('recipePeople',1)">+</button>
+</div>
 
 
 
@@ -1702,11 +1913,11 @@ People
 </label>
 
 
-<input
-id="plannerRecipePeople"
-type="number"
-value="4"
->
+<div class="stepper">
+<button type="button" onclick="adjustStepper('plannerRecipePeople',-1)">−</button>
+<input id="plannerRecipePeople" type="number" value="4" readonly>
+<button type="button" onclick="adjustStepper('plannerRecipePeople',1)">+</button>
+</div>
 
 
 <br>
@@ -1926,6 +2137,7 @@ function setupDayDropZone(card, targetDay){
         render();
 
         if(sourceDay !== targetDay){
+            hapticFeedback();
             showToast(`Moved "${movedMeal.name}" to ${targetDay}`);
         }
 
@@ -1981,6 +2193,8 @@ function attachSwipeToDelete(element, onDelete){
             element.style.transform = "translateX(-100%)";
             element.style.opacity = "0";
 
+            hapticFeedback();
+
             setTimeout(onDelete, 200);
 
         }else{
@@ -1998,6 +2212,108 @@ function attachSwipeToDelete(element, onDelete){
 
 
 // =======================
+// MODAL FOCUS: auto-focus + keyboard trap (desktop)
+// =======================
+
+function getFocusableElements(container){
+
+    return Array.from(container.querySelectorAll(
+        'button, [href], input:not([type="hidden"]), select, textarea, [tabindex]:not([tabindex="-1"])'
+    )).filter(el => !el.disabled && el.offsetParent !== null);
+
+}
+
+
+function autoFocusModal(modal){
+
+    let firstField = modal.querySelector(
+        'input:not([type="hidden"]), textarea, select'
+    );
+
+    let target = firstField || getFocusableElements(modal)[0];
+
+    if(target){
+        setTimeout(()=> target.focus(), 50);
+    }
+
+}
+
+
+// Watches every modal for it becoming visible, so focus behavior
+// works no matter which function opened it — no need to touch each
+// individual openXModal() function.
+document.querySelectorAll(".modal").forEach(modal=>{
+
+    let wasOpen = false;
+
+    new MutationObserver(()=>{
+
+        let isOpen = modal.style.display === "flex";
+
+        if(isOpen && !wasOpen){
+            autoFocusModal(modal);
+        }
+
+        wasOpen = isOpen;
+
+    }).observe(modal, { attributes:true, attributeFilter:["style"] });
+
+});
+
+
+// A short, subtle vibration for touch interactions that just
+// completed (swipe-delete, drag-drop) — silently does nothing on
+// devices/browsers without vibration support.
+function hapticFeedback(){
+
+    if(navigator.vibrate){
+        navigator.vibrate(15);
+    }
+
+}
+
+
+// Used by the +/- stepper controls on servings/people fields.
+function adjustStepper(inputId, delta){
+
+    let input = document.getElementById(inputId);
+
+    if(!input){
+        return;
+    }
+
+    let value = parseInt(input.value, 10);
+
+    if(isNaN(value)){
+        value = 1;
+    }
+
+    value = Math.max(1, value + delta);
+
+    input.value = value;
+
+}
+
+
+// Jumps straight to adding a meal on today's actual date — switching
+// weeks first if a different week is currently being viewed.
+function quickAddToday(){
+
+    let todayWeekKey = getMondayKey(new Date());
+
+    if(currentWeekKey !== todayWeekKey){
+        switchToWeek(todayWeekKey);
+    }
+
+    let todayIndex = (new Date().getDay() + 6) % 7;
+    let todayName = days[todayIndex];
+
+    openModal(todayName);
+
+}
+
+
+// =======================
 // KEYBOARD SHORTCUTS (desktop)
 // =======================
 
@@ -2005,6 +2321,36 @@ document.addEventListener("keydown", function(e){
 
     let tag = (e.target.tagName || "").toLowerCase();
     let typing = tag === "input" || tag === "textarea" || tag === "select";
+
+    // Tab inside an open modal stays trapped within it, instead of
+    // tabbing out into the page behind it.
+    if(e.key === "Tab"){
+
+        let openModal = Array.from(document.querySelectorAll(".modal"))
+            .find(m => m.style.display === "flex");
+
+        if(openModal){
+
+            let focusable = getFocusableElements(openModal);
+
+            if(focusable.length > 0){
+
+                let first = focusable[0];
+                let last = focusable[focusable.length - 1];
+
+                if(e.shiftKey && document.activeElement === first){
+                    e.preventDefault();
+                    last.focus();
+                }else if(!e.shiftKey && document.activeElement === last){
+                    e.preventDefault();
+                    first.focus();
+                }
+
+            }
+
+        }
+
+    }
 
     // Esc closes whichever modal is open
     if(e.key === "Escape"){
@@ -3387,12 +3733,37 @@ document.body.classList.contains("dark")
 
 
 
-if(
-localStorage.getItem("foodflowTheme")
-==="true"
-){
+function applyTheme(){
 
-document.body.classList.add("dark");
+    let mode = localStorage.getItem("foodflowTheme") || "auto";
+
+    let shouldBeDark;
+
+    if(mode === "auto"){
+        shouldBeDark = window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches;
+    }else{
+        shouldBeDark = mode === "dark";
+    }
+
+    document.body.classList.toggle("dark", shouldBeDark);
+
+}
+
+applyTheme();
+
+// If set to Auto, follow the system's light/dark setting live —
+// e.g. if the phone switches to dark mode at sunset.
+if(window.matchMedia){
+
+    window.matchMedia("(prefers-color-scheme: dark)")
+        .addEventListener("change", ()=>{
+
+            if((localStorage.getItem("foodflowTheme") || "auto") === "auto"){
+                applyTheme();
+            }
+
+        });
 
 }
 
@@ -3423,30 +3794,9 @@ document.getElementById("settingsModal")
 
 function setTheme(mode){
 
+    localStorage.setItem("foodflowTheme", mode);
 
-if(mode==="dark"){
-
-document.body.classList.add("dark");
-
-localStorage.setItem(
-"foodflowTheme",
-"true"
-);
-
-
-}else{
-
-
-document.body.classList.remove("dark");
-
-localStorage.setItem(
-"foodflowTheme",
-"false"
-);
-
-
-}
-
+    applyTheme();
 
 }
 
@@ -4903,14 +5253,38 @@ function formatAmount(num){
 
 function renderShoppingItemRow(item){
 
-    let checked = shoppingChecked[item.key] ? "checked" : "";
+    let safeKey = item.key.replace(/'/g,"\\'");
+    let accent = categoryAccents[item.category] || categoryAccents["Other"];
 
     let amountText = item.amount > 0
         ? `${formatAmount(item.amount)}${item.unit ? " " + item.unit : ""} `
         : "";
 
-    let safeKey = item.key.replace(/'/g,"\\'");
-    let accent = categoryAccents[item.category] || categoryAccents["Other"];
+    if(shoppingSelectionMode){
+
+        let selected = shoppingSelectedKeys.has(item.key);
+
+        return `
+            <div
+                class="meal"
+                style="--accent:${accent};display:flex;align-items:center;gap:10px;flex-wrap:wrap;cursor:pointer;${selected ? "outline:2px solid var(--primary);" : ""}"
+                onclick="toggleItemSelection('${safeKey}')"
+            >
+                <input
+                    type="checkbox"
+                    style="width:auto;margin:0;pointer-events:none;"
+                    ${selected ? "checked" : ""}
+                >
+                <span style="flex:1;">
+                    ${amountText}${item.name}
+                    ${item.isExtra ? `<span class="small">(added by you)</span>` : ""}
+                </span>
+            </div>
+        `;
+
+    }
+
+    let checked = shoppingChecked[item.key] ? "checked" : "";
 
     return `
         <div class="meal" data-swipe-key="${safeKey}" style="--accent:${accent};display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -5068,6 +5442,7 @@ function setShoppingRangePreset(preset){
 function renderShoppingList(){
 
     updateShoppingRangeInputs();
+    renderShoppingSelectionBar();
 
     const { list: fullList, manualMeals } = generateShoppingList();
 
@@ -5162,6 +5537,10 @@ function toggleShoppingItem(key){
 
     shoppingChecked[key] = !shoppingChecked[key];
 
+    if(shoppingChecked[key]){
+        hapticFeedback();
+    }
+
     saveShoppingState();
 
     renderShoppingList();
@@ -5184,6 +5563,140 @@ function clearCheckedItems(){
 // null key = adding a brand new item.
 let editingShoppingKey = null;
 let editingShoppingIsExtra = false;
+
+
+// =======================
+// SHOPPING LIST MULTI-SELECT
+// =======================
+
+let shoppingSelectionMode = false;
+let shoppingSelectedKeys = new Set();
+
+
+function toggleShoppingSelectionMode(){
+
+    shoppingSelectionMode = !shoppingSelectionMode;
+    shoppingSelectedKeys.clear();
+
+    renderShoppingList();
+
+}
+
+
+function toggleItemSelection(key){
+
+    if(shoppingSelectedKeys.has(key)){
+        shoppingSelectedKeys.delete(key);
+    }else{
+        shoppingSelectedKeys.add(key);
+    }
+
+    renderShoppingSelectionBar();
+    renderShoppingList();
+
+}
+
+
+function renderShoppingSelectionBar(){
+
+    let bar = document.getElementById("shoppingSelectionBar");
+
+    if(!bar){
+        return;
+    }
+
+    if(!shoppingSelectionMode){
+        bar.style.display = "none";
+        return;
+    }
+
+    bar.style.display = "flex";
+
+    bar.innerHTML = `
+        <span class="small">${shoppingSelectedKeys.size} selected</span>
+        <button onclick="bulkCheckSelected()" style="font-size:13px;padding:6px 10px;">✅ Check</button>
+        <button class="delete" onclick="bulkDeleteSelected()" style="font-size:13px;padding:6px 10px;">🗑 Delete</button>
+        <button onclick="toggleShoppingSelectionMode()" style="font-size:13px;padding:6px 10px;">✖ Cancel</button>
+    `;
+
+}
+
+
+function bulkCheckSelected(){
+
+    if(shoppingSelectedKeys.size === 0){
+        return;
+    }
+
+    shoppingSelectedKeys.forEach(key=>{
+        shoppingChecked[key] = true;
+    });
+
+    let count = shoppingSelectedKeys.size;
+
+    saveShoppingState();
+
+    shoppingSelectionMode = false;
+    shoppingSelectedKeys.clear();
+
+    renderShoppingList();
+
+    showToast(`Checked off ${count} item${count === 1 ? "" : "s"}`);
+
+}
+
+
+async function bulkDeleteSelected(){
+
+    if(shoppingSelectedKeys.size === 0){
+        return;
+    }
+
+    let count = shoppingSelectedKeys.size;
+
+    let confirmed = await customConfirm(
+        `Delete ${count} selected item${count === 1 ? "" : "s"} from the shopping list?`,
+        "Delete items?"
+    );
+
+    if(!confirmed){
+        return;
+    }
+
+    const { list } = generateShoppingList();
+
+    shoppingSelectedKeys.forEach(key=>{
+
+        let item = list.find(i => i.key === key);
+
+        if(!item){
+            return;
+        }
+
+        if(item.isExtra){
+
+            let id = key.replace("extra:","");
+            shoppingExtras = shoppingExtras.filter(e => e.id !== id);
+
+        }else{
+
+            shoppingRemoved[key] = true;
+            delete shoppingOverrides[key];
+
+        }
+
+    });
+
+    saveShoppingState();
+
+    shoppingSelectionMode = false;
+    shoppingSelectedKeys.clear();
+
+    renderShoppingList();
+
+    showToast(`Deleted ${count} item${count === 1 ? "" : "s"}`);
+
+}
 
 
 function openShoppingItemModal(title, name, amount, unit){
@@ -5410,6 +5923,92 @@ async function resetShoppingEdits(){
     saveShoppingState();
 
     renderShoppingList();
+
+}
+
+
+// Builds a plain-text version of the current list (grouped by
+// category, same as everywhere else) for sharing or copying.
+function buildShoppingListText(){
+
+    const { list } = generateShoppingList();
+
+    if(list.length === 0){
+        return "Shopping list is empty.";
+    }
+
+    let groups = groupItemsByCategory(list);
+
+    let lines = ["🛒 Shopping List", ""];
+
+    categoryOrder
+        .filter(cat => groups[cat] && groups[cat].length > 0)
+        .forEach(cat=>{
+
+            lines.push(`${categoryIcons[cat] || ""} ${cat}`);
+
+            groups[cat].forEach(item=>{
+
+                let amountText = item.amount > 0
+                    ? `${formatAmount(item.amount)}${item.unit ? " " + item.unit : ""} `
+                    : "";
+
+                let box = shoppingChecked[item.key] ? "[x]" : "[ ]";
+
+                lines.push(`${box} ${amountText}${item.name}`);
+
+            });
+
+            lines.push("");
+
+        });
+
+    return lines.join("\n").trim();
+
+}
+
+
+async function shareShoppingList(){
+
+    let text = buildShoppingListText();
+
+    if(navigator.share){
+
+        try{
+
+            await navigator.share({
+                title: "Shopping List",
+                text: text
+            });
+
+        }catch(err){
+
+            // AbortError just means the person cancelled the share
+            // sheet — nothing to do or report in that case.
+            if(err && err.name !== "AbortError"){
+                showToast("Couldn't share the list.", { type:"error" });
+            }
+
+        }
+
+    }else if(navigator.clipboard){
+
+        try{
+
+            await navigator.clipboard.writeText(text);
+            showToast("Shopping list copied to clipboard");
+
+        }catch(err){
+
+            showToast("Couldn't copy the list.", { type:"error" });
+
+        }
+
+    }else{
+
+        showToast("Sharing isn't supported on this browser.", { type:"error" });
+
+    }
 
 }
 
@@ -5792,6 +6391,13 @@ renderShoppingList();
 }
 
 
+let quickAddFab = document.getElementById("quickAddFab");
+
+if(quickAddFab){
+    quickAddFab.classList.toggle("show-fab", page === "planner");
+}
+
+
 }
 
 let savedPage =
@@ -5835,6 +6441,8 @@ renderShoppingList();
 </div>
 
 </div>
+
+<button id="quickAddFab" onclick="quickAddToday()" title="Add a meal to today">➕</button>
 
 <div id="printArea"></div>
 
