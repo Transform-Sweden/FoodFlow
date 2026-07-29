@@ -1072,14 +1072,14 @@ bottom:90px;
 
 <h1>🍃 FoodFlow</h1>
 
-<p>Plan • Shop • Cook</p>
+<p data-i18n="app_tagline">Plan • Shop • Cook</p>
 
 
 
 
 <button onclick="openSettings()">
 
-⚙️ Settings
+<span data-i18n="settings_button">⚙️ Settings</span>
 
 </button>
 
@@ -1089,17 +1089,17 @@ bottom:90px;
 <nav id="navbar">
 
 <button onclick="showPage('planner')">
-🏠 Meal Planner
+<span data-i18n="nav_planner">🏠 Meal Planner</span>
 </button>
 
 
 <button onclick="showPage('recipes')">
-📖 Recipes
+<span data-i18n="nav_recipes">📖 Recipes</span>
 </button>
 
 
 <button onclick="showPage('shopping')">
-🛒 Shopping List
+<span data-i18n="nav_shopping">🛒 Shopping List</span>
 </button>
 
 </nav>    
@@ -1115,8 +1115,8 @@ bottom:90px;
 <div class="week-nav-row">
 
 <button onclick="goToPreviousWeek()">
-<span class="nav-full">◀ Previous</span>
-<span class="nav-short">◀</span>
+<span class="nav-full" data-i18n="nav_full_previous">◀ Previous</span>
+<span class="nav-short" data-i18n="nav_short_previous">◀</span>
 </button>
 
 <div class="week-nav-center">
@@ -1124,8 +1124,8 @@ bottom:90px;
 </div>
 
 <button onclick="goToNextWeek()">
-<span class="nav-full">Next ▶</span>
-<span class="nav-short">▶</span>
+<span class="nav-full" data-i18n="nav_full_next">Next ▶</span>
+<span class="nav-short" data-i18n="nav_short_next">▶</span>
 </button>
 
 </div>
@@ -1133,13 +1133,13 @@ bottom:90px;
 <div class="week-nav-secondary">
 
 <button onclick="goToThisWeek()" class="week-nav-today">
-<span class="nav-full">📍 This Week</span>
-<span class="nav-short">📍 Today</span>
+<span class="nav-full" data-i18n="nav_full_today">📍 This Week</span>
+<span class="nav-short" data-i18n="nav_short_today">📍 Today</span>
 </button>
 
 <button onclick="copyWeekToNext()" class="week-nav-copy">
-<span class="nav-full">📆 Copy Week Forward</span>
-<span class="nav-short">📆 Copy Forward</span>
+<span class="nav-full" data-i18n="nav_full_copy_forward">📆 Copy Week Forward</span>
+<span class="nav-short" data-i18n="nav_short_copy_forward">📆 Copy Forward</span>
 </button>
 
 </div>
@@ -1156,19 +1156,20 @@ bottom:90px;
 
 <div class="container">
 
-<h2>📖 Recipes</h2>
+<h2 data-i18n="recipes_heading">📖 Recipes</h2>
 
 <button onclick="openRecipeModal()">
-➕ Add Recipe
+<span data-i18n="add_recipe">➕ Add Recipe</span>
 </button>
 
 <button onclick="openPasteModal()">
-📋 Paste from Web
+<span data-i18n="paste_from_web">📋 Paste from Web</span>
 </button>
 
 <input
     id="recipeSearchPage"
     placeholder="🔍 Search recipes..."
+    data-i18n-placeholder="recipe_search_placeholder"
     oninput="renderRecipes()"
 >
 
@@ -1186,16 +1187,16 @@ bottom:90px;
 
 <div class="container">
 
-<h2>🛒 Shopping List</h2>
+<h2 data-i18n="shopping_heading">🛒 Shopping List</h2>
 
-<p class="small">
+<p class="small" data-i18n="shopping_description">
 Automatically built from every recipe in your meal planner, scaled to the number of people you set for each meal.
 </p>
 
-<button onclick="openAddShoppingItem()">➕ Add Item</button>
-<button onclick="openShoppingMoreMenu()">⋯ More</button>
+<button onclick="openAddShoppingItem()"><span data-i18n="add_item">➕ Add Item</span></button>
+<button onclick="openShoppingMoreMenu()"><span data-i18n="more_actions">⋯ More</span></button>
 
-<div class="small" style="margin-top:12px;">
+<div class="small" style="margin-top:12px;" data-i18n="shopping_for">
 🗓️ Shopping for:
 </div>
 
@@ -1203,7 +1204,7 @@ Automatically built from every recipe in your meal planner, scaled to the number
 
 <input type="date" id="shoppingRangeStartInput" onchange="onShoppingRangeChange()">
 
-<span class="small">to</span>
+<span class="small" data-i18n="range_to">to</span>
 
 <input type="date" id="shoppingRangeEndInput" onchange="onShoppingRangeChange()">
 
@@ -1212,14 +1213,15 @@ Automatically built from every recipe in your meal planner, scaled to the number
 <div id="shoppingRangeSummary" class="small" style="margin-top:4px;"></div>
 
 <div class="week-nav-secondary" style="margin-top:8px;">
-<button onclick="setShoppingRangePreset('thisWeek')" style="font-size:13px;padding:8px 10px;">This Week</button>
-<button onclick="setShoppingRangePreset('restOfWeek')" style="font-size:13px;padding:8px 10px;">📍 Rest of Week</button>
-<button onclick="setShoppingRangePreset('next7')" style="font-size:13px;padding:8px 10px;">Next 7 Days</button>
+<button onclick="setShoppingRangePreset('thisWeek')" style="font-size:13px;padding:8px 10px;" data-i18n="preset_this_week">This Week</button>
+<button onclick="setShoppingRangePreset('restOfWeek')" style="font-size:13px;padding:8px 10px;" data-i18n="preset_rest_of_week">📍 Rest of Week</button>
+<button onclick="setShoppingRangePreset('next7')" style="font-size:13px;padding:8px 10px;" data-i18n="preset_next_7">Next 7 Days</button>
 </div>
 
 <input
 id="shoppingSearch"
 placeholder="🔍 Search shopping list..."
+data-i18n-placeholder="shopping_search_placeholder"
 oninput="renderShoppingList()"
 >
 
@@ -1250,7 +1252,7 @@ oninput="renderShoppingList()"
 <div class="modal-box">
 
 
-<h2 id="settingsTitle">
+<h2 id="settingsTitle" data-i18n="settings_title">
 
 ⚙️ Settings
 
@@ -1258,7 +1260,7 @@ oninput="renderShoppingList()"
 
 
 
-<h3>
+<h3 data-i18n="settings_language">
 🌍 Language
 </h3>
 
@@ -1283,28 +1285,28 @@ oninput="renderShoppingList()"
 
 
 
-<h3>
+<h3 data-i18n="settings_theme">
 🎨 Theme
 </h3>
 
 
 <button onclick="setTheme('auto')">
 
-🌗 Auto (match device)
+<span data-i18n="theme_auto">🌗 Auto (match device)</span>
 
 </button>
 
 
 <button onclick="setTheme('light')">
 
-☀️ Light
+<span data-i18n="theme_light">☀️ Light</span>
 
 </button>
 
 
 <button onclick="setTheme('dark')">
 
-🌙 Dark
+<span data-i18n="theme_dark">🌙 Dark</span>
 
 </button>
 
@@ -1312,32 +1314,32 @@ oninput="renderShoppingList()"
 
 
 
-<h3>
+<h3 data-i18n="settings_categories">
 📂 Categories
 </h3>
 
 
 <button onclick="openCategoryManager()">
 
-Manage Categories
+<span data-i18n="manage_categories">Manage Categories</span>
 
 </button>
 
 
-<h3>
+<h3 data-i18n="settings_backup">
 💾 Backup
 </h3>
 
-<p class="small">
+<p class="small" data-i18n="backup_description">
 Your data lives only in this browser. Export it now and then to keep a safe copy, or to move it to another device.
 </p>
 
 <button onclick="exportData()">
-⬇️ Export Data
+<span data-i18n="export_data">⬇️ Export Data</span>
 </button>
 
 <button onclick="triggerImport()">
-⬆️ Import Data
+<span data-i18n="import_data">⬆️ Import Data</span>
 </button>
 
 <input
@@ -1354,7 +1356,7 @@ onchange="importData(event)"
 
 <button onclick="closeSettings()">
 
-Close
+<span data-i18n="close">Close</span>
 
 </button>
 
@@ -1374,21 +1376,21 @@ Close
 <div class="modal-box">
 
 
-<h2>
+<h2 data-i18n="category_title">
 
 📂 Categories
 
 </h2>
 
 
-<p class="small">
+<p class="small" data-i18n="category_current">
 Your current categories:
 </p>
 
 <div id="categoryListDisplay"></div>
 
 
-<p>
+<p data-i18n="category_add">
 Add your own meal categories
 </p>
 
@@ -1397,11 +1399,12 @@ Add your own meal categories
 <input 
 id="categoryName"
 placeholder="Category name"
+data-i18n-placeholder="category_name_placeholder"
 >
 
 
 
-<p>
+<p data-i18n="category_emoji_choose">
 Choose an emoji:
 </p>
 
@@ -1447,6 +1450,7 @@ Choose an emoji:
 <input 
 id="categoryEmoji"
 placeholder="Or type your own emoji"
+data-i18n-placeholder="category_emoji_placeholder"
 >
 
 
@@ -1454,7 +1458,7 @@ placeholder="Or type your own emoji"
 
 <button data-primary onclick="saveCategory()">
 
-Save
+<span data-i18n="save">Save</span>
 
 </button>
 
@@ -1462,7 +1466,7 @@ Save
 
 <button onclick="closeCategoryManager()">
 
-Close
+<span data-i18n="close">Close</span>
 
 </button>
 
@@ -1480,20 +1484,20 @@ Close
 <div class="modal-box">
 
 
-<h2>
+<h2 data-i18n="copy_day_title">
 📋 Copy Day
 </h2>
 
 
 <p class="small">
-Copy all meals from <strong id="copyDaySourceLabel"></strong> into:
+<span data-i18n="copy_day_prefix">Copy all meals from</span> <strong id="copyDaySourceLabel"></strong> <span data-i18n="copy_day_suffix">into:</span>
 </p>
 
 
 <div id="copyDayTargets"></div>
 
 
-<p class="small">
+<p class="small" data-i18n="copy_day_note">
 This adds to whatever's already planned on those days — it won't remove anything.
 </p>
 
@@ -1501,12 +1505,12 @@ This adds to whatever's already planned on those days — it won't remove anythi
 <br>
 
 
-<button data-primary onclick="copyDayToTargets()">
+<button data-primary onclick="copyDayToTargets()" data-i18n="copy">
 Copy
 </button>
 
 
-<button onclick="closeCopyDayModal()">
+<button onclick="closeCopyDayModal()" data-i18n="cancel">
 Cancel
 </button>
 
@@ -1535,7 +1539,7 @@ Add Meal
 
 <label>
 
-Meal Type
+<span data-i18n="meal_type_label">Meal Type</span>
 
 </label>
 
@@ -1557,12 +1561,13 @@ Meal Type
 
 
 <label>
-📖 Choose Recipe
+<span data-i18n="choose_recipe_label">📖 Choose Recipe</span>
 </label>
 
 <input
 id="recipeSearch"
 placeholder="🔍 Search recipes..."
+data-i18n-placeholder="meal_search_placeholder"
 oninput="searchRecipesForMeal()"
 >
 
@@ -1572,14 +1577,14 @@ oninput="searchRecipesForMeal()"
 
 
 
-<p>
+<p data-i18n="or_enter_manually">
 or enter manually:
 </p>
 
 
 <label>
 
-Meal
+<span data-i18n="meal_label">Meal</span>
 
 </label>
 
@@ -1593,7 +1598,7 @@ placeholder="e.g. Spaghetti Bolognese"
 
 <label>
 
-People
+<span data-i18n="people_label">People</span>
 
 </label>
 
@@ -1611,14 +1616,14 @@ People
 
 <button data-primary onclick="saveMeal()">
 
-Save
+<span data-i18n="save">Save</span>
 
 </button>
 
 
 <button onclick="closeModal()">
 
-Cancel
+<span data-i18n="cancel">Cancel</span>
 
 </button>
 
@@ -1637,12 +1642,12 @@ Cancel
 <div class="modal-box">
 
 
-<h2>
+<h2 data-i18n="paste_recipe_title">
 📋 Paste Recipe
 </h2>
 
 
-<p class="small">
+<p class="small" data-i18n="paste_recipe_description">
 Copy a recipe's title, portions, and ingredient list from pretty much any website and paste it below. This works best when it's just the ingredients — not the cooking steps.
 </p>
 
@@ -1658,12 +1663,12 @@ style="width:100%;padding:12px;border-radius:12px;border:1px solid #ccc;font-siz
 <br><br>
 
 
-<button data-primary onclick="parsePastedRecipe()">
+<button data-primary onclick="parsePastedRecipe()" data-i18n="parse_recipe">
 ✅ Parse Recipe
 </button>
 
 
-<button onclick="closePasteModal()">
+<button onclick="closePasteModal()" data-i18n="cancel">
 Cancel
 </button>
 
@@ -1679,22 +1684,22 @@ Cancel
 
 <div class="modal-box">
 
-<h2>🛒 More Actions</h2>
+<h2 data-i18n="more_menu_title">🛒 More Actions</h2>
 
 <div class="action-list">
 
-<button onclick="closeShoppingMoreMenu(); renderShoppingList();">🔄 Refresh</button>
-<button onclick="closeShoppingMoreMenu(); toggleShoppingSelectionMode();">☑️ Select Multiple</button>
-<button onclick="closeShoppingMoreMenu(); clearCheckedItems();">🧹 Clear Checked</button>
-<button onclick="closeShoppingMoreMenu(); resetShoppingEdits();">↩️ Undo My Edits</button>
-<button onclick="closeShoppingMoreMenu(); shareShoppingList();">📤 Share</button>
-<button onclick="closeShoppingMoreMenu(); printShoppingList();">🖨️ Print / Save as PDF</button>
+<button data-i18n="action_refresh" onclick="closeShoppingMoreMenu(); renderShoppingList();">🔄 Refresh</button>
+<button data-i18n="action_select_multiple" onclick="closeShoppingMoreMenu(); toggleShoppingSelectionMode();">☑️ Select Multiple</button>
+<button data-i18n="action_clear_checked" onclick="closeShoppingMoreMenu(); clearCheckedItems();">🧹 Clear Checked</button>
+<button data-i18n="action_undo_edits" onclick="closeShoppingMoreMenu(); resetShoppingEdits();">↩️ Undo My Edits</button>
+<button data-i18n="action_share" onclick="closeShoppingMoreMenu(); shareShoppingList();">📤 Share</button>
+<button data-i18n="action_print" onclick="closeShoppingMoreMenu(); printShoppingList();">🖨️ Print / Save as PDF</button>
 
 </div>
 
 <br>
 
-<button onclick="closeShoppingMoreMenu()">Close</button>
+<button data-i18n="close" onclick="closeShoppingMoreMenu()">Close</button>
 
 </div>
 
@@ -1714,7 +1719,7 @@ Edit Item
 
 
 <label>
-Item
+<span data-i18n="item_label">Item</span>
 </label>
 
 
@@ -1725,7 +1730,7 @@ placeholder="e.g. Tomatoes"
 
 
 <label>
-Amount
+<span data-i18n="amount_label">Amount</span>
 </label>
 
 
@@ -1738,7 +1743,7 @@ placeholder="Leave blank for none"
 
 
 <label>
-Unit
+<span data-i18n="unit_label">Unit</span>
 </label>
 
 
@@ -1752,12 +1757,12 @@ placeholder="e.g. g, dl, st"
 
 
 <button data-primary onclick="saveShoppingItem()">
-Save
+<span data-i18n="save">Save</span>
 </button>
 
 
 <button onclick="closeShoppingItemModal()">
-Cancel
+<span data-i18n="cancel">Cancel</span>
 </button>
 
 
@@ -1780,7 +1785,7 @@ Add Recipe
 
 
 <label>
-Recipe Name
+<span data-i18n="recipe_name_label">Recipe Name</span>
 </label>
 
 
@@ -1795,7 +1800,7 @@ placeholder="Example: Spaghetti Bolognese"
 
 
 <label>
-Servings
+<span data-i18n="recipe_servings_label">Servings</span>
 </label>
 
 
@@ -1808,13 +1813,13 @@ Servings
 
 
 <label>
-Ingredients
+<span data-i18n="recipe_ingredients_label">Ingredients</span>
 </label>
 
 <div id="ingredientList"></div>
 
 <button type="button" onclick="addIngredientRow()">
-➕ Add Ingredient
+<span data-i18n="add_ingredient">➕ Add Ingredient</span>
 </button>
 
 
@@ -1823,12 +1828,12 @@ Ingredients
 
 
 <button data-primary onclick="saveRecipe()">
-Save
+<span data-i18n="save">Save</span>
 </button>
 
 
 <button onclick="closeRecipeModal()">
-Cancel
+<span data-i18n="cancel">Cancel</span>
 </button>
 
 
@@ -1852,7 +1857,7 @@ Recipe
 <br>
 
 <button onclick="closeViewRecipe()">
-Close
+<span data-i18n="close">Close</span>
 </button>
 
 </div>
@@ -1867,13 +1872,13 @@ Close
 <div class="modal-box">
 
 
-<h2>
+<h2 data-i18n="planner_recipe_title">
 📅 Add Recipe to Planner
 </h2>
 
 
 <label>
-Day
+<span data-i18n="day_label">Day</span>
 </label>
 
 
@@ -1891,7 +1896,7 @@ Day
 
 
 <label>
-Meal Type
+<span data-i18n="meal_type_label">Meal Type</span>
 </label>
 
 
@@ -1909,7 +1914,7 @@ Meal Type
 
 
 <label>
-People
+<span data-i18n="people_label">People</span>
 </label>
 
 
@@ -1925,14 +1930,14 @@ People
 
 <button data-primary onclick="addRecipeToPlanner()">
 
-Add
+<span data-i18n="add">Add</span>
 
 </button>
 
 
 <button onclick="closePlannerRecipeModal()">
 
-Cancel
+<span data-i18n="cancel">Cancel</span>
 
 </button>
 
@@ -1955,6 +1960,385 @@ const days = [
     "Saturday",
     "Sunday"
 ];
+
+
+// =======================
+// TRANSLATIONS (English / Swedish)
+// =======================
+// This covers the app's own UI chrome — buttons, labels, headings.
+// It's separate from the ingredient dictionary elsewhere in the
+// file, which already treats Swedish/English ingredient NAMES as
+// interchangeable data, not UI text.
+
+const translations = {
+
+    en: {
+
+        nav_planner: "🏠 Meal Planner",
+        nav_recipes: "📖 Recipes",
+        nav_shopping: "🛒 Shopping List",
+        app_tagline: "Plan • Shop • Cook",
+        settings_button: "⚙️ Settings",
+
+        settings_title: "⚙️ Settings",
+        settings_language: "🌍 Language",
+        settings_theme: "🎨 Theme",
+        theme_auto: "🌗 Auto (match device)",
+        theme_light: "☀️ Light",
+        theme_dark: "🌙 Dark",
+        settings_categories: "📂 Categories",
+        manage_categories: "Manage Categories",
+        settings_backup: "💾 Backup",
+        backup_description: "Your data lives only in this browser. Export it now and then to keep a safe copy, or to move it to another device.",
+        export_data: "⬇️ Export Data",
+        import_data: "⬆️ Import Data",
+        close: "Close",
+        save: "Save",
+        cancel: "Cancel",
+        add: "Add",
+
+        category_title: "📂 Categories",
+        category_current: "Your current categories:",
+        category_add: "Add your own meal categories",
+        category_emoji_choose: "Choose an emoji:",
+        category_name_placeholder: "Category name",
+        category_emoji_placeholder: "Or type your own emoji",
+
+        recipes_heading: "📖 Recipes",
+        add_recipe: "➕ Add Recipe",
+        paste_from_web: "📋 Paste from Web",
+        recipe_search_placeholder: "🔍 Search recipes...",
+        recipes_empty: "No recipes yet — tap ➕ Add Recipe or 📋 Paste from Web to get started",
+        recipes_no_match: "No recipes match",
+
+        planner_no_meals: "No meals planned yet",
+        planner_add: "➕ Add",
+        planner_copy_day: "📋 Copy Day",
+
+        shopping_heading: "🛒 Shopping List",
+        shopping_description: "Automatically built from every recipe in your meal planner, scaled to the number of people you set for each meal.",
+        add_item: "➕ Add Item",
+        more_actions: "⋯ More",
+        shopping_for: "🗓️ Shopping for:",
+        range_to: "to",
+        preset_this_week: "This Week",
+        preset_rest_of_week: "📍 Rest of Week",
+        preset_next_7: "Next 7 Days",
+        shopping_search_placeholder: "🔍 Search shopping list...",
+        shopping_empty: "No ingredients yet — add some recipes to your meal planner and they'll show up here.",
+        shopping_no_match: "No items match",
+
+        more_menu_title: "🛒 More Actions",
+        action_refresh: "🔄 Refresh",
+        action_select_multiple: "☑️ Select Multiple",
+        action_clear_checked: "🧹 Clear Checked",
+        action_undo_edits: "↩️ Undo My Edits",
+        action_share: "📤 Share",
+        action_print: "🖨️ Print / Save as PDF",
+
+        recipe_name_label: "Recipe Name",
+        recipe_servings_label: "Servings",
+        recipe_ingredients_label: "Ingredients",
+        add_ingredient: "➕ Add Ingredient",
+
+        meal_type_label: "Meal Type",
+        choose_recipe_label: "📖 Choose Recipe",
+        meal_search_placeholder: "🔍 Search recipes...",
+        or_enter_manually: "or enter manually:",
+        meal_label: "Meal",
+        people_label: "People",
+
+        week_previous: "◀ Previous",
+        week_next: "Next ▶",
+        week_today: "📍 This Week",
+        week_copy_forward: "📆 Copy Week Forward",
+
+        edit_item_title: "Edit Item",
+        add_item_title: "Add Item",
+        item_label: "Item",
+        amount_label: "Amount",
+        unit_label: "Unit",
+        day_selected_one: "1 day selected",
+        day_selected_other: "{n} days selected",
+        progress_checked: "{checked} / {total} checked",
+        modal_add_meal: "Add Meal",
+        modal_edit_meal: "Edit Meal",
+        modal_add_recipe: "Add Recipe",
+        modal_edit_recipe: "Edit Recipe",
+        paste_recipe_title: "📋 Paste Recipe",
+        paste_recipe_description: "Copy a recipe's title, portions, and ingredient list from pretty much any website and paste it below. This works best when it's just the ingredients — not the cooking steps.",
+        parse_recipe: "✅ Parse Recipe",
+        planner_recipe_title: "📅 Add Recipe to Planner",
+        day_label: "Day",
+        copy_day_title: "📋 Copy Day",
+        copy_day_prefix: "Copy all meals from",
+        copy_day_suffix: "into:",
+        copy_day_note: "This adds to whatever's already planned on those days — it won't remove anything.",
+        copy: "Copy",
+        nav_full_previous: "◀ Previous",
+        nav_short_previous: "◀",
+        nav_full_next: "Next ▶",
+        nav_short_next: "▶",
+        nav_full_today: "📍 This Week",
+        nav_short_today: "📍 Today",
+        nav_full_copy_forward: "📆 Copy Week Forward",
+        nav_short_copy_forward: "📆 Copy Forward",
+
+        no_meals_to_copy_prefix: "There are no meals on ",
+        no_meals_to_copy_suffix: " yet to copy.",
+        moved_meal_prefix: "Moved ",
+        moved_meal_suffix: " to ",
+        no_meals_this_week: "This week doesn't have any meals planned yet.",
+        replace_next_week_message: "Next week already has meals planned. This will replace that plan with a copy of this week. Continue?",
+        replace_next_week_title: "Replace next week's plan?",
+        copied_to_next_week: "Copied to next week!",
+        enter_meal_name: "Please enter a meal name.",
+        toast_removed: "Removed",
+        pick_day_to_copy: "Pick at least one day to copy into.",
+        import_backup_message: "This will replace your current recipes, meal planner, settings, and shopping list with what's in this backup file. Continue?",
+        import_backup_title: "Import backup?",
+        import_complete: "Import complete! Reloading...",
+        need_one_category: "You need at least one category.",
+        delete_category_message: "Delete this category? Meals already using it will keep showing it, but it won't be selectable for new meals.",
+        delete_category_title: "Delete category?",
+        enter_category_name: "Enter category name",
+        category_exists: "That category already exists.",
+        enter_recipe_name: "Please enter a recipe name.",
+        recipe_not_found: "Recipe not found",
+        start_before_end: "Start date needs to be on or before the end date.",
+        checked_off_items: "Checked off {n} item(s)",
+        delete_items_message: "Delete {n} selected item(s) from the shopping list?",
+        delete_items_title: "Delete items?",
+        deleted_items: "Deleted {n} item(s)",
+        undo_edits_message: "This brings back any removed or edited auto-generated items. Items you added by hand will stay. Continue?",
+        undo_edits_title: "Undo my edits?",
+        enter_item_name: "Please enter an item name.",
+        couldnt_share: "Couldn't share the list.",
+        copied_to_clipboard: "Shopping list copied to clipboard",
+        couldnt_copy_list: "Couldn't copy the list.",
+        sharing_not_supported: "Sharing isn't supported on this browser.",
+        paste_text_first: "Paste some recipe text first.",
+        this_week_suffix: "(this week)",
+        language_changed: "Language set to English"
+
+    },
+
+    sv: {
+
+        nav_planner: "🏠 Måltidsplanerare",
+        nav_recipes: "📖 Recept",
+        nav_shopping: "🛒 Inköpslista",
+        app_tagline: "Planera • Handla • Laga",
+        settings_button: "⚙️ Inställningar",
+
+        settings_title: "⚙️ Inställningar",
+        settings_language: "🌍 Språk",
+        settings_theme: "🎨 Tema",
+        theme_auto: "🌗 Auto (följ enheten)",
+        theme_light: "☀️ Ljust",
+        theme_dark: "🌙 Mörkt",
+        settings_categories: "📂 Kategorier",
+        manage_categories: "Hantera kategorier",
+        settings_backup: "💾 Säkerhetskopia",
+        backup_description: "Din data finns bara i den här webbläsaren. Exportera då och då för att ha en säker kopia, eller för att flytta den till en annan enhet.",
+        export_data: "⬇️ Exportera data",
+        import_data: "⬆️ Importera data",
+        close: "Stäng",
+        save: "Spara",
+        cancel: "Avbryt",
+        add: "Lägg till",
+
+        category_title: "📂 Kategorier",
+        category_current: "Dina nuvarande kategorier:",
+        category_add: "Lägg till egna måltidskategorier",
+        category_emoji_choose: "Välj en emoji:",
+        category_name_placeholder: "Kategorinamn",
+        category_emoji_placeholder: "Eller skriv en egen emoji",
+
+        recipes_heading: "📖 Recept",
+        add_recipe: "➕ Lägg till recept",
+        paste_from_web: "📋 Klistra in från webben",
+        recipe_search_placeholder: "🔍 Sök recept...",
+        recipes_empty: "Inga recept ännu — tryck på ➕ Lägg till recept eller 📋 Klistra in från webben för att komma igång",
+        recipes_no_match: "Inga recept matchar",
+
+        planner_no_meals: "Inga måltider planerade än",
+        planner_add: "➕ Lägg till",
+        planner_copy_day: "📋 Kopiera dag",
+
+        shopping_heading: "🛒 Inköpslista",
+        shopping_description: "Byggs automatiskt utifrån recepten i din måltidsplanerare, skalat efter antalet personer du anger för varje måltid.",
+        add_item: "➕ Lägg till vara",
+        more_actions: "⋯ Mer",
+        shopping_for: "🗓️ Handlar för:",
+        range_to: "till",
+        preset_this_week: "Denna vecka",
+        preset_rest_of_week: "📍 Resten av veckan",
+        preset_next_7: "Kommande 7 dagar",
+        shopping_search_placeholder: "🔍 Sök i inköpslistan...",
+        shopping_empty: "Inga ingredienser än — lägg till recept i din måltidsplanerare så visas de här.",
+        shopping_no_match: "Inga varor matchar",
+
+        more_menu_title: "🛒 Fler åtgärder",
+        action_refresh: "🔄 Uppdatera",
+        action_select_multiple: "☑️ Markera flera",
+        action_clear_checked: "🧹 Rensa markerade",
+        action_undo_edits: "↩️ Ångra mina ändringar",
+        action_share: "📤 Dela",
+        action_print: "🖨️ Skriv ut / Spara som PDF",
+
+        recipe_name_label: "Receptnamn",
+        recipe_servings_label: "Portioner",
+        recipe_ingredients_label: "Ingredienser",
+        add_ingredient: "➕ Lägg till ingrediens",
+
+        meal_type_label: "Måltidstyp",
+        choose_recipe_label: "📖 Välj recept",
+        meal_search_placeholder: "🔍 Sök recept...",
+        or_enter_manually: "eller skriv in manuellt:",
+        meal_label: "Måltid",
+        people_label: "Personer",
+
+        week_previous: "◀ Föregående",
+        week_next: "Nästa ▶",
+        week_today: "📍 Denna vecka",
+        week_copy_forward: "📆 Kopiera vecka framåt",
+
+        edit_item_title: "Redigera vara",
+        add_item_title: "Lägg till vara",
+        item_label: "Vara",
+        amount_label: "Mängd",
+        unit_label: "Enhet",
+        day_selected_one: "1 dag vald",
+        day_selected_other: "{n} dagar valda",
+        progress_checked: "{checked} / {total} avbockade",
+        modal_add_meal: "Lägg till måltid",
+        modal_edit_meal: "Redigera måltid",
+        modal_add_recipe: "Lägg till recept",
+        modal_edit_recipe: "Redigera recept",
+        paste_recipe_title: "📋 Klistra in recept",
+        paste_recipe_description: "Kopiera receptets titel, antal portioner och ingredienslista från nästan vilken webbsida som helst och klistra in det nedan. Fungerar bäst om det bara är ingredienserna — inte tillagningsstegen.",
+        parse_recipe: "✅ Tolka recept",
+        planner_recipe_title: "📅 Lägg till recept i planeraren",
+        day_label: "Dag",
+        copy_day_title: "📋 Kopiera dag",
+        copy_day_prefix: "Kopiera alla måltider från",
+        copy_day_suffix: "till:",
+        copy_day_note: "Detta läggs till utöver det som redan är planerat de dagarna — inget tas bort.",
+        copy: "Kopiera",
+        nav_full_previous: "◀ Föregående",
+        nav_short_previous: "◀",
+        nav_full_next: "Nästa ▶",
+        nav_short_next: "▶",
+        nav_full_today: "📍 Denna vecka",
+        nav_short_today: "📍 Idag",
+        nav_full_copy_forward: "📆 Kopiera vecka framåt",
+        nav_short_copy_forward: "📆 Kopiera framåt",
+
+        no_meals_to_copy_prefix: "Det finns inga måltider på ",
+        no_meals_to_copy_suffix: " att kopiera än.",
+        moved_meal_prefix: "Flyttade ",
+        moved_meal_suffix: " till ",
+        no_meals_this_week: "Den här veckan har inga måltider planerade än.",
+        replace_next_week_message: "Nästa vecka har redan måltider planerade. Detta ersätter den planen med en kopia av denna vecka. Fortsätt?",
+        replace_next_week_title: "Ersätta nästa veckas plan?",
+        copied_to_next_week: "Kopierat till nästa vecka!",
+        enter_meal_name: "Ange ett namn på måltiden.",
+        toast_removed: "Borttagen",
+        pick_day_to_copy: "Välj minst en dag att kopiera till.",
+        import_backup_message: "Detta ersätter dina nuvarande recept, måltidsplan, inställningar och inköpslista med innehållet i denna säkerhetskopia. Fortsätt?",
+        import_backup_title: "Importera säkerhetskopia?",
+        import_complete: "Importen är klar! Laddar om...",
+        need_one_category: "Du behöver minst en kategori.",
+        delete_category_message: "Ta bort den här kategorin? Måltider som redan använder den visar den fortfarande, men den går inte att välja för nya måltider.",
+        delete_category_title: "Ta bort kategori?",
+        enter_category_name: "Ange ett kategorinamn",
+        category_exists: "Den kategorin finns redan.",
+        enter_recipe_name: "Ange ett namn på receptet.",
+        recipe_not_found: "Receptet hittades inte",
+        start_before_end: "Startdatumet måste vara samma dag som eller före slutdatumet.",
+        checked_off_items: "Bockade av {n} vara/varor",
+        delete_items_message: "Ta bort {n} markerade varor från inköpslistan?",
+        delete_items_title: "Ta bort varor?",
+        deleted_items: "Tog bort {n} vara/varor",
+        undo_edits_message: "Detta återställer allt du tagit bort eller ändrat bland de automatiska varorna. Sådant du lagt till själv finns kvar. Fortsätt?",
+        undo_edits_title: "Ångra mina ändringar?",
+        enter_item_name: "Ange ett namn på varan.",
+        couldnt_share: "Kunde inte dela listan.",
+        copied_to_clipboard: "Inköpslistan kopierades till urklipp",
+        couldnt_copy_list: "Kunde inte kopiera listan.",
+        sharing_not_supported: "Delning stöds inte i den här webbläsaren.",
+        paste_text_first: "Klistra in receptext först.",
+        this_week_suffix: "(denna vecka)",
+        language_changed: "Språk satt till Svenska"
+
+    }
+
+};
+
+
+let currentLanguage = localStorage.getItem("foodflowLanguage") || "en";
+
+
+// Day names ("Monday".."Sunday") are used as internal data keys
+// everywhere (meals[day], storage, etc.) and must never change. This
+// only affects what's displayed on screen.
+const dayNameTranslations = {
+
+    en: {
+        Monday:"Monday", Tuesday:"Tuesday", Wednesday:"Wednesday",
+        Thursday:"Thursday", Friday:"Friday", Saturday:"Saturday", Sunday:"Sunday"
+    },
+
+    sv: {
+        Monday:"Måndag", Tuesday:"Tisdag", Wednesday:"Onsdag",
+        Thursday:"Torsdag", Friday:"Fredag", Saturday:"Lördag", Sunday:"Söndag"
+    }
+
+};
+
+
+function translateDayName(day){
+
+    let dict = dayNameTranslations[currentLanguage] || dayNameTranslations.en;
+
+    return dict[day] || day;
+
+}
+
+
+// Looks up a UI string in the current language, falling back to
+// English (and finally to the raw key) if a translation is missing —
+// so nothing ever breaks while more strings are added over time.
+function t(key){
+
+    let dict = translations[currentLanguage] || translations.en;
+
+    return dict[key] || translations.en[key] || key;
+
+}
+
+
+// Sweeps the page for anything tagged with a translation key and
+// updates it — text content for most elements, or the placeholder
+// attribute for inputs marked with data-i18n-placeholder.
+function applyTranslations(){
+
+    document.querySelectorAll("[data-i18n]").forEach(el=>{
+
+        el.textContent = t(el.getAttribute("data-i18n"));
+
+    });
+
+    document.querySelectorAll("[data-i18n-placeholder]").forEach(el=>{
+
+        el.placeholder = t(el.getAttribute("data-i18n-placeholder"));
+
+    });
+
+    document.documentElement.lang = currentLanguage;
+
+}
 
 
 // =======================
@@ -2138,7 +2522,7 @@ function setupDayDropZone(card, targetDay){
 
         if(sourceDay !== targetDay){
             hapticFeedback();
-            showToast(`Moved "${movedMeal.name}" to ${targetDay}`);
+            showToast(`${t("moved_meal_prefix")}"${movedMeal.name}"${t("moved_meal_suffix")}${translateDayName(targetDay)}`);
         }
 
     });
@@ -3059,9 +3443,11 @@ function updateWeekLabel(){
     let end = parseDateKey(currentWeekKey);
     end.setDate(end.getDate() + 6);
 
+    let locale = currentLanguage === "sv" ? "sv-SE" : "en-US";
+
     let options = { month:"short", day:"numeric" };
-    let startStr = start.toLocaleDateString(undefined, options);
-    let endStr = end.toLocaleDateString(undefined, { ...options, year:"numeric" });
+    let startStr = start.toLocaleDateString(locale, options);
+    let endStr = end.toLocaleDateString(locale, { ...options, year:"numeric" });
 
     let isThisWeek = currentWeekKey === getMondayKey(new Date());
 
@@ -3070,7 +3456,7 @@ function updateWeekLabel(){
     if(label){
         label.innerText =
             startStr + " – " + endStr +
-            (isThisWeek ? "  (this week)" : "");
+            (isThisWeek ? "  " + t("this_week_suffix") : "");
     }
 
 }
@@ -3083,7 +3469,7 @@ async function copyWeekToNext(){
 
     if(!hasAnyMeals){
 
-        showToast("This week doesn't have any meals planned yet.", { type:"error" });
+        showToast(t("no_meals_this_week"), { type:"error" });
         return;
 
     }
@@ -3099,9 +3485,8 @@ async function copyWeekToNext(){
     if(nextWeekHasMeals){
 
         let ok = await customConfirm(
-            "Next week already has meals planned. This will replace " +
-            "that plan with a copy of this week. Continue?",
-            "Replace next week's plan?"
+            t("replace_next_week_message"),
+            t("replace_next_week_title")
         );
 
         if(!ok) return;
@@ -3120,7 +3505,7 @@ async function copyWeekToNext(){
 
     saveData();
 
-    showToast("Copied to next week!");
+    showToast(t("copied_to_next_week"));
 
 }
 
@@ -3225,14 +3610,14 @@ card.className="day";
 
 card.innerHTML = `
 
-<h2>${day}</h2>
+<h2>${translateDayName(day)}</h2>
 
 <button onclick="openModal('${day}')">
-➕ Add
+${t("planner_add")}
 </button>
 
 <button onclick="openCopyDayModal('${day}')">
-📋 Copy Day
+${t("planner_copy_day")}
 </button>
 
 `;
@@ -3337,7 +3722,7 @@ if(meals[day] && meals[day].length > 0){
     emptyMsg.className = "small";
     emptyMsg.style.textAlign = "center";
     emptyMsg.style.opacity = "0.7";
-    emptyMsg.innerText = "No meals planned yet";
+    emptyMsg.innerText = t("planner_no_meals");
 
     card.appendChild(emptyMsg);
 
@@ -3377,7 +3762,7 @@ selectedMeal = null;
 
 
 document.getElementById("modalTitle")
-.innerText = "Add Meal";
+.innerText = t("modal_add_meal");
 
 
 document.getElementById("mealName")
@@ -3424,7 +3809,7 @@ meals[day][index];
 
 document.getElementById("modalTitle")
 .innerText =
-"Edit Meal"
+t("modal_edit_meal")
 
 
 document.getElementById("mealType")
@@ -3518,7 +3903,7 @@ selectedRecipeIndex !== ""
 
 if(!meal.name){
 
-showToast("Please enter a meal name.", { type:"error" });
+showToast(t("enter_meal_name"), { type:"error" });
 
 return;
 
@@ -3583,7 +3968,7 @@ saveData();
 render();
 
 
-showToast(`Removed "${removedMeal.name}"`, {
+showToast(`${t("toast_removed")} "${removedMeal.name}"`, {
     actionLabel: "Undo",
     onAction: () => {
 
@@ -3614,7 +3999,10 @@ function openCopyDayModal(day){
 
     if(!meals[day] || meals[day].length === 0){
 
-        showToast("There are no meals on " + day + " yet to copy.", { type:"error" });
+        showToast(
+            t("no_meals_to_copy_prefix") + translateDayName(day) + t("no_meals_to_copy_suffix"),
+            { type:"error" }
+        );
         return;
 
     }
@@ -3622,7 +4010,7 @@ function openCopyDayModal(day){
     copyDaySource = day;
 
     document.getElementById("copyDaySourceLabel")
-    .innerText = day;
+    .innerText = translateDayName(day);
 
     let targets = days.filter(d => d !== day);
 
@@ -3635,7 +4023,7 @@ function openCopyDayModal(day){
                     value="${d}"
                     style="width:auto;margin:0;"
                 >
-                ${d}
+                ${translateDayName(d)}
             </label>
         `).join("");
 
@@ -3660,7 +4048,7 @@ function copyDayToTargets(){
 
     if(checkboxes.length === 0){
 
-        showToast("Pick at least one day to copy into.", { type:"error" });
+        showToast(t("pick_day_to_copy"), { type:"error" });
         return;
 
     }
@@ -3807,16 +4195,21 @@ function setTheme(mode){
 
 function changeLanguage(lang){
 
+currentLanguage = lang;
+
 localStorage.setItem(
 "foodflowLanguage",
 lang
 );
 
-showToast(
-lang === "en"
-? "Language set to English"
-: "Språk satt till Svenska"
-);
+applyTranslations();
+
+render();
+renderRecipes();
+renderShoppingList();
+updateWeekLabel();
+
+showToast(t("language_changed"));
 
 }
 
@@ -3888,10 +4281,8 @@ async function importData(event){
     }
 
     let ok = await customConfirm(
-        "This will replace your current recipes, meal planner, " +
-        "settings, and shopping list with what's in this backup " +
-        "file. Continue?",
-        "Import backup?"
+        t("import_backup_message"),
+        t("import_backup_title")
     );
 
     if(!ok){
@@ -3917,7 +4308,7 @@ async function importData(event){
 
             });
 
-            showToast("Import complete! Reloading...");
+            showToast(t("import_complete"));
 
             setTimeout(() => location.reload(), 900);
 
@@ -3978,15 +4369,14 @@ async function deleteCategory(index){
 
     if(mealCategories.length <= 1){
 
-        showToast("You need at least one category.", { type:"error" });
+        showToast(t("need_one_category"), { type:"error" });
         return;
 
     }
 
     let ok = await customConfirm(
-        "Delete this category? Meals already using it will keep " +
-        "showing it, but it won't be selectable for new meals.",
-        "Delete category?"
+        t("delete_category_message"),
+        t("delete_category_title")
     );
 
     if(!ok){
@@ -4039,7 +4429,7 @@ document.getElementById("categoryEmoji").value.trim() || "🍽️";
 
 if(!name){
 
-showToast("Enter category name", { type:"error" });
+showToast(t("enter_category_name"), { type:"error" });
 
 return;
 
@@ -4050,7 +4440,7 @@ let newCategory = emoji + " " + name;
 
 if(mealCategories.includes(newCategory)){
 
-    showToast("That category already exists.", { type:"error" });
+    showToast(t("category_exists"), { type:"error" });
     return;
 
 }
@@ -4110,7 +4500,7 @@ addIngredientRow();
 
 
 document.querySelector("#recipeModal h2")
-.innerText = "Add Recipe";
+.innerText = t("modal_add_recipe");
 
 
 document.getElementById("recipeModal")
@@ -4155,7 +4545,7 @@ favorite:false
 
 if(recipe.name===""){
 
-showToast("Please enter a recipe name.", { type:"error" });
+showToast(t("enter_recipe_name"), { type:"error" });
 
 return;
 
@@ -4330,7 +4720,7 @@ let recipe = recipes[index];
 
 if(!recipe){
 
-showToast("Recipe not found", { type:"error" });
+showToast(t("recipe_not_found"), { type:"error" });
 
 return;
 
@@ -4419,8 +4809,8 @@ if(filteredRecipes.length === 0){
     emptyMsg.style.opacity = "0.7";
 
     emptyMsg.innerText = recipes.length === 0
-        ? "No recipes yet — tap ➕ Add Recipe or 📋 Paste from Web to get started"
-        : `No recipes match "${search}"`;
+        ? t("recipes_empty")
+        : `${t("recipes_no_match")} "${search}"`;
 
     list.appendChild(emptyMsg);
 
@@ -4559,7 +4949,7 @@ JSON.stringify(recipes)
 
 renderRecipes();
 
-showToast(`Removed "${removedRecipe.name}"`, {
+showToast(`${t("toast_removed")} "${removedRecipe.name}"`, {
     actionLabel: "Undo",
     onAction: () => {
 
@@ -4622,7 +5012,7 @@ if(recipe.ingredients.length === 0){
 
 
 document.querySelector("#recipeModal h2")
-.innerText = "Edit Recipe";
+.innerText = t("modal_edit_recipe");
 
 
 document.getElementById("recipeModal")
@@ -4821,7 +5211,7 @@ let recipe = recipes[index];
 
 if(!recipe){
 
-showToast("Recipe not found", { type:"error" });
+showToast(t("recipe_not_found"), { type:"error" });
 
 return;
 
@@ -5359,8 +5749,8 @@ function updateShoppingRangeInputs(){
         let count = getDateRangeDays(shoppingRangeStart, shoppingRangeEnd).length;
 
         summary.innerText = count === 1
-            ? "1 day selected"
-            : `${count} days selected`;
+            ? t("day_selected_one")
+            : t("day_selected_other").replace("{n}", count);
 
     }
 
@@ -5381,7 +5771,7 @@ function onShoppingRangeChange(){
 
     if(parseDateKey(newStart).getTime() > parseDateKey(newEnd).getTime()){
 
-        showToast("Start date needs to be on or before the end date.", { type:"error" });
+        showToast(t("start_before_end"), { type:"error" });
         updateShoppingRangeInputs();
 
         return;
@@ -5468,7 +5858,7 @@ function renderShoppingList(){
         let percent = total > 0 ? Math.round((checkedCount / total) * 100) : 0;
 
         progressText.innerText = total > 0
-            ? `${checkedCount} / ${total} checked`
+            ? t("progress_checked").replace("{checked}", checkedCount).replace("{total}", total)
             : "";
 
         progressBar.style.width = percent + "%";
@@ -5479,7 +5869,7 @@ function renderShoppingList(){
 
         container.innerHTML = `
             <p class="small">
-            No ingredients yet — add some recipes to your meal planner and they'll show up here.
+            ${t("shopping_empty")}
             </p>
         `;
 
@@ -5487,7 +5877,7 @@ function renderShoppingList(){
 
         container.innerHTML = `
             <p class="small">
-            No items match "${search}".
+            ${t("shopping_no_match")} "${search}".
             </p>
         `;
 
@@ -5641,7 +6031,7 @@ function bulkCheckSelected(){
 
     renderShoppingList();
 
-    showToast(`Checked off ${count} item${count === 1 ? "" : "s"}`);
+    showToast(t("checked_off_items").replace("{n}", count));
 
 }
 
@@ -5655,8 +6045,8 @@ async function bulkDeleteSelected(){
     let count = shoppingSelectedKeys.size;
 
     let confirmed = await customConfirm(
-        `Delete ${count} selected item${count === 1 ? "" : "s"} from the shopping list?`,
-        "Delete items?"
+        t("delete_items_message").replace("{n}", count),
+        t("delete_items_title")
     );
 
     if(!confirmed){
@@ -5694,7 +6084,7 @@ async function bulkDeleteSelected(){
 
     renderShoppingList();
 
-    showToast(`Deleted ${count} item${count === 1 ? "" : "s"}`);
+    showToast(t("deleted_items").replace("{n}", count));
 
 }
 
@@ -5740,7 +6130,7 @@ function editShoppingItem(key){
     editingShoppingIsExtra = item.isExtra;
 
     openShoppingItemModal(
-        "Edit Item",
+        t("edit_item_title"),
         item.name,
         item.amount > 0 ? formatAmount(item.amount) : "",
         item.unit || ""
@@ -5761,7 +6151,7 @@ function saveShoppingItem(){
         document.getElementById("shoppingItemUnit").value.trim();
 
     if(!name){
-        showToast("Please enter an item name.", { type:"error" });
+        showToast(t("enter_item_name"), { type:"error" });
         return;
     }
 
@@ -5829,7 +6219,7 @@ function deleteShoppingItem(key){
         saveShoppingState();
         renderShoppingList();
 
-        showToast(`Removed "${item.name}"`, {
+        showToast(`${t("toast_removed")} "${item.name}"`, {
             actionLabel: "Undo",
             onAction: () => {
 
@@ -5858,7 +6248,7 @@ function deleteShoppingItem(key){
         saveShoppingState();
         renderShoppingList();
 
-        showToast(`Removed "${item.name}"`, {
+        showToast(`${t("toast_removed")} "${item.name}"`, {
             actionLabel: "Undo",
             onAction: () => {
 
@@ -5884,7 +6274,7 @@ function openAddShoppingItem(){
     editingShoppingKey = null;
     editingShoppingIsExtra = true;
 
-    openShoppingItemModal("Add Item", "", "", "");
+    openShoppingItemModal(t("add_item_title"), "", "", "");
 
 }
 
@@ -5908,9 +6298,8 @@ function closeShoppingMoreMenu(){
 async function resetShoppingEdits(){
 
     let confirmed = await customConfirm(
-        "This brings back any removed or edited auto-generated " +
-        "items. Items you added by hand will stay. Continue?",
-        "Undo my edits?"
+        t("undo_edits_message"),
+        t("undo_edits_title")
     );
 
     if(!confirmed){
@@ -5986,7 +6375,7 @@ async function shareShoppingList(){
             // AbortError just means the person cancelled the share
             // sheet — nothing to do or report in that case.
             if(err && err.name !== "AbortError"){
-                showToast("Couldn't share the list.", { type:"error" });
+                showToast(t("couldnt_share"), { type:"error" });
             }
 
         }
@@ -5996,17 +6385,17 @@ async function shareShoppingList(){
         try{
 
             await navigator.clipboard.writeText(text);
-            showToast("Shopping list copied to clipboard");
+            showToast(t("copied_to_clipboard"));
 
         }catch(err){
 
-            showToast("Couldn't copy the list.", { type:"error" });
+            showToast(t("couldnt_copy_list"), { type:"error" });
 
         }
 
     }else{
 
-        showToast("Sharing isn't supported on this browser.", { type:"error" });
+        showToast(t("sharing_not_supported"), { type:"error" });
 
     }
 
@@ -6203,7 +6592,7 @@ function parsePastedRecipe(){
 
     if(!raw.trim()){
 
-        showToast("Paste some recipe text first.", { type:"error" });
+        showToast(t("paste_text_first"), { type:"error" });
         return;
 
     }
@@ -6327,7 +6716,7 @@ function parsePastedRecipe(){
     }
 
     document.querySelector("#recipeModal h2")
-    .innerText = "Add Recipe";
+    .innerText = t("modal_add_recipe");
 
     closePasteModal();
 
@@ -6404,6 +6793,8 @@ let savedPage =
 localStorage.getItem("foodflowPage")
 || "planner";
 
+
+applyTranslations();
 
 showPage(savedPage);
 
