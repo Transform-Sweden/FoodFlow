@@ -203,6 +203,28 @@ min-width:0;
 
 overflow-wrap:break-word;
 
+transition:outline .15s ease, background .15s ease;
+
+}
+
+/* Mobile long-press-to-move: the meal currently picked up */
+.meal-picked-up {
+
+transform:scale(1.03);
+
+box-shadow:0 6px 18px rgba(0,0,0,.3);
+
+opacity:.9;
+
+}
+
+/* Mobile long-press-to-move: valid days to tap and drop into */
+.drop-target-highlight {
+
+outline:2px dashed var(--primary);
+
+outline-offset:-2px;
+
 }
 
 
@@ -2083,6 +2105,8 @@ const translations = {
         no_meals_to_copy_suffix: " yet to copy.",
         moved_meal_prefix: "Moved ",
         moved_meal_suffix: " to ",
+        pick_a_day_prefix: "Tap a day to move ",
+        pick_a_day_suffix: " there",
         no_meals_this_week: "This week doesn't have any meals planned yet.",
         replace_next_week_message: "Next week already has meals planned. This will replace that plan with a copy of this week. Continue?",
         replace_next_week_title: "Replace next week's plan?",
@@ -2234,6 +2258,8 @@ const translations = {
         no_meals_to_copy_suffix: " att kopiera än.",
         moved_meal_prefix: "Flyttade ",
         moved_meal_suffix: " till ",
+        pick_a_day_prefix: "Tryck på en dag för att flytta ",
+        pick_a_day_suffix: " dit",
         no_meals_this_week: "Den här veckan har inga måltider planerade än.",
         replace_next_week_message: "Nästa vecka har redan måltider planerade. Detta ersätter den planen med en kopia av denna vecka. Fortsätt?",
         replace_next_week_title: "Ersätta nästa veckas plan?",
@@ -2521,6 +2547,192 @@ function setupDayDropZone(card, targetDay){
         }
 
     });
+
+}
+
+
+// =======================
+// LONG-PRESS TO MOVE (mobile equivalent of drag-and-drop)
+// =======================
+
+let pickedUpMeal = null;
+let pickedUpElement = null;
+let pickupCancelTimer = null;
+
+
+function attachLongPressToMove(element, day, index){
+
+    let pressTimer = null;
+    let moved = false;
+    let startX = 0;
+    let startY = 0;
+
+    element.addEventListener("touchstart", (e)=>{
+
+        // Don't start the long-press timer if the touch began on one
+        // of the card's own buttons (Edit, Delete, View, etc.) — let
+        // those work normally no matter how long they're held.
+        if(e.target.closest("button")){
+            return;
+        }
+
+        moved = false;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+
+        pressTimer = setTimeout(()=>{
+
+            if(!moved && meals[day] && meals[day][index]){
+                pickUpMeal(day, index, element);
+            }
+
+        }, 450);
+
+    }, { passive:true });
+
+    element.addEventListener("touchmove", (e)=>{
+
+        let dx = Math.abs(e.touches[0].clientX - startX);
+        let dy = Math.abs(e.touches[0].clientY - startY);
+
+        // A real swipe (for swipe-to-delete) or scroll cancels the
+        // long-press — only a still, sustained touch picks it up.
+        if(dx > 10 || dy > 10){
+            moved = true;
+            clearTimeout(pressTimer);
+        }
+
+    }, { passive:true });
+
+    element.addEventListener("touchend", ()=>{
+        clearTimeout(pressTimer);
+    });
+
+    element.addEventListener("touchcancel", ()=>{
+        clearTimeout(pressTimer);
+    });
+
+}
+
+
+function pickUpMeal(day, index, element){
+
+    let meal = meals[day] && meals[day][index];
+
+    if(!meal){
+        return;
+    }
+
+    // Only one meal can be picked up at a time
+    if(pickedUpMeal){
+        cancelMealPickup();
+    }
+
+    hapticFeedback();
+
+    pickedUpMeal = { day, index };
+    pickedUpElement = element;
+
+    element.classList.add("meal-picked-up");
+
+    document.querySelectorAll(".day").forEach(card=>{
+        card.classList.add("drop-target-highlight");
+    });
+
+    clearTimeout(pickupCancelTimer);
+
+    showToast(
+        `${t("pick_a_day_prefix")}"${meal.name}"${t("pick_a_day_suffix")}`,
+        {
+            actionLabel: t("cancel"),
+            onAction: cancelMealPickup,
+            duration: 6000
+        }
+    );
+
+    pickupCancelTimer = setTimeout(cancelMealPickup, 6000);
+
+}
+
+
+function cancelMealPickup(){
+
+    if(pickedUpElement){
+        pickedUpElement.classList.remove("meal-picked-up");
+    }
+
+    document.querySelectorAll(".day").forEach(card=>{
+        card.classList.remove("drop-target-highlight");
+    });
+
+    pickedUpMeal = null;
+    pickedUpElement = null;
+
+    clearTimeout(pickupCancelTimer);
+
+}
+
+
+function setupDayTapDropZone(card, targetDay){
+
+    // Capture phase so this runs before any inner button's own
+    // onclick (Add, Copy Day, Edit, Delete, etc.) while a meal is
+    // actively picked up — otherwise tapping the destination day
+    // would also trigger whatever button happened to be underneath.
+    card.addEventListener("click", (e)=>{
+
+        if(!pickedUpMeal){
+            return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        tryDropMealOnDay(targetDay);
+
+    }, true);
+
+}
+
+
+function tryDropMealOnDay(targetDay){
+
+    if(!pickedUpMeal){
+        return;
+    }
+
+    let { day: sourceDay, index: sourceIndex } = pickedUpMeal;
+
+    if(sourceDay === targetDay){
+        // Tapping the same day it's already on just cancels
+        cancelMealPickup();
+        return;
+    }
+
+    if(!meals[sourceDay] || !meals[sourceDay][sourceIndex]){
+        cancelMealPickup();
+        return;
+    }
+
+    let movedMeal = meals[sourceDay][sourceIndex];
+
+    meals[sourceDay].splice(sourceIndex, 1);
+
+    if(!meals[targetDay]){
+        meals[targetDay] = [];
+    }
+
+    meals[targetDay].push(movedMeal);
+
+    saveData();
+
+    cancelMealPickup();
+
+    hapticFeedback();
+
+    render();
+
+    showToast(`${t("moved_meal_prefix")}"${movedMeal.name}"${t("moved_meal_suffix")}${translateDayName(targetDay)}`);
 
 }
 
@@ -3729,6 +3941,9 @@ if(meals[day] && meals[day].length > 0){
         // Mobile: swipe left to delete
         attachSwipeToDelete(box, () => deleteMeal(day, originalIndex));
 
+        // Mobile: long-press to pick up, then tap another day to move it there
+        attachLongPressToMove(box, day, originalIndex);
+
 
     });
 
@@ -3750,6 +3965,9 @@ week.appendChild(card);
 
 // Desktop: let this day accept a dragged meal from another day
 setupDayDropZone(card, day);
+
+// Mobile: tapping a day while a meal is picked up drops it there
+setupDayTapDropZone(card, day);
 
 });
 
