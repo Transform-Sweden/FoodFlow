@@ -677,32 +677,27 @@ display:none;
 }
 
 
-@media print {
+@page {
 
-body * {
-
-visibility:hidden;
+margin:12mm;
 
 }
 
-#printArea,
-#printArea * {
+@media print {
 
-visibility:visible;
+/* Fully remove everything except the print content from the page
+flow — using visibility alone leaves invisible elements still
+taking up vertical space, which is what was causing the extra
+blank page at the end. */
+body > *:not(#printArea) {
+
+display:none !important;
 
 }
 
 #printArea {
 
 display:block;
-
-position:absolute;
-
-left:0;
-
-top:0;
-
-width:100%;
 
 color:#000;
 
@@ -1605,7 +1600,7 @@ placeholder="e.g. Spaghetti Bolognese"
 
 <div class="stepper">
 <button type="button" onclick="adjustStepper('people',-1)">−</button>
-<input id="people" type="number" value="4" readonly>
+<input id="people" type="number" value="4" min="1" onblur="clampStepperInput('people')">
 <button type="button" onclick="adjustStepper('people',1)">+</button>
 </div>
 
@@ -1806,7 +1801,7 @@ placeholder="Example: Spaghetti Bolognese"
 
 <div class="stepper">
 <button type="button" onclick="adjustStepper('recipePeople',-1)">−</button>
-<input id="recipePeople" type="number" value="4" readonly>
+<input id="recipePeople" type="number" value="4" min="1" onblur="clampStepperInput('recipePeople')">
 <button type="button" onclick="adjustStepper('recipePeople',1)">+</button>
 </div>
 
@@ -1920,7 +1915,7 @@ Recipe
 
 <div class="stepper">
 <button type="button" onclick="adjustStepper('plannerRecipePeople',-1)">−</button>
-<input id="plannerRecipePeople" type="number" value="4" readonly>
+<input id="plannerRecipePeople" type="number" value="4" min="1" onblur="clampStepperInput('plannerRecipePeople')">
 <button type="button" onclick="adjustStepper('plannerRecipePeople',1)">+</button>
 </div>
 
@@ -2673,6 +2668,28 @@ function adjustStepper(inputId, delta){
     }
 
     value = Math.max(1, value + delta);
+
+    input.value = value;
+
+}
+
+
+// Cleans up whatever the person typed by hand once they leave the
+// field — blank, zero, negative, or non-numeric all become 1, so a
+// bad value can't sneak into the recipe-scaling math elsewhere.
+function clampStepperInput(inputId){
+
+    let input = document.getElementById(inputId);
+
+    if(!input){
+        return;
+    }
+
+    let value = parseInt(input.value, 10);
+
+    if(isNaN(value) || value < 1){
+        value = 1;
+    }
 
     input.value = value;
 
