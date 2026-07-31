@@ -753,6 +753,96 @@ opacity:.6;
 
 }
 
+#printArea .print-planner-subtitle {
+
+margin-top:0;
+
+margin-bottom:18px;
+
+color:#555;
+
+}
+
+#printArea .print-planner-grid {
+
+display:grid;
+
+grid-template-columns:repeat(2,1fr);
+
+gap:14px;
+
+}
+
+#printArea .print-planner-day {
+
+border:1px solid #999;
+
+border-radius:10px;
+
+padding:12px 14px;
+
+break-inside:avoid;
+
+}
+
+#printArea .print-planner-day-name {
+
+font-size:18px;
+
+font-weight:bold;
+
+margin-bottom:8px;
+
+padding-bottom:6px;
+
+border-bottom:1px solid #ccc;
+
+}
+
+#printArea .print-planner-meal {
+
+margin-bottom:10px;
+
+}
+
+#printArea .print-planner-meal-type {
+
+font-size:11px;
+
+text-transform:uppercase;
+
+letter-spacing:.03em;
+
+color:#666;
+
+}
+
+#printArea .print-planner-meal-name {
+
+font-size:15px;
+
+font-weight:600;
+
+}
+
+#printArea .print-planner-meal-people {
+
+font-size:12px;
+
+color:#777;
+
+}
+
+#printArea .print-planner-empty {
+
+font-size:13px;
+
+color:#999;
+
+font-style:italic;
+
+}
+
 }
 
 
@@ -1157,6 +1247,11 @@ bottom:90px;
 <button onclick="copyWeekToNext()" class="week-nav-copy">
 <span class="nav-full" data-i18n="nav_full_copy_forward">📆 Copy Week Forward</span>
 <span class="nav-short" data-i18n="nav_short_copy_forward">📆 Copy Forward</span>
+</button>
+
+<button onclick="printMealPlanner()">
+<span class="nav-full" data-i18n="print_planner_full">🖨️ Print / Save as PDF</span>
+<span class="nav-short" data-i18n="print_planner_short">🖨️ Print</span>
 </button>
 
 </div>
@@ -2100,6 +2195,10 @@ const translations = {
         nav_short_today: "📍 Today",
         nav_full_copy_forward: "📆 Copy Week Forward",
         nav_short_copy_forward: "📆 Copy Forward",
+        print_planner_full: "🖨️ Print / Save as PDF",
+        print_planner_short: "🖨️ Print",
+        meal_plan_title: "🍃 FoodFlow — Meal Plan",
+        print_no_meals_day: "—",
 
         no_meals_to_copy_prefix: "There are no meals on ",
         no_meals_to_copy_suffix: " yet to copy.",
@@ -2253,6 +2352,10 @@ const translations = {
         nav_short_today: "📍 Idag",
         nav_full_copy_forward: "📆 Kopiera vecka framåt",
         nav_short_copy_forward: "📆 Kopiera framåt",
+        print_planner_full: "🖨️ Skriv ut / Spara som PDF",
+        print_planner_short: "🖨️ Skriv ut",
+        meal_plan_title: "🍃 FoodFlow — Måltidsplan",
+        print_no_meals_day: "—",
 
         no_meals_to_copy_prefix: "Det finns inga måltider på ",
         no_meals_to_copy_suffix: " att kopiera än.",
@@ -6688,6 +6791,61 @@ function printShoppingList(){
         <h1>🍃 FoodFlow — Shopping List</h1>
         <p style="color:#555;margin-top:0;">${dateStr}</p>
         ${itemsHtml}
+    `;
+
+    window.print();
+
+}
+
+
+function printMealPlanner(){
+
+    let start = parseDateKey(currentWeekKey);
+    let end = parseDateKey(currentWeekKey);
+    end.setDate(end.getDate() + 6);
+
+    let locale = currentLanguage === "sv" ? "sv-SE" : "en-US";
+    let options = { month:"long", day:"numeric" };
+    let startStr = start.toLocaleDateString(locale, options);
+    let endStr = end.toLocaleDateString(locale, { ...options, year:"numeric" });
+
+    let mealOrder = getMealOrder();
+
+    let dayColumns = days.map(day=>{
+
+        let dayMeals = meals[day] || [];
+
+        let sortedMeals = [...dayMeals].sort((a,b)=>
+            (mealOrder[a.type] ?? 99) - (mealOrder[b.type] ?? 99)
+        );
+
+        let mealsHtml = sortedMeals.length > 0
+
+            ? sortedMeals.map(meal => `
+                <div class="print-planner-meal">
+                    <div class="print-planner-meal-type">${meal.type}</div>
+                    <div class="print-planner-meal-name">${meal.name}</div>
+                    <div class="print-planner-meal-people">👥 ${meal.people}</div>
+                </div>
+            `).join("")
+
+            : `<div class="print-planner-empty">${t("print_no_meals_day")}</div>`;
+
+        return `
+            <div class="print-planner-day">
+                <div class="print-planner-day-name">${translateDayName(day)}</div>
+                ${mealsHtml}
+            </div>
+        `;
+
+    }).join("");
+
+    document.getElementById("printArea").innerHTML = `
+        <h1>${t("meal_plan_title")}</h1>
+        <p class="print-planner-subtitle">${startStr} – ${endStr}</p>
+        <div class="print-planner-grid">
+            ${dayColumns}
+        </div>
     `;
 
     window.print();
