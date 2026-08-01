@@ -1656,7 +1656,7 @@ Add Meal
 </label>
 
 
-<select id="mealType">
+<select id="mealType" onchange="handleMealTypeSelectChange(this)">
 
 
 <option>🍳 Frukost</option>
@@ -2012,7 +2012,7 @@ Recipe
 </label>
 
 
-<select id="plannerRecipeType">
+<select id="plannerRecipeType" onchange="handleMealTypeSelectChange(this)">
 
 <option>🍳 Frukost</option>
 
@@ -2100,6 +2100,8 @@ const translations = {
         theme_dark: "🌙 Dark",
         settings_categories: "📂 Categories",
         manage_categories: "Manage Categories",
+        new_category_option: "➕ New category",
+        category_saved_prefix: "Category saved: ",
         settings_backup: "💾 Backup",
         backup_description: "Your data lives only in this browser. Export it now and then to keep a safe copy, or to move it to another device.",
         export_data: "⬇️ Export Data",
@@ -2257,6 +2259,8 @@ const translations = {
         theme_dark: "🌙 Mörkt",
         settings_categories: "📂 Kategorier",
         manage_categories: "Hantera kategorier",
+        new_category_option: "➕ Ny kategori",
+        category_saved_prefix: "Kategori sparad: ",
         settings_backup: "💾 Säkerhetskopia",
         backup_description: "Din data finns bara i den här webbläsaren. Exportera då och då för att ha en säker kopia, eller för att flytta den till en annan enhet.",
         export_data: "⬇️ Exportera data",
@@ -2558,7 +2562,13 @@ function closeAnyModal(modal){
     if(modal.id === "customConfirmModal"){
         resolveCustomConfirm(false);
     }else{
+
         modal.style.display = "none";
+
+        if(modal.id === "categoryModal"){
+            pendingCategorySelectId = null;
+        }
+
     }
 
 }
@@ -2935,7 +2945,12 @@ function autoFocusModal(modal){
 
 // Watches every modal for it becoming visible, so focus behavior
 // works no matter which function opened it — no need to touch each
-// individual openXModal() function.
+// individual openXModal() function. Also brings whichever modal was
+// opened most recently to the front, since two modals can be open
+// at once (e.g. "+ New category" from inside Add Meal) and DOM order
+// alone isn't a reliable way to decide which one should be on top.
+let topModalZIndex = 1000;
+
 document.querySelectorAll(".modal").forEach(modal=>{
 
     let wasOpen = false;
@@ -2946,6 +2961,7 @@ document.querySelectorAll(".modal").forEach(modal=>{
 
         if(isOpen && !wasOpen){
             autoFocusModal(modal);
+            modal.style.zIndex = ++topModalZIndex;
         }
 
         wasOpen = isOpen;
@@ -3894,7 +3910,8 @@ function renderMealTypeOptions(){
 
     let optionsHtml = mealCategories
         .map(cat => `<option>${cat}</option>`)
-        .join("");
+        .join("") +
+        `<option value="__new_category__">${t("new_category_option")}</option>`;
 
     let mealTypeSelect = document.getElementById("mealType");
     let plannerTypeSelect = document.getElementById("plannerRecipeType");
@@ -3912,6 +3929,29 @@ function renderMealTypeOptions(){
         }
 
     });
+
+}
+
+
+// When "+ New category" is picked from a meal-type dropdown, open
+// the category manager instead of actually selecting it as a value,
+// and remember which select triggered it so the newly created
+// category can be selected there automatically once it's saved.
+let pendingCategorySelectId = null;
+
+function handleMealTypeSelectChange(select){
+
+    if(select.value !== "__new_category__"){
+        return;
+    }
+
+    pendingCategorySelectId = select.id;
+
+    // Fall back to the first real category for now, so the dropdown
+    // doesn't stay stuck on the "+ New category" placeholder.
+    select.value = mealCategories[0] || "";
+
+    openCategoryManager();
 
 }
 
@@ -4748,6 +4788,8 @@ function closeCategoryManager(){
 document.getElementById("categoryModal")
 .style.display="none";
 
+pendingCategorySelectId = null;
+
 }
 
 
@@ -4793,13 +4835,25 @@ localStorage.setItem(
 renderMealTypeOptions();
 renderCategoryList();
 
+if(pendingCategorySelectId){
+
+    let targetSelect = document.getElementById(pendingCategorySelectId);
+
+    if(targetSelect){
+        targetSelect.value = newCategory;
+    }
+
+    pendingCategorySelectId = null;
+
+}
+
 
 document.getElementById("categoryName").value = "";
 document.getElementById("categoryEmoji").value = "";
 
 
 showToast(
-"Category saved: "
+t("category_saved_prefix")
 +
 newCategory
 );
