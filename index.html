@@ -2101,6 +2101,8 @@ const translations = {
         settings_categories: "📂 Categories",
         manage_categories: "Manage Categories",
         new_category_option: "➕ New category",
+        quick_add_title: "➕ Add a meal — which day?",
+        quick_add_today_suffix: " (today)",
         category_saved_prefix: "Category saved: ",
         settings_backup: "💾 Backup",
         backup_description: "Your data lives only in this browser. Export it now and then to keep a safe copy, or to move it to another device.",
@@ -2260,6 +2262,8 @@ const translations = {
         settings_categories: "📂 Kategorier",
         manage_categories: "Hantera kategorier",
         new_category_option: "➕ Ny kategori",
+        quick_add_title: "➕ Lägg till måltid — vilken dag?",
+        quick_add_today_suffix: " (idag)",
         category_saved_prefix: "Kategori sparad: ",
         settings_backup: "💾 Säkerhetskopia",
         backup_description: "Din data finns bara i den här webbläsaren. Exportera då och då för att ha en säker kopia, eller för att flytta den till en annan enhet.",
@@ -3027,20 +3031,45 @@ function clampStepperInput(inputId){
 }
 
 
-// Jumps straight to adding a meal on today's actual date — switching
-// weeks first if a different week is currently being viewed.
-function quickAddToday(){
+// Lets the person pick which day to add a meal to, instead of
+// always assuming "today" — the FAB used to jump straight to
+// today's weekday with no way to choose, which was the actual bug.
+function openQuickAddDayPicker(){
 
     let todayWeekKey = getMondayKey(new Date());
+    let isViewingCurrentWeek = currentWeekKey === todayWeekKey;
+    let todayName = isViewingCurrentWeek
+        ? days[(new Date().getDay() + 6) % 7]
+        : null;
 
-    if(currentWeekKey !== todayWeekKey){
-        switchToWeek(todayWeekKey);
-    }
+    let list = document.getElementById("quickAddDayList");
 
-    let todayIndex = (new Date().getDay() + 6) % 7;
-    let todayName = days[todayIndex];
+    list.innerHTML = days.map(day => {
 
-    openModal(todayName);
+        let label = translateDayName(day) +
+            (day === todayName ? t("quick_add_today_suffix") : "");
+
+        return `<button onclick="pickQuickAddDay('${day}')">${label}</button>`;
+
+    }).join("");
+
+    document.getElementById("quickAddDayModal").style.display = "flex";
+
+}
+
+
+function pickQuickAddDay(day){
+
+    closeQuickAddDayPicker();
+
+    openModal(day);
+
+}
+
+
+function closeQuickAddDayPicker(){
+
+    document.getElementById("quickAddDayModal").style.display = "none";
 
 }
 
@@ -7280,7 +7309,25 @@ renderShoppingList();
 
 </div>
 
-<button id="quickAddFab" onclick="quickAddToday()" title="Add a meal to today">➕</button>
+<!-- QUICK ADD: PICK A DAY -->
+
+<div class="modal" id="quickAddDayModal">
+
+<div class="modal-box">
+
+<h2 data-i18n="quick_add_title">➕ Add a meal — which day?</h2>
+
+<div class="action-list" id="quickAddDayList"></div>
+
+<br>
+
+<button onclick="closeQuickAddDayPicker()" data-i18n="cancel">Cancel</button>
+
+</div>
+
+</div>
+
+<button id="quickAddFab" onclick="openQuickAddDayPicker()" title="Add a meal">➕</button>
 
 <div id="printArea"></div>
 
