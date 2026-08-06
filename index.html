@@ -2060,6 +2060,50 @@ Recipe
 </div>    
 
 
+<div id="toastContainer"></div>
+
+<!-- CUSTOM CONFIRM WINDOW -->
+
+<div class="modal" id="customConfirmModal">
+
+<div class="modal-box">
+
+<h2 id="customConfirmTitle">Are you sure?</h2>
+
+<p id="customConfirmMessage" class="small"></p>
+
+<br>
+
+<button onclick="resolveCustomConfirm(true)">Yes, continue</button>
+<button onclick="resolveCustomConfirm(false)">Cancel</button>
+
+</div>
+
+</div>
+
+<!-- QUICK ADD: PICK A DAY -->
+
+<div class="modal" id="quickAddDayModal">
+
+<div class="modal-box">
+
+<h2 data-i18n="quick_add_title">➕ Add a meal — which day?</h2>
+
+<div class="action-list" id="quickAddDayList"></div>
+
+<br>
+
+<button onclick="closeQuickAddDayPicker()" data-i18n="cancel">Cancel</button>
+
+</div>
+
+</div>
+
+<button id="quickAddFab" onclick="openQuickAddDayPicker()" title="Add a meal">➕</button>
+
+<div id="printArea"></div>
+
+
 <script>
 
 
@@ -7286,50 +7330,6 @@ renderShoppingList();
 
 
 </script>
-
-
-<div id="toastContainer"></div>
-
-<!-- CUSTOM CONFIRM WINDOW -->
-
-<div class="modal" id="customConfirmModal">
-
-<div class="modal-box">
-
-<h2 id="customConfirmTitle">Are you sure?</h2>
-
-<p id="customConfirmMessage" class="small"></p>
-
-<br>
-
-<button onclick="resolveCustomConfirm(true)">Yes, continue</button>
-<button onclick="resolveCustomConfirm(false)">Cancel</button>
-
-</div>
-
-</div>
-
-<!-- QUICK ADD: PICK A DAY -->
-
-<div class="modal" id="quickAddDayModal">
-
-<div class="modal-box">
-
-<h2 data-i18n="quick_add_title">➕ Add a meal — which day?</h2>
-
-<div class="action-list" id="quickAddDayList"></div>
-
-<br>
-
-<button onclick="closeQuickAddDayPicker()" data-i18n="cancel">Cancel</button>
-
-</div>
-
-</div>
-
-<button id="quickAddFab" onclick="openQuickAddDayPicker()" title="Add a meal">➕</button>
-
-<div id="printArea"></div>
 
 </body>
 
