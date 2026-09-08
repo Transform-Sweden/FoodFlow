@@ -1244,9 +1244,9 @@ bottom:90px;
 <span class="nav-short" data-i18n="nav_short_today">📍 Today</span>
 </button>
 
-<button onclick="copyWeekToNext()" class="week-nav-copy">
-<span class="nav-full" data-i18n="nav_full_copy_forward">📆 Copy Week Forward</span>
-<span class="nav-short" data-i18n="nav_short_copy_forward">📆 Copy Forward</span>
+<button onclick="openCopyWeekModal()" class="week-nav-copy">
+<span class="nav-full" data-i18n="nav_full_copy_forward">📆 Copy Week To...</span>
+<span class="nav-short" data-i18n="nav_short_copy_forward">📆 Copy To...</span>
 </button>
 
 <button onclick="printMealPlanner()">
@@ -2103,6 +2103,35 @@ Recipe
 
 <div id="printArea"></div>
 
+<!-- COPY WEEK TO... -->
+
+<div class="modal" id="copyWeekModal">
+
+<div class="modal-box">
+
+<h2 data-i18n="copy_week_modal_title">📆 Copy This Week To...</h2>
+
+<label>
+<span data-i18n="copy_week_target_label">Target week (any date in that week)</span>
+</label>
+
+<input type="date" id="copyWeekTargetInput">
+
+<div class="week-nav-secondary" style="margin-top:8px;">
+<button onclick="setCopyWeekPreset(1)" style="font-size:13px;padding:8px 10px;" data-i18n="copy_week_preset_next">Next Week</button>
+<button onclick="setCopyWeekPreset(2)" style="font-size:13px;padding:8px 10px;" data-i18n="copy_week_preset_2">In 2 Weeks</button>
+<button onclick="setCopyWeekPreset(4)" style="font-size:13px;padding:8px 10px;" data-i18n="copy_week_preset_4">In 4 Weeks</button>
+</div>
+
+<br>
+
+<button data-primary onclick="confirmCopyWeek()" data-i18n="copy">Copy</button>
+<button onclick="closeCopyWeekModal()" data-i18n="cancel">Cancel</button>
+
+</div>
+
+</div>
+
 
 <script>
 
@@ -2241,8 +2270,8 @@ const translations = {
         nav_short_next: "▶",
         nav_full_today: "📍 This Week",
         nav_short_today: "📍 Today",
-        nav_full_copy_forward: "📆 Copy Week Forward",
-        nav_short_copy_forward: "📆 Copy Forward",
+        nav_full_copy_forward: "📆 Copy Week To...",
+        nav_short_copy_forward: "📆 Copy To...",
         print_planner_full: "🖨️ Print / Save as PDF",
         print_planner_short: "🖨️ Print",
         meal_plan_title: "🍃 FoodFlow — Meal Plan",
@@ -2255,9 +2284,16 @@ const translations = {
         pick_a_day_prefix: "Tap a day to move ",
         pick_a_day_suffix: " there",
         no_meals_this_week: "This week doesn't have any meals planned yet.",
-        replace_next_week_message: "Next week already has meals planned. This will replace that plan with a copy of this week. Continue?",
-        replace_next_week_title: "Replace next week's plan?",
-        copied_to_next_week: "Copied to next week!",
+        replace_target_week_message: "That week already has meals planned. This will replace that plan with a copy of this week. Continue?",
+        replace_target_week_title: "Replace that week's plan?",
+        copied_to_chosen_week: "Copied to the chosen week!",
+        copy_week_modal_title: "📆 Copy This Week To...",
+        copy_week_target_label: "Target week (any date in that week)",
+        copy_week_preset_next: "Next Week",
+        copy_week_preset_2: "In 2 Weeks",
+        copy_week_preset_4: "In 4 Weeks",
+        pick_a_week_date: "Pick a date first.",
+        cant_copy_to_same_week: "That's the week you're already viewing — pick a different one.",
         enter_meal_name: "Please enter a meal name.",
         toast_removed: "Removed",
         pick_day_to_copy: "Pick at least one day to copy into.",
@@ -2402,8 +2438,8 @@ const translations = {
         nav_short_next: "▶",
         nav_full_today: "📍 Denna vecka",
         nav_short_today: "📍 Idag",
-        nav_full_copy_forward: "📆 Kopiera vecka framåt",
-        nav_short_copy_forward: "📆 Kopiera framåt",
+        nav_full_copy_forward: "📆 Kopiera vecka till...",
+        nav_short_copy_forward: "📆 Kopiera till...",
         print_planner_full: "🖨️ Skriv ut / Spara som PDF",
         print_planner_short: "🖨️ Skriv ut",
         meal_plan_title: "🍃 FoodFlow — Måltidsplan",
@@ -2416,9 +2452,16 @@ const translations = {
         pick_a_day_prefix: "Tryck på en dag för att flytta ",
         pick_a_day_suffix: " dit",
         no_meals_this_week: "Den här veckan har inga måltider planerade än.",
-        replace_next_week_message: "Nästa vecka har redan måltider planerade. Detta ersätter den planen med en kopia av denna vecka. Fortsätt?",
-        replace_next_week_title: "Ersätta nästa veckas plan?",
-        copied_to_next_week: "Kopierat till nästa vecka!",
+        replace_target_week_message: "Den veckan har redan måltider planerade. Detta ersätter den planen med en kopia av denna vecka. Fortsätt?",
+        replace_target_week_title: "Ersätta den veckans plan?",
+        copied_to_chosen_week: "Kopierat till den valda veckan!",
+        copy_week_modal_title: "📆 Kopiera denna vecka till...",
+        copy_week_target_label: "Målvecka (valfritt datum den veckan)",
+        copy_week_preset_next: "Nästa vecka",
+        copy_week_preset_2: "Om 2 veckor",
+        copy_week_preset_4: "Om 4 veckor",
+        pick_a_week_date: "Välj ett datum först.",
+        cant_copy_to_same_week: "Det är veckan du redan tittar på — välj en annan.",
         enter_meal_name: "Ange ett namn på måltiden.",
         toast_removed: "Borttagen",
         pick_day_to_copy: "Välj minst en dag att kopiera till.",
@@ -3883,7 +3926,7 @@ function updateWeekLabel(){
 }
 
 
-async function copyWeekToNext(){
+function openCopyWeekModal(){
 
     let hasAnyMeals = Object.values(meals)
         .some(dayMeals => dayMeals && dayMeals.length > 0);
@@ -3895,38 +3938,81 @@ async function copyWeekToNext(){
 
     }
 
+    // Default suggestion: next week, same as the old behavior
+    setCopyWeekPreset(1);
+
+    document.getElementById("copyWeekModal").style.display = "flex";
+
+}
+
+
+function closeCopyWeekModal(){
+
+    document.getElementById("copyWeekModal").style.display = "none";
+
+}
+
+
+function setCopyWeekPreset(weeksAhead){
+
     let d = parseDateKey(currentWeekKey);
-    d.setDate(d.getDate() + 7);
-    let nextWeekKey = getMondayKey(d);
+    d.setDate(d.getDate() + (7 * weeksAhead));
 
-    let nextWeekHasMeals =
-        weeks[nextWeekKey] &&
-        Object.values(weeks[nextWeekKey]).some(dm => dm && dm.length > 0);
+    document.getElementById("copyWeekTargetInput").value = formatDateKey(d);
 
-    if(nextWeekHasMeals){
+}
+
+
+async function confirmCopyWeek(){
+
+    let inputValue = document.getElementById("copyWeekTargetInput").value;
+
+    if(!inputValue){
+
+        showToast(t("pick_a_week_date"), { type:"error" });
+        return;
+
+    }
+
+    let targetWeekKey = getMondayKey(parseDateKey(inputValue));
+
+    if(targetWeekKey === currentWeekKey){
+
+        showToast(t("cant_copy_to_same_week"), { type:"error" });
+        return;
+
+    }
+
+    let targetHasMeals =
+        weeks[targetWeekKey] &&
+        Object.values(weeks[targetWeekKey]).some(dm => dm && dm.length > 0);
+
+    if(targetHasMeals){
 
         let ok = await customConfirm(
-            t("replace_next_week_message"),
-            t("replace_next_week_title")
+            t("replace_target_week_message"),
+            t("replace_target_week_title")
         );
 
         if(!ok) return;
 
     }
 
-    // Deep copy so editing next week later doesn't also change this week
-    weeks[nextWeekKey] = JSON.parse(JSON.stringify(meals));
+    // Deep copy so editing the target week later doesn't also change this week
+    weeks[targetWeekKey] = JSON.parse(JSON.stringify(meals));
 
     // Collapse any expanded state so it opens tidy
     days.forEach(day=>{
-        if(weeks[nextWeekKey][day]){
-            weeks[nextWeekKey][day].forEach(m => m.expanded = false);
+        if(weeks[targetWeekKey][day]){
+            weeks[targetWeekKey][day].forEach(m => m.expanded = false);
         }
     });
 
     saveData();
 
-    showToast(t("copied_to_next_week"));
+    closeCopyWeekModal();
+
+    showToast(t("copied_to_chosen_week"));
 
 }
 
