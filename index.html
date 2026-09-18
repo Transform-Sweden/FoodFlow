@@ -5715,6 +5715,16 @@ function addIngredientRow(name="", amount="", unit=""){
             value="${unit}"
             style="width:70px;"
         >
+
+        <button
+            type="button"
+            class="delete"
+            title="Remove ingredient"
+            onclick="this.parentElement.remove()"
+            style="flex-shrink:0;padding:8px 12px;margin:0;"
+        >
+            🗑
+        </button>
     `;
 
     list.appendChild(row);
@@ -7234,21 +7244,33 @@ function parsePastedRecipe(){
 
     // Guess title = first line that isn't a number, servings line, or header
     let title = "";
+    let titleIndex = -1;
 
-    for(let line of lines){
+    for(let i = 0; i < lines.length; i++){
+
+        let line = lines[i];
 
         if(/^\d/.test(line)) continue;
         if(skipPattern.test(line)) continue;
         if(servingsLinePattern.test(line)) continue;
 
         title = line;
+        titleIndex = i;
         break;
 
     }
 
     let ingredientLines = [];
 
-    lines.forEach(line=>{
+    lines.forEach((line, index)=>{
+
+        // The recipe's title line is never itself an ingredient —
+        // without this, a short title (e.g. "Chicken Curry") could
+        // slip through the same "short, no-quantity line" check
+        // used below for things like "salt".
+        if(index === titleIndex){
+            return;
+        }
 
         if(skipPattern.test(line)){
             return;
