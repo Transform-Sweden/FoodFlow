@@ -7218,11 +7218,14 @@ function parsePastedRecipe(){
         .map(l => l.trim())
         .filter(l => l !== "");
 
-    // Guess servings, e.g. "4 port" / "4 portioner" / "4 personer"
+    // Guess servings — covers Swedish ("4 portioner", "4 port", "4
+    // personer") and common English/shorthand forms ("10x", "10p",
+    // "10 people", "serves 4", "4 servings").
     let servings = 4;
 
     let servingsMatch =
-        raw.match(/(\d+)\s*(portioner|port\.?|personer)\b/i);
+        raw.match(/(\d+)\s*(?:x|p(?:eople|ersons?)?|portioner|port\.?|personer|servings?|serves)\b/i) ||
+        raw.match(/(?:serves|serving size)\s*:?\s*(\d+)/i);
 
     if(servingsMatch){
         servings = Number(servingsMatch[1]);
@@ -7233,11 +7236,15 @@ function parsePastedRecipe(){
     let skipPattern =
         /^(ingredienser|gör så här|tillagning|instruktioner|steg|servering|tips)\b/i;
 
-    // Only matches a line that is JUST the serving count (e.g. "4
-    // portioner" on its own) — not "4 portioner pasta ...", where
-    // "portioner" is actually describing the pasta itself.
+    // Only matches a line that is JUST the serving count on its own
+    // (e.g. "4 portioner", "10x", "10p", "10 people", "serves 4") —
+    // not "4 portioner pasta ...", where "portioner" is actually
+    // describing the pasta itself.
     let servingsLinePattern =
-        /^\d+\s*(portioner|port\.?|personer)\.?$/i;
+        /^\d+\s*(?:x|p(?:eople|ersons?)?|portioner|port\.?|personer|servings?|serves)\.?$/i;
+
+    let servingsLinePatternReversed =
+        /^(?:serves|serving size)\s*:?\s*\d+\.?$/i;
 
     let numberedStepPattern =
         /^\d+[.)]\s/;
@@ -7253,6 +7260,7 @@ function parsePastedRecipe(){
         if(/^\d/.test(line)) continue;
         if(skipPattern.test(line)) continue;
         if(servingsLinePattern.test(line)) continue;
+        if(servingsLinePatternReversed.test(line)) continue;
 
         title = line;
         titleIndex = i;
@@ -7277,6 +7285,10 @@ function parsePastedRecipe(){
         }
 
         if(servingsLinePattern.test(line)){
+            return;
+        }
+
+        if(servingsLinePatternReversed.test(line)){
             return;
         }
 
