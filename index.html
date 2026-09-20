@@ -5973,28 +5973,69 @@ function getIngredientCategory(normalizedName){
 
 // Converts an amount up to a bigger unit once it gets unwieldy —
 // e.g. 1200 g -> 1.2 kg, 12 dl -> 1.2 l — so the list stays readable.
-const unitConversions = {
-    "g": { threshold: 1000, factor: 1000, to: "kg" },
-    "ml": { threshold: 1000, factor: 1000, to: "l" },
-    "dl": { threshold: 10, factor: 10, to: "l" },
-    "cl": { threshold: 100, factor: 100, to: "l" }
+// Units that are just different scales of the same underlying
+// measurement — these get converted to one common base unit before
+// combining, so "1.5 kg" and "1500 g" of the same ingredient are
+// correctly recognized as the same amount instead of two separate
+// shopping-list lines. Base units: grams for weight, milliliters
+// for volume (millimeter-scale-y things like msk/tsk stay separate,
+// since spoon measurements aren't usually meant to merge with dl/l).
+const unitFamilies = {
+    "g":  { family:"weight", toBase:1 },
+    "kg": { family:"weight", toBase:1000 },
+    "ml": { family:"volume", toBase:1 },
+    "l":  { family:"volume", toBase:1000 },
+    "dl": { family:"volume", toBase:100 },
+    "cl": { family:"volume", toBase:10 }
 };
 
 
-function simplifyUnit(amount, unit){
+// Converts an amount+unit into the family's base unit for combining
+// (e.g. "1.5 kg" -> 1500 in the "weight" family). Units outside a
+// known family (st, msk, tsk, kruka, etc.) pass through unchanged,
+// keyed by their own lowercase unit text as before.
+function toCombinableUnit(amount, unit){
 
-    let conversion = unitConversions[(unit || "").toLowerCase()];
+    let info = unitFamilies[(unit || "").toLowerCase()];
 
-    if(conversion && amount >= conversion.threshold){
+    if(!info){
+        return { amount, unitKey: (unit || "").trim().toLowerCase() };
+    }
 
-        return {
-            amount: amount / conversion.factor,
-            unit: conversion.to
-        };
+    return {
+        amount: amount * info.toBase,
+        unitKey: "family:" + info.family
+    };
+
+}
+
+
+// Converts a combined base-unit amount back into a sensible display
+// unit — e.g. 1500 (grams) -> "1.5 kg", 250 (ml) -> "2.5 dl". Units
+// outside a known family are shown exactly as originally combined.
+function simplifyUnit(amount, unitKey){
+
+    if(unitKey === "family:weight"){
+
+        if(amount >= 1000){
+            return { amount: amount / 1000, unit:"kg" };
+        }
+
+        return { amount, unit:"g" };
 
     }
 
-    return { amount, unit };
+    if(unitKey === "family:volume"){
+
+        if(amount >= 1000){
+            return { amount: amount / 1000, unit:"l" };
+        }
+
+        return { amount: amount / 100, unit:"dl" };
+
+    }
+
+    return { amount, unit: unitKey };
 
 }
 
@@ -6091,21 +6132,31 @@ function generateShoppingList(){
                         ? normalizedName.charAt(0).toUpperCase() + normalizedName.slice(1)
                         : rawName;
 
-                    // Same ingredient (regardless of language) + same unit
-                    // gets combined together.
+                    // Convert to a common base unit first (e.g. kg -> g)
+                    // so equivalent units always combine, regardless of
+                    // which one each recipe happened to use.
+                    let combinable = toCombinableUnit(scaled, unit);
+
+                    // Same ingredient (regardless of language) + same
+                    // unit family gets combined together.
                     let key =
-                        normalizedName + "|" + unit.toLowerCase();
+                        normalizedName + "|" + combinable.unitKey;
 
                     if(items[key]){
 
-                        items[key].amount += scaled;
+                        items[key].amount += combinable.amount;
 
                     }else{
 
                         items[key] = {
                             name: displayName,
-                            unit: unit,
-                            amount: scaled,
+                            // Family units (weight/volume) get resolved
+                            // to a real display unit later; other units
+                            // keep their original casing as typed.
+                            unit: combinable.unitKey.startsWith("family:")
+                                ? combinable.unitKey
+                                : unit,
+                            amount: combinable.amount,
                             category: getIngredientCategory(normalizedName)
                         };
 
