@@ -5820,6 +5820,18 @@ const ingredientTranslations = {
     "schalottenlök":"shallot", "schalottenlökar":"shallot",
     "bananschalottenlök":"shallot", "bananschalottenlökar":"shallot",
     "shallot":"shallot", "shallots":"shallot",
+    "lökar":"onion",
+    "haricot verts":"green beans", "haricots verts":"green beans",
+    "gröna bönor":"green beans", "green beans":"green beans", "green bean":"green beans",
+    "isbergssallad":"lettuce",
+    "ärtor":"peas", "ärter":"peas", "peas":"peas", "pea":"peas",
+    "grönsaker":"vegetables", "vegetables":"vegetables", "vegetable":"vegetables",
+    "majs":"corn", "corn":"corn", "maize":"corn",
+    "kikärtor":"chickpeas", "kikärter":"chickpeas",
+    "chickpeas":"chickpeas", "chickpea":"chickpeas", "garbanzo beans":"chickpeas",
+    "bönor":"beans", "böna":"beans", "beans":"beans", "bean":"beans",
+    "rödbetssallad":"beet salad", "beet salad":"beet salad",
+    "wokmix":"wok mix", "wok mix":"wok mix",
 
     // dairy & eggs
     "mjölk":"milk", "milk":"milk",
@@ -5830,6 +5842,7 @@ const ingredientTranslations = {
     "parmesan":"parmesan", "riven parmesan":"parmesan",
     "yoghurt":"yogurt", "yogurt":"yogurt",
     "crème fraiche":"creme fraiche", "creme fraiche":"creme fraiche", "crème fraîche":"creme fraiche",
+    "kokosmjölk":"coconut milk", "coconut milk":"coconut milk",
 
     // meat & fish
     "nötfärs":"ground beef", "ground beef":"ground beef",
@@ -5843,6 +5856,14 @@ const ingredientTranslations = {
     "lax":"salmon", "salmon":"salmon",
     "torsk":"cod", "cod":"cod",
     "räkor":"shrimp", "räka":"shrimp", "shrimp":"shrimp",
+    "falukorv":"falukorv",
+    "fiskfilé":"fish fillet", "fiskfile":"fish fillet",
+    "fish fillet":"fish fillet", "fish fillets":"fish fillet",
+    "fiskpinnar":"fish sticks", "fish sticks":"fish sticks", "fish fingers":"fish sticks",
+    "köttbullar":"meatballs", "meatballs":"meatballs", "meatball":"meatballs",
+    "kycklingfile":"chicken breast",
+    "rökt kalkon":"smoked turkey", "smoked turkey":"smoked turkey",
+    "kalkon":"turkey", "turkey":"turkey",
 
     // pantry
     "mjöl":"flour", "vetemjöl":"flour", "flour":"flour",
@@ -5875,6 +5896,21 @@ const ingredientTranslations = {
     "vatten":"water", "water":"water",
     "vitt vin":"white wine", "white wine":"white wine",
     "vitt matlagningsvin":"white wine", "matlagningsvin":"white wine",
+    "äggnudlar":"egg noodles", "egg noodles":"egg noodles", "egg noodle":"egg noodles",
+    "couscous":"couscous",
+    "fiskbuljong":"fish broth", "fiskbuljongtärning":"fish broth", "fiskbuljongtärningar":"fish broth",
+    "fish broth":"fish broth", "fish stock":"fish broth", "fish bouillon":"fish broth",
+    "maizena":"corn starch", "majsstärkelse":"corn starch",
+    "corn starch":"corn starch", "cornstarch":"corn starch",
+    "sambal oelek":"sambal oelek",
+    "snabbmakaroner":"macaroni", "makaroner":"macaroni", "macaroni":"macaroni",
+    "sriracha":"sriracha",
+    "sweet chili sås":"sweet chili sauce", "söt chilisås":"sweet chili sauce",
+    "sweet chili sauce":"sweet chili sauce",
+    "tomatpuré":"tomato puree", "tomatpure":"tomato puree",
+    "tomato puree":"tomato puree", "tomato paste":"tomato puree",
+    "lasagneplattor":"lasagna sheets", "lasagna sheets":"lasagna sheets", "lasagne sheets":"lasagna sheets",
+    "linser":"lentils", "lins":"lentils", "lentils":"lentils", "lentil":"lentils",
 
     // herbs & spices
     "persilja":"parsley", "parsley":"parsley",
@@ -5883,7 +5919,10 @@ const ingredientTranslations = {
     "oregano":"oregano",
     "curry":"curry",
     "kanel":"cinnamon", "cinnamon":"cinnamon",
-    "vanilj":"vanilla", "vanilla":"vanilla"
+    "vanilj":"vanilla", "vanilla":"vanilla",
+    "dill":"dill",
+    "rosmarin":"rosemary", "rosemary":"rosemary",
+    "citronjuice":"lemon juice", "citron juice":"lemon juice", "lemon juice":"lemon juice"
 
 };
 
@@ -5894,8 +5933,9 @@ const ingredientStopwords = [
     "grön","grönt","gröna","färsk","färskt","färska","torkad","torkat","torkade",
     "stor","stort","stora","liten","litet","små","hel","helt","hela",
     "riven","rivet","rivna","hackad","hackat","hackade",
+    "frysta","fryst","fruset","frusna",
     "fresh","dried","yellow","red","white","green","large","small","whole","big","little",
-    "grated","shredded","chopped","diced","minced"
+    "grated","shredded","chopped","diced","minced","frozen"
 ];
 
 // Every canonical value used above, so we know when to show a
@@ -5916,16 +5956,21 @@ const ingredientCategories = {
     "broccoli":"Produce", "cauliflower":"Produce", "lettuce":"Produce",
     "cucumber":"Produce", "lemon":"Produce", "lime":"Produce",
     "apple":"Produce", "banana":"Produce", "parsley":"Produce",
-    "basil":"Produce",
+    "basil":"Produce", "green beans":"Produce", "peas":"Produce",
+    "vegetables":"Produce", "corn":"Produce", "chickpeas":"Produce",
+    "beans":"Produce", "beet salad":"Produce", "wok mix":"Produce",
 
     "milk":"Dairy & Eggs", "cream":"Dairy & Eggs", "butter":"Dairy & Eggs",
     "egg":"Dairy & Eggs", "cheese":"Dairy & Eggs", "yogurt":"Dairy & Eggs",
     "creme fraiche":"Dairy & Eggs", "parmesan":"Dairy & Eggs",
+    "coconut milk":"Dairy & Eggs",
 
     "ground beef":"Meat & Fish", "ground pork":"Meat & Fish",
     "chicken breast":"Meat & Fish", "chicken":"Meat & Fish",
     "pork chop":"Meat & Fish", "bacon":"Meat & Fish",
     "salmon":"Meat & Fish", "cod":"Meat & Fish", "shrimp":"Meat & Fish",
+    "falukorv":"Meat & Fish", "fish fillet":"Meat & Fish", "fish sticks":"Meat & Fish",
+    "meatballs":"Meat & Fish", "smoked turkey":"Meat & Fish", "turkey":"Meat & Fish",
 
     "flour":"Pantry", "sugar":"Pantry", "salt":"Pantry", "pepper":"Pantry",
     "rice":"Pantry", "pasta":"Pantry", "spaghetti":"Pantry", "noodles":"Pantry",
@@ -5933,9 +5978,14 @@ const ingredientCategories = {
     "oil":"Pantry", "olive oil":"Pantry", "vinegar":"Pantry", "soy sauce":"Pantry", "water":"Pantry",
     "mustard":"Pantry", "ketchup":"Pantry", "mayonnaise":"Pantry",
     "breadcrumbs":"Pantry", "bread":"Pantry", "white wine":"Pantry",
+    "egg noodles":"Pantry", "couscous":"Pantry", "fish broth":"Pantry",
+    "corn starch":"Pantry", "sambal oelek":"Pantry", "macaroni":"Pantry",
+    "sriracha":"Pantry", "sweet chili sauce":"Pantry", "tomato puree":"Pantry",
+    "lasagna sheets":"Pantry", "lentils":"Pantry",
 
     "thyme":"Herbs & Spices", "oregano":"Herbs & Spices", "curry":"Herbs & Spices",
-    "cinnamon":"Herbs & Spices", "vanilla":"Herbs & Spices"
+    "cinnamon":"Herbs & Spices", "vanilla":"Herbs & Spices",
+    "dill":"Herbs & Spices", "rosemary":"Herbs & Spices", "lemon juice":"Herbs & Spices"
 
 };
 
