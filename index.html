@@ -276,6 +276,24 @@ font-weight:bold;
 }
 
 
+/* Keeps a meal name to a tidy 2 lines with "..." when collapsed,
+instead of shrinking text or overflowing its box. Expanding the
+meal (▼ View) shows the name in full. */
+.meal-name-clamp {
+
+display:-webkit-box;
+
+-webkit-line-clamp:2;
+
+-webkit-box-orient:vertical;
+
+overflow:hidden;
+
+word-break:break-word;
+
+}
+
+
 
 .small {
 
@@ -4185,7 +4203,7 @@ if(meals[day] && meals[day].length > 0){
         </div>
 
 
-        <strong>
+        <strong class="${meal.expanded ? "" : "meal-name-clamp"}" title="${meal.name}">
         ${meal.name}
         </strong>
 
