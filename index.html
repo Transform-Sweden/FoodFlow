@@ -7,6 +7,17 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<meta name="theme-color" content="#4caf50">
+
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="FoodFlow">
+
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%234caf50' rx='20'/%3E%3Ctext x='50' y='68' font-size='55' text-anchor='middle'%3E%F0%9F%8D%83%3C/text%3E%3C/svg%3E">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%234caf50' rx='20'/%3E%3Ctext x='50' y='68' font-size='55' text-anchor='middle'%3E%F0%9F%8D%83%3C/text%3E%3C/svg%3E">
+
 <title>🍃 FoodFlow</title>
 
 
@@ -1239,7 +1250,7 @@ bottom:90px;
 
 <div class="week-nav-row">
 
-<button onclick="goToPreviousWeek()">
+<button onclick="goToPreviousWeek()" data-i18n-aria-label="aria_previous_week" aria-label="Previous week">
 <span class="nav-full" data-i18n="nav_full_previous">◀ Previous</span>
 <span class="nav-short" data-i18n="nav_short_previous">◀</span>
 </button>
@@ -1248,7 +1259,7 @@ bottom:90px;
 <div id="weekLabel"></div>
 </div>
 
-<button onclick="goToNextWeek()">
+<button onclick="goToNextWeek()" data-i18n-aria-label="aria_next_week" aria-label="Next week">
 <span class="nav-full" data-i18n="nav_full_next">Next ▶</span>
 <span class="nav-short" data-i18n="nav_short_next">▶</span>
 </button>
@@ -1302,6 +1313,9 @@ bottom:90px;
     data-i18n-placeholder="recipe_search_placeholder"
     oninput="renderRecipes()"
 >
+
+<div id="recipeTagFilterBar" style="display:none; flex-wrap:wrap; gap:6px; margin:8px 0;">
+</div>
 
 <div id="recipeList">
 </div>
@@ -1376,7 +1390,7 @@ oninput="renderShoppingList()"
 <!-- SETTINGS WINDOW -->
 
 
-<div class="modal" id="settingsModal">
+<div class="modal" role="dialog" aria-modal="true" id="settingsModal">
 
 
 <div class="modal-box">
@@ -1456,6 +1470,17 @@ oninput="renderShoppingList()"
 </button>
 
 
+<h3 data-i18n="settings_shopping_categories">
+🛒 Shopping List Order
+</h3>
+
+<p class="small" data-i18n="shopping_category_order_description">
+Reorder the categories to match how your store is laid out.
+</p>
+
+<div id="categoryOrderList"></div>
+
+
 <h3 data-i18n="settings_backup">
 💾 Backup
 </h3>
@@ -1500,7 +1525,7 @@ onchange="importData(event)"
     <!-- CATEGORY WINDOW -->
 
 
-<div class="modal" id="categoryModal">
+<div class="modal" role="dialog" aria-modal="true" id="categoryModal">
 
 
 <div class="modal-box">
@@ -1542,35 +1567,35 @@ Choose an emoji:
 <div id="emojiPicker">
 
 
-<button onclick="selectEmoji('🍕')">
+<button onclick="selectEmoji('🍕')" aria-label="Pizza emoji">
 🍕
 </button>
 
-<button onclick="selectEmoji('🍰')">
+<button onclick="selectEmoji('🍰')" aria-label="Cake emoji">
 🍰
 </button>
 
-<button onclick="selectEmoji('🥪')">
+<button onclick="selectEmoji('🥪')" aria-label="Sandwich emoji">
 🥪
 </button>
 
-<button onclick="selectEmoji('🍎')">
+<button onclick="selectEmoji('🍎')" aria-label="Apple emoji">
 🍎
 </button>
 
-<button onclick="selectEmoji('🥤')">
+<button onclick="selectEmoji('🥤')" aria-label="Drink emoji">
 🥤
 </button>
 
-<button onclick="selectEmoji('🌙')">
+<button onclick="selectEmoji('🌙')" aria-label="Moon emoji">
 🌙
 </button>
 
-<button onclick="selectEmoji('💪')">
+<button onclick="selectEmoji('💪')" aria-label="Muscle emoji">
 💪
 </button>
 
-<button onclick="selectEmoji('🍲')">
+<button onclick="selectEmoji('🍲')" aria-label="Stew emoji">
 🍲
 </button>
 
@@ -1608,7 +1633,7 @@ data-i18n-placeholder="category_emoji_placeholder"
 
 <!-- COPY DAY WINDOW -->
 
-<div class="modal" id="copyDayModal">
+<div class="modal" role="dialog" aria-modal="true" id="copyDayModal">
 
 
 <div class="modal-box">
@@ -1653,7 +1678,7 @@ Cancel
 <!-- ADD MEAL WINDOW -->
 
 
-<div class="modal" id="modal">
+<div class="modal" role="dialog" aria-modal="true" id="modal">
 
 
 <div class="modal-box">
@@ -1734,9 +1759,9 @@ placeholder="e.g. Spaghetti Bolognese"
 
 
 <div class="stepper">
-<button type="button" onclick="adjustStepper('people',-1)">−</button>
+<button type="button" onclick="adjustStepper('people',-1)" data-i18n-aria-label="aria_decrease_servings" aria-label="Decrease servings">−</button>
 <input id="people" type="number" value="4" min="1" onblur="clampStepperInput('people')">
-<button type="button" onclick="adjustStepper('people',1)">+</button>
+<button type="button" onclick="adjustStepper('people',1)" data-i18n-aria-label="aria_increase_servings" aria-label="Increase servings">+</button>
 </div>
 
 
@@ -1766,7 +1791,7 @@ placeholder="e.g. Spaghetti Bolognese"
 
 <!-- PASTE RECIPE FROM WEB WINDOW -->
 
-<div class="modal" id="pasteModal">
+<div class="modal" role="dialog" aria-modal="true" id="pasteModal">
 
 
 <div class="modal-box">
@@ -1810,7 +1835,7 @@ Cancel
 
 <!-- SHOPPING LIST MORE ACTIONS MENU -->
 
-<div class="modal" id="shoppingMoreMenu">
+<div class="modal" role="dialog" aria-modal="true" id="shoppingMoreMenu">
 
 <div class="modal-box">
 
@@ -1837,7 +1862,7 @@ Cancel
 
 <!-- EDIT / ADD SHOPPING ITEM WINDOW -->
 
-<div class="modal" id="shoppingItemModal">
+<div class="modal" role="dialog" aria-modal="true" id="shoppingItemModal">
 
 
 <div class="modal-box">
@@ -1903,7 +1928,7 @@ placeholder="e.g. g, dl, st"
 
 <!-- ADD RECIPE WINDOW -->
 
-<div class="modal" id="recipeModal">
+<div class="modal" role="dialog" aria-modal="true" id="recipeModal">
 
 
 <div class="modal-box">
@@ -1919,12 +1944,21 @@ Add Recipe
 </label>
 
 
-<input 
+<input
 id="recipeName"
 placeholder="Example: Spaghetti Bolognese"
 >
 
 
+<label>
+<span data-i18n="recipe_tags_label">Tags (comma separated)</span>
+</label>
+
+
+<input
+id="recipeTags"
+placeholder="e.g. quick, vegetarian, dessert"
+>
 
 
 
@@ -1935,9 +1969,9 @@ placeholder="Example: Spaghetti Bolognese"
 
 
 <div class="stepper">
-<button type="button" onclick="adjustStepper('recipePeople',-1)">−</button>
+<button type="button" onclick="adjustStepper('recipePeople',-1)" data-i18n-aria-label="aria_decrease_servings" aria-label="Decrease servings">−</button>
 <input id="recipePeople" type="number" value="4" min="1" onblur="clampStepperInput('recipePeople')">
-<button type="button" onclick="adjustStepper('recipePeople',1)">+</button>
+<button type="button" onclick="adjustStepper('recipePeople',1)" data-i18n-aria-label="aria_increase_servings" aria-label="Increase servings">+</button>
 </div>
 
 
@@ -1974,7 +2008,7 @@ placeholder="Example: Spaghetti Bolognese"
 
 <!-- VIEW RECIPE WINDOW -->
 
-<div class="modal" id="viewRecipeModal">
+<div class="modal" role="dialog" aria-modal="true" id="viewRecipeModal">
 
 <div class="modal-box">
 
@@ -1996,7 +2030,7 @@ Recipe
 
 <!-- ADD RECIPE TO PLANNER WINDOW -->
 
-<div class="modal" id="plannerRecipeModal">
+<div class="modal" role="dialog" aria-modal="true" id="plannerRecipeModal">
 
 
 <div class="modal-box">
@@ -2049,9 +2083,9 @@ Recipe
 
 
 <div class="stepper">
-<button type="button" onclick="adjustStepper('plannerRecipePeople',-1)">−</button>
+<button type="button" onclick="adjustStepper('plannerRecipePeople',-1)" data-i18n-aria-label="aria_decrease_servings" aria-label="Decrease servings">−</button>
 <input id="plannerRecipePeople" type="number" value="4" min="1" onblur="clampStepperInput('plannerRecipePeople')">
-<button type="button" onclick="adjustStepper('plannerRecipePeople',1)">+</button>
+<button type="button" onclick="adjustStepper('plannerRecipePeople',1)" data-i18n-aria-label="aria_increase_servings" aria-label="Increase servings">+</button>
 </div>
 
 
@@ -2082,7 +2116,7 @@ Recipe
 
 <!-- CUSTOM CONFIRM WINDOW -->
 
-<div class="modal" id="customConfirmModal">
+<div class="modal" role="dialog" aria-modal="true" id="customConfirmModal">
 
 <div class="modal-box">
 
@@ -2101,7 +2135,7 @@ Recipe
 
 <!-- QUICK ADD: PICK A DAY -->
 
-<div class="modal" id="quickAddDayModal">
+<div class="modal" role="dialog" aria-modal="true" id="quickAddDayModal">
 
 <div class="modal-box">
 
@@ -2117,13 +2151,13 @@ Recipe
 
 </div>
 
-<button id="quickAddFab" onclick="openQuickAddDayPicker()" title="Add a meal">➕</button>
+<button id="quickAddFab" onclick="openQuickAddDayPicker()" title="Add a meal" data-i18n-aria-label="aria_add_meal" aria-label="Add a meal">➕</button>
 
 <div id="printArea"></div>
 
 <!-- COPY WEEK TO... -->
 
-<div class="modal" id="copyWeekModal">
+<div class="modal" role="dialog" aria-modal="true" id="copyWeekModal">
 
 <div class="modal-box">
 
@@ -2195,6 +2229,15 @@ const translations = {
         quick_add_title: "➕ Add a meal — which day?",
         quick_add_today_suffix: " (today)",
         category_saved_prefix: "Category saved: ",
+        aria_decrease_servings: "Decrease servings",
+        aria_increase_servings: "Increase servings",
+        aria_previous_week: "Previous week",
+        aria_next_week: "Next week",
+        aria_add_meal: "Add a meal",
+        aria_move_category_up: "Move category up",
+        aria_move_category_down: "Move category down",
+        settings_shopping_categories: "🛒 Shopping List Order",
+        shopping_category_order_description: "Reorder the categories to match how your store is laid out.",
         settings_backup: "💾 Backup",
         backup_description: "Your data lives only in this browser. Export it now and then to keep a safe copy, or to move it to another device.",
         export_data: "⬇️ Export Data",
@@ -2244,6 +2287,7 @@ const translations = {
         action_print: "🖨️ Print / Save as PDF",
 
         recipe_name_label: "Recipe Name",
+        recipe_tags_label: "Tags (comma separated)",
         recipe_servings_label: "Servings",
         recipe_ingredients_label: "Ingredients",
         add_ingredient: "➕ Add Ingredient",
@@ -2314,6 +2358,7 @@ const translations = {
         cant_copy_to_same_week: "That's the week you're already viewing — pick a different one.",
         enter_meal_name: "Please enter a meal name.",
         toast_removed: "Removed",
+        toast_duplicated_prefix: "Duplicated:",
         pick_day_to_copy: "Pick at least one day to copy into.",
         import_backup_message: "This will replace your current recipes, meal planner, settings, and shopping list with what's in this backup file. Continue?",
         import_backup_title: "Import backup?",
@@ -2363,6 +2408,15 @@ const translations = {
         quick_add_title: "➕ Lägg till måltid — vilken dag?",
         quick_add_today_suffix: " (idag)",
         category_saved_prefix: "Kategori sparad: ",
+        aria_decrease_servings: "Minska antal portioner",
+        aria_increase_servings: "Öka antal portioner",
+        aria_previous_week: "Föregående vecka",
+        aria_next_week: "Nästa vecka",
+        aria_add_meal: "Lägg till en måltid",
+        aria_move_category_up: "Flytta kategori uppåt",
+        aria_move_category_down: "Flytta kategori nedåt",
+        settings_shopping_categories: "🛒 Inköpslistans ordning",
+        shopping_category_order_description: "Ändra ordningen på kategorierna så att den matchar din butik.",
         settings_backup: "💾 Säkerhetskopia",
         backup_description: "Din data finns bara i den här webbläsaren. Exportera då och då för att ha en säker kopia, eller för att flytta den till en annan enhet.",
         export_data: "⬇️ Exportera data",
@@ -2412,6 +2466,7 @@ const translations = {
         action_print: "🖨️ Skriv ut / Spara som PDF",
 
         recipe_name_label: "Receptnamn",
+        recipe_tags_label: "Taggar (kommaseparerat)",
         recipe_servings_label: "Portioner",
         recipe_ingredients_label: "Ingredienser",
         add_ingredient: "➕ Lägg till ingrediens",
@@ -2482,6 +2537,7 @@ const translations = {
         cant_copy_to_same_week: "Det är veckan du redan tittar på — välj en annan.",
         enter_meal_name: "Ange ett namn på måltiden.",
         toast_removed: "Borttagen",
+        toast_duplicated_prefix: "Duplicerad:",
         pick_day_to_copy: "Välj minst en dag att kopiera till.",
         import_backup_message: "Detta ersätter dina nuvarande recept, måltidsplan, inställningar och inköpslista med innehållet i denna säkerhetskopia. Fortsätt?",
         import_backup_title: "Importera säkerhetskopia?",
@@ -2570,6 +2626,15 @@ function applyTranslations(){
     document.querySelectorAll("[data-i18n-placeholder]").forEach(el=>{
 
         el.placeholder = t(el.getAttribute("data-i18n-placeholder"));
+
+    });
+
+    document.querySelectorAll("[data-i18n-aria-label]").forEach(el=>{
+
+        el.setAttribute(
+            "aria-label",
+            t(el.getAttribute("data-i18n-aria-label"))
+        );
 
     });
 
@@ -3386,6 +3451,7 @@ JSON.stringify(recipes)
 let selectedDay = null;
 let selectedMeal = null;
 let selectedRecipe = null;
+let activeRecipeTagFilter = null;
 
 let plannerRecipeIndex = null;
 
@@ -4721,6 +4787,8 @@ function openSettings(){
 document.getElementById("settingsModal")
 .style.display="flex";
 
+renderCategoryOrderSettings();
+
 }
 
 
@@ -5062,6 +5130,10 @@ document.getElementById("recipePeople")
 .value=4;
 
 
+document.getElementById("recipeTags")
+.value="";
+
+
 document.getElementById("ingredientList")
 .innerHTML="";
 
@@ -5104,6 +5176,11 @@ document.getElementById("recipePeople").value
 
 ingredients:
 getIngredientsFromRows(),
+
+tags: document.getElementById("recipeTags").value
+.split(",")
+.map(tag => tag.trim())
+.filter(tag => tag !== ""),
 
 expanded:false,
 
@@ -5365,9 +5442,41 @@ searchBox
 ? searchBox.value.toLowerCase()
 : "";
 
+let allTags = Array.from(new Set(
+    recipes.flatMap(r => r.tags || [])
+)).sort();
+
+let tagBar = document.getElementById("recipeTagFilterBar");
+
+if(allTags.length === 0){
+
+    tagBar.style.display = "none";
+    tagBar.innerHTML = "";
+
+}else{
+
+    tagBar.style.display = "flex";
+
+    tagBar.innerHTML = allTags.map(tag => `
+        <button
+            onclick="toggleRecipeTagFilter('${tag.replace(/'/g,"\\'")}')"
+            style="
+                padding:4px 10px;
+                border-radius:999px;
+                font-size:0.85em;
+                background:${activeRecipeTagFilter === tag ? "var(--primary)" : "var(--card)"};
+                color:${activeRecipeTagFilter === tag ? "#fff" : "inherit"};
+                border:1px solid var(--primary);
+            "
+        >${tag}</button>
+    `).join("");
+
+}
+
 let filteredRecipes = recipes
     .map((recipe, index) => ({ recipe, index }))
     .filter(({recipe}) => recipe.name.toLowerCase().includes(search))
+    .filter(({recipe}) => !activeRecipeTagFilter || (recipe.tags || []).includes(activeRecipeTagFilter))
     .sort((a, b) => (b.recipe.favorite ? 1 : 0) - (a.recipe.favorite ? 1 : 0));
 
 if(filteredRecipes.length === 0){
@@ -5405,6 +5514,23 @@ ${recipe.favorite ? "⭐ " : ""}
 ${recipe.name}
 
 </h3>
+
+${
+(recipe.tags && recipe.tags.length > 0)
+? `<div style="display:flex; flex-wrap:wrap; gap:4px; margin:4px 0;">
+    ${recipe.tags.map(tag => `
+        <span style="
+            padding:2px 8px;
+            border-radius:999px;
+            font-size:0.75em;
+            background:var(--bg);
+            border:1px solid var(--primary);
+            opacity:0.85;
+        ">${tag}</span>
+    `).join("")}
+   </div>`
+: ""
+}
 
 ${
 recipe.expanded
@@ -5453,6 +5579,12 @@ ${recipe.favorite ? "⭐ Remove Favorite" : "☆ Add Favorite"}
 onclick="editRecipe(${index})">
 
 ✏️ Edit
+
+</button>
+
+<button onclick="duplicateRecipe(${index})">
+
+📄 Duplicate
 
 </button>
 
@@ -5505,6 +5637,41 @@ list.appendChild(card);
 }
 
 
+function toggleRecipeTagFilter(tag){
+
+activeRecipeTagFilter =
+(activeRecipeTagFilter === tag) ? null : tag;
+
+renderRecipes();
+
+}
+
+
+function duplicateRecipe(index){
+
+let original = recipes[index];
+
+let copy = {
+    ...original,
+    name: `${original.name} (copy)`,
+    favorite: false,
+    expanded: false
+};
+
+recipes.splice(index + 1, 0, copy);
+
+localStorage.setItem(
+    "foodflowRecipes",
+    JSON.stringify(recipes)
+);
+
+renderRecipes();
+
+showToast(`${t("toast_duplicated_prefix")} "${original.name}"`);
+
+}
+
+
 function deleteRecipe(index){
 
 let removedRecipe = recipes[index];
@@ -5550,6 +5717,10 @@ document.getElementById("recipeName")
 
 document.getElementById("recipePeople")
 .value = recipe.servings;
+
+
+document.getElementById("recipeTags")
+.value = (recipe.tags || []).join(", ");
 
 
 document.getElementById("ingredientList")
@@ -6008,10 +6179,106 @@ const ingredientCategories = {
 };
 
 // The order categories appear in on the shopping list.
-const categoryOrder = [
+// The user can customize this order from Settings, so it's loaded
+// from localStorage when a valid saved order exists.
+const defaultCategoryOrder = [
     "Produce", "Dairy & Eggs", "Meat & Fish",
     "Pantry", "Herbs & Spices", "Other"
 ];
+
+let categoryOrder = loadCategoryOrder();
+
+function loadCategoryOrder(){
+
+    let saved = localStorage.getItem("foodflowCategoryOrder");
+
+    if(!saved) return [...defaultCategoryOrder];
+
+    try{
+
+        let parsed = JSON.parse(saved);
+
+        let sameSet =
+            Array.isArray(parsed) &&
+            parsed.length === defaultCategoryOrder.length &&
+            defaultCategoryOrder.every(cat => parsed.includes(cat));
+
+        return sameSet ? parsed : [...defaultCategoryOrder];
+
+    }catch(e){
+
+        return [...defaultCategoryOrder];
+
+    }
+
+}
+
+function saveCategoryOrder(){
+
+    localStorage.setItem(
+        "foodflowCategoryOrder",
+        JSON.stringify(categoryOrder)
+    );
+
+}
+
+function moveCategoryOrder(index, direction){
+
+    let newIndex = index + direction;
+
+    if(newIndex < 0 || newIndex >= categoryOrder.length) return;
+
+    [categoryOrder[index], categoryOrder[newIndex]] =
+        [categoryOrder[newIndex], categoryOrder[index]];
+
+    saveCategoryOrder();
+
+    renderCategoryOrderSettings();
+
+    renderShoppingList();
+
+}
+
+function renderCategoryOrderSettings(){
+
+    let container = document.getElementById("categoryOrderList");
+
+    if(!container) return;
+
+    container.innerHTML = categoryOrder.map((cat, index) => `
+
+        <div style="
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:8px;
+            padding:6px 10px;
+            margin-bottom:4px;
+            border-radius:8px;
+            background:var(--bg);
+        ">
+            <span>${categoryIcons[cat] || "🛒"} ${cat}</span>
+
+            <span style="display:flex; gap:4px;">
+                <button
+                    onclick="moveCategoryOrder(${index}, -1)"
+                    ${index === 0 ? "disabled" : ""}
+                    aria-label="${t("aria_move_category_up")}: ${cat}"
+                    style="padding:2px 10px;"
+                >▲</button>
+
+                <button
+                    onclick="moveCategoryOrder(${index}, 1)"
+                    ${index === categoryOrder.length - 1 ? "disabled" : ""}
+                    aria-label="${t("aria_move_category_down")}: ${cat}"
+                    style="padding:2px 10px;"
+                >▼</button>
+            </span>
+        </div>
+
+    `).join("");
+
+}
 
 const categoryIcons = {
     "Produce":"🥕",
@@ -7459,6 +7726,7 @@ function parsePastedRecipe(){
 
     document.getElementById("recipeName").value = title;
     document.getElementById("recipePeople").value = servings;
+    document.getElementById("recipeTags").value = "";
 
     document.getElementById("ingredientList").innerHTML = "";
 
@@ -7547,6 +7815,45 @@ if(quickAddFab){
 
 
 }
+
+function setupPWAManifest(){
+
+// A single HTML file can't host a real manifest.json on its own URL,
+// so we build one in memory and point a <link> at it as a Blob URL.
+let manifest = {
+    name: "FoodFlow",
+    short_name: "FoodFlow",
+    start_url: ".",
+    display: "standalone",
+    background_color: "#f4f6f4",
+    theme_color: "#4caf50",
+    icons: [
+        {
+            src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%234caf50' rx='20'/%3E%3Ctext x='50' y='68' font-size='55' text-anchor='middle'%3E%F0%9F%8D%83%3C/text%3E%3C/svg%3E",
+            sizes: "100x100",
+            type: "image/svg+xml"
+        }
+    ]
+};
+
+let blob = new Blob(
+    [JSON.stringify(manifest)],
+    { type: "application/manifest+json" }
+);
+
+let manifestUrl = URL.createObjectURL(blob);
+
+let link = document.createElement("link");
+link.rel = "manifest";
+link.href = manifestUrl;
+
+document.head.appendChild(link);
+
+}
+
+
+setupPWAManifest();
+
 
 let savedPage =
 localStorage.getItem("foodflowPage")
