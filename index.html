@@ -6731,7 +6731,7 @@ function generateShoppingList(){
                         return;
                     }
 
-                    let unit = (ingredient.unit || "").trim();
+                    let unit = normalizeUnit(ingredient.unit || "");
                     let amount = Number(ingredient.amount) || 0;
                     let scaled = amount * factor;
 
@@ -7754,8 +7754,61 @@ const knownUnits = [
     "g","kg","dl","msk","tsk","st","ml","l","cl","liter",
     "förp","förpackning","burk","burkar","klyfta","klyftor",
     "kruka","skiva","skivor","bunt","nypa","kryddmått","paket","påse",
-    "port","portion","portioner","personer"
+    "port","portion","portioner","personer",
+
+    // English units — metric/weight/volume
+    "oz","ounce","ounces","lb","lbs","pound","pounds",
+    "tbsp","tbsps","tablespoon","tablespoons",
+    "tsp","tsps","teaspoon","teaspoons",
+    "cup","cups","pinch","pinches",
+
+    // English/general count-style units
+    "can","cans","package","packages","pkg","pkgs",
+    "bag","bags","bottle","bottles","jar","jars",
+    "box","boxes","clove","cloves","slice","slices",
+    "piece","pieces","bunch","bunches","head","heads",
+    "stick","sticks"
 ];
+
+// Common unit synonyms/plurals that should all combine on the
+// shopping list as the same unit, regardless of which form a
+// recipe (or a pasted web recipe) happened to use.
+const unitAliases = {
+    "ounce":"oz", "ounces":"oz",
+    "pound":"lb", "pounds":"lb", "lbs":"lb",
+    "tbsps":"tbsp", "tablespoon":"tbsp", "tablespoons":"tbsp",
+    "tsps":"tsp", "teaspoon":"tsp", "teaspoons":"tsp",
+    "cups":"cup",
+    "pinches":"pinch",
+    "cans":"can",
+    "packages":"package", "pkg":"package", "pkgs":"package",
+    "bags":"bag",
+    "bottles":"bottle",
+    "jars":"jar",
+    "boxes":"box",
+    "cloves":"clove",
+    "slices":"slice",
+    "pieces":"piece",
+    "bunches":"bunch",
+    "heads":"head",
+    "sticks":"stick",
+    "burkar":"burk",
+    "klyftor":"klyfta",
+    "skivor":"skiva",
+    "liter":"l"
+};
+
+// Normalizes a unit word to its canonical form so "cans"/"can",
+// "tablespoons"/"tbsp" etc. all combine as the same unit.
+function normalizeUnit(unit){
+
+    let lower = (unit || "").trim().toLowerCase();
+
+    if(lower === "") return "";
+
+    return unitAliases[lower] || lower;
+
+}
 
 const fractionMap = {
     "½": 0.5,
@@ -7837,7 +7890,45 @@ function parseIngredientLine(line){
 
     if(!match || !/[\d½¼¾⅓⅔]/.test(match[1])){
 
-        // No leading number found — treat whole line as name only
+        // No leading number — some recipes write the amount and unit
+        // AFTER the ingredient name instead ("Sugar 2 tbsp"). Try that
+        // before giving up and treating the whole line as just a name.
+        let trailingWithUnit = line.match(
+            /^(.+?)\s+(\d+\/\d+|[\d½¼¾⅓⅔]+(?:[.,]\d+)?)\s+([a-zA-ZåäöÅÄÖ.]+)$/
+        );
+
+        if(trailingWithUnit){
+
+            let unitWord = trailingWithUnit[3].replace(/\.$/, "").toLowerCase();
+
+            if(knownUnits.includes(unitWord)){
+
+                return {
+                    amount: parseQuantityToken(trailingWithUnit[2]) || "",
+                    unit: normalizeUnit(unitWord),
+                    name: trailingWithUnit[1].trim()
+                };
+
+            }
+
+        }
+
+        // Trailing amount with no unit word ("Eggs 3").
+        let trailingNoUnit = line.match(
+            /^(.+?)\s+(\d+\/\d+|[\d½¼¾⅓⅔]+(?:[.,]\d+)?)$/
+        );
+
+        if(trailingNoUnit){
+
+            return {
+                amount: parseQuantityToken(trailingNoUnit[2]) || "",
+                unit: "",
+                name: trailingNoUnit[1].trim()
+            };
+
+        }
+
+        // No number found anywhere — treat whole line as name only
         return { amount:"", unit:"", name: line };
 
     }
@@ -7857,7 +7948,7 @@ function parseIngredientLine(line){
         knownUnits.includes(restTokens[0].toLowerCase())
     ){
 
-        unit = restTokens.shift();
+        unit = normalizeUnit(restTokens.shift());
         rest = restTokens.join(" ");
 
     }
