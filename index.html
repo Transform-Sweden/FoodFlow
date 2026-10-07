@@ -1366,9 +1366,18 @@ Automatically built from every recipe in your meal planner, scaled to the number
 <div id="shoppingRangeSummary" class="small" style="margin-top:4px;"></div>
 
 <div class="week-nav-secondary" style="margin-top:8px;">
-<button onclick="setShoppingRangePreset('thisWeek')" style="font-size:13px;padding:8px 10px;" data-i18n="preset_this_week">This Week</button>
-<button onclick="setShoppingRangePreset('restOfWeek')" style="font-size:13px;padding:8px 10px;" data-i18n="preset_rest_of_week">📍 Rest of Week</button>
-<button onclick="setShoppingRangePreset('next7')" style="font-size:13px;padding:8px 10px;" data-i18n="preset_next_7">Next 7 Days</button>
+<button onclick="setShoppingRangePreset('thisWeek')" style="font-size:13px;padding:8px 10px;">
+    <span class="nav-full" data-i18n="preset_this_week">This Week</span>
+    <span class="nav-short" data-i18n="preset_this_week_short">This Week</span>
+</button>
+<button onclick="setShoppingRangePreset('restOfWeek')" style="font-size:13px;padding:8px 10px;">
+    <span class="nav-full" data-i18n="preset_rest_of_week">📍 Rest of Week</span>
+    <span class="nav-short" data-i18n="preset_rest_of_week_short">📍 Rest</span>
+</button>
+<button onclick="setShoppingRangePreset('next7')" style="font-size:13px;padding:8px 10px;">
+    <span class="nav-full" data-i18n="preset_next_7">Next 7 Days</span>
+    <span class="nav-short" data-i18n="preset_next_7_short">Next 7d</span>
+</button>
 </div>
 
 <input
@@ -2206,9 +2215,18 @@ Recipe
 <input type="date" id="copyWeekTargetInput">
 
 <div class="week-nav-secondary" style="margin-top:8px;">
-<button onclick="setCopyWeekPreset(1)" style="font-size:13px;padding:8px 10px;" data-i18n="copy_week_preset_next">Next Week</button>
-<button onclick="setCopyWeekPreset(2)" style="font-size:13px;padding:8px 10px;" data-i18n="copy_week_preset_2">In 2 Weeks</button>
-<button onclick="setCopyWeekPreset(4)" style="font-size:13px;padding:8px 10px;" data-i18n="copy_week_preset_4">In 4 Weeks</button>
+<button onclick="setCopyWeekPreset(1)" style="font-size:13px;padding:8px 10px;">
+    <span class="nav-full" data-i18n="copy_week_preset_next">Next Week</span>
+    <span class="nav-short" data-i18n="copy_week_preset_next_short">Next Wk</span>
+</button>
+<button onclick="setCopyWeekPreset(2)" style="font-size:13px;padding:8px 10px;">
+    <span class="nav-full" data-i18n="copy_week_preset_2">In 2 Weeks</span>
+    <span class="nav-short" data-i18n="copy_week_preset_2_short">+2 Wks</span>
+</button>
+<button onclick="setCopyWeekPreset(4)" style="font-size:13px;padding:8px 10px;">
+    <span class="nav-full" data-i18n="copy_week_preset_4">In 4 Weeks</span>
+    <span class="nav-short" data-i18n="copy_week_preset_4_short">+4 Wks</span>
+</button>
 </div>
 
 <br>
@@ -2318,8 +2336,11 @@ const translations = {
         shopping_for: "🗓️ Shopping for:",
         range_to: "to",
         preset_this_week: "This Week",
+        preset_this_week_short: "This Week",
         preset_rest_of_week: "📍 Rest of Week",
+        preset_rest_of_week_short: "📍 Rest",
         preset_next_7: "Next 7 Days",
+        preset_next_7_short: "Next 7d",
         shopping_search_placeholder: "🔍 Search shopping list...",
         shopping_empty: "No ingredients yet — add some recipes to your meal planner and they'll show up here.",
         shopping_no_match: "No items match",
@@ -2398,8 +2419,11 @@ const translations = {
         copy_week_modal_title: "📆 Copy This Week To...",
         copy_week_target_label: "Target week (any date in that week)",
         copy_week_preset_next: "Next Week",
+        copy_week_preset_next_short: "Next Wk",
         copy_week_preset_2: "In 2 Weeks",
+        copy_week_preset_2_short: "+2 Wks",
         copy_week_preset_4: "In 4 Weeks",
+        copy_week_preset_4_short: "+4 Wks",
         pick_a_week_date: "Pick a date first.",
         cant_copy_to_same_week: "That's the week you're already viewing — pick a different one.",
         enter_meal_name: "Please enter a meal name.",
@@ -2507,8 +2531,11 @@ const translations = {
         shopping_for: "🗓️ Handlar för:",
         range_to: "till",
         preset_this_week: "Denna vecka",
+        preset_this_week_short: "Denna v.",
         preset_rest_of_week: "📍 Resten av veckan",
+        preset_rest_of_week_short: "📍 Resten",
         preset_next_7: "Kommande 7 dagar",
+        preset_next_7_short: "7 dagar",
         shopping_search_placeholder: "🔍 Sök i inköpslistan...",
         shopping_empty: "Inga ingredienser än — lägg till recept i din måltidsplanerare så visas de här.",
         shopping_no_match: "Inga varor matchar",
@@ -2587,8 +2614,11 @@ const translations = {
         copy_week_modal_title: "📆 Kopiera denna vecka till...",
         copy_week_target_label: "Målvecka (valfritt datum den veckan)",
         copy_week_preset_next: "Nästa vecka",
+        copy_week_preset_next_short: "Nästa v.",
         copy_week_preset_2: "Om 2 veckor",
+        copy_week_preset_2_short: "+2 v.",
         copy_week_preset_4: "Om 4 veckor",
+        copy_week_preset_4_short: "+4 v.",
         pick_a_week_date: "Välj ett datum först.",
         cant_copy_to_same_week: "Det är veckan du redan tittar på — välj en annan.",
         enter_meal_name: "Ange ett namn på måltiden.",
