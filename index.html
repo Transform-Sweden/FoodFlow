@@ -1470,6 +1470,33 @@ oninput="renderShoppingList()"
 </button>
 
 
+<h3 data-i18n="settings_custom_translations">
+🔤 Custom Ingredient Translations
+</h3>
+
+<p class="small" data-i18n="custom_translations_description">
+Add your own word so it always combines on the shopping list, no matter which language it's written in.
+</p>
+
+<div id="customTranslationList"></div>
+
+<input
+    id="customTranslationAlias"
+    placeholder="e.g. kycklingfilé"
+    data-i18n-placeholder="custom_translation_alias_placeholder"
+>
+
+<input
+    id="customTranslationTarget"
+    placeholder="e.g. chicken breast"
+    data-i18n-placeholder="custom_translation_target_placeholder"
+>
+
+<button onclick="addCustomIngredientTranslation()">
+<span data-i18n="add_translation">➕ Add Translation</span>
+</button>
+
+
 <h3 data-i18n="settings_shopping_categories">
 🛒 Shopping List Order
 </h3>
@@ -2236,6 +2263,15 @@ const translations = {
         aria_add_meal: "Add a meal",
         aria_move_category_up: "Move category up",
         aria_move_category_down: "Move category down",
+        aria_delete_translation: "Delete translation",
+        settings_custom_translations: "🔤 Custom Ingredient Translations",
+        custom_translations_description: "Add your own word so it always combines on the shopping list, no matter which language it's written in.",
+        custom_translation_alias_placeholder: "e.g. kycklingfilé",
+        custom_translation_target_placeholder: "e.g. chicken breast",
+        add_translation: "➕ Add Translation",
+        enter_both_translation_fields: "Please fill in both fields.",
+        translation_saved: "Translation saved",
+        no_custom_translations_yet: "No custom translations added yet.",
         settings_shopping_categories: "🛒 Shopping List Order",
         shopping_category_order_description: "Reorder the categories to match how your store is laid out.",
         settings_backup: "💾 Backup",
@@ -2415,6 +2451,15 @@ const translations = {
         aria_add_meal: "Lägg till en måltid",
         aria_move_category_up: "Flytta kategori uppåt",
         aria_move_category_down: "Flytta kategori nedåt",
+        aria_delete_translation: "Ta bort översättning",
+        settings_custom_translations: "🔤 Egna ingrediensöversättningar",
+        custom_translations_description: "Lägg till ett eget ord så att det alltid kombineras på inköpslistan, oavsett vilket språk det är skrivet på.",
+        custom_translation_alias_placeholder: "t.ex. kycklingfilé",
+        custom_translation_target_placeholder: "t.ex. chicken breast",
+        add_translation: "➕ Lägg till översättning",
+        enter_both_translation_fields: "Fyll i båda fälten.",
+        translation_saved: "Översättning sparad",
+        no_custom_translations_yet: "Inga egna översättningar tillagda än.",
         settings_shopping_categories: "🛒 Inköpslistans ordning",
         shopping_category_order_description: "Ändra ordningen på kategorierna så att den matchar din butik.",
         settings_backup: "💾 Säkerhetskopia",
@@ -4789,6 +4834,8 @@ document.getElementById("settingsModal")
 
 renderCategoryOrderSettings();
 
+renderCustomIngredientTranslations();
+
 }
 
 
@@ -4853,7 +4900,11 @@ const foodflowStorageKeys = [
     "foodflowShoppingCheckedByWeek",
     "foodflowShoppingRemoved",
     "foodflowShoppingOverridesByWeek",
-    "foodflowShoppingExtrasByWeek"
+    "foodflowShoppingExtrasByWeek",
+    "foodflowShoppingRangeStart",
+    "foodflowShoppingRangeEnd",
+    "foodflowCategoryOrder",
+    "foodflowCustomIngredientTranslations"
 ];
 
 
@@ -6375,6 +6426,120 @@ function simplifyUnit(amount, unitKey){
 }
 
 
+// User-added ingredient translations/aliases, saved from Settings.
+// Checked before the built-in dictionary so a user override always wins.
+let customIngredientTranslations = loadCustomIngredientTranslations();
+
+function loadCustomIngredientTranslations(){
+
+    try{
+
+        let saved = localStorage.getItem("foodflowCustomIngredientTranslations");
+
+        return saved ? JSON.parse(saved) : {};
+
+    }catch(e){
+
+        return {};
+
+    }
+
+}
+
+function saveCustomIngredientTranslations(){
+
+    localStorage.setItem(
+        "foodflowCustomIngredientTranslations",
+        JSON.stringify(customIngredientTranslations)
+    );
+
+}
+
+function addCustomIngredientTranslation(){
+
+    let aliasInput = document.getElementById("customTranslationAlias");
+    let targetInput = document.getElementById("customTranslationTarget");
+
+    let alias = aliasInput.value.trim().toLowerCase();
+    let target = targetInput.value.trim().toLowerCase();
+
+    if(alias === "" || target === ""){
+
+        showToast(t("enter_both_translation_fields"), { type:"error" });
+
+        return;
+
+    }
+
+    customIngredientTranslations[alias] = target;
+
+    saveCustomIngredientTranslations();
+
+    aliasInput.value = "";
+    targetInput.value = "";
+
+    renderCustomIngredientTranslations();
+
+    renderShoppingList();
+
+    showToast(t("translation_saved"));
+
+}
+
+function deleteCustomIngredientTranslation(alias){
+
+    delete customIngredientTranslations[alias];
+
+    saveCustomIngredientTranslations();
+
+    renderCustomIngredientTranslations();
+
+    renderShoppingList();
+
+}
+
+function renderCustomIngredientTranslations(){
+
+    let container = document.getElementById("customTranslationList");
+
+    if(!container) return;
+
+    let entries = Object.entries(customIngredientTranslations);
+
+    if(entries.length === 0){
+
+        container.innerHTML = `<p class="small" style="opacity:0.7;">${t("no_custom_translations_yet")}</p>`;
+
+        return;
+
+    }
+
+    container.innerHTML = entries.map(([alias, target]) => `
+
+        <div style="
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:8px;
+            padding:6px 10px;
+            margin-bottom:4px;
+            border-radius:8px;
+            background:var(--bg);
+        ">
+            <span>${alias} → ${target}</span>
+
+            <button
+                onclick="deleteCustomIngredientTranslation('${alias.replace(/'/g,"\\'")}')"
+                aria-label="${t("aria_delete_translation")}: ${alias}"
+                style="padding:2px 10px;"
+            >🗑</button>
+        </div>
+
+    `).join("");
+
+}
+
+
 function normalizeIngredientName(name){
 
     let base = name
@@ -6384,6 +6549,11 @@ function normalizeIngredientName(name){
         .replace(/[.,;:!?]+$/g, "")  // strip trailing punctuation
         .trim()
         .replace(/\s+/g, " ");
+
+    // Custom user translations take priority over the built-in dictionary.
+    if(customIngredientTranslations[base]){
+        return customIngredientTranslations[base];
+    }
 
     // Try the full phrase first, before stripping any descriptive
     // words — otherwise a dictionary entry like "minced meat" would
@@ -6397,6 +6567,10 @@ function normalizeIngredientName(name){
         .filter(word => !ingredientStopwords.includes(word))
         .join(" ");
 
+    if(customIngredientTranslations[cleaned]){
+        return customIngredientTranslations[cleaned];
+    }
+
     if(ingredientTranslations[cleaned]){
         return ingredientTranslations[cleaned];
     }
@@ -6405,6 +6579,10 @@ function normalizeIngredientName(name){
     // or "gul lök" -> "lök" after "gul" was already stripped above.
     let words = cleaned.split(" ");
     let lastWord = words[words.length - 1];
+
+    if(customIngredientTranslations[lastWord]){
+        return customIngredientTranslations[lastWord];
+    }
 
     if(ingredientTranslations[lastWord]){
         return ingredientTranslations[lastWord];
