@@ -862,6 +862,15 @@ color:#777;
 
 }
 
+#printArea .print-planner-note {
+
+font-size:12px;
+font-style:italic;
+color:#555;
+margin-bottom:6px;
+
+}
+
 #printArea .print-planner-empty {
 
 font-size:13px;
@@ -2272,6 +2281,7 @@ const translations = {
         enter_both_translation_fields: "Please fill in both fields.",
         translation_saved: "Translation saved",
         no_custom_translations_yet: "No custom translations added yet.",
+        day_note_placeholder: "📝 Note (e.g. eating out, leftovers)",
         settings_shopping_categories: "🛒 Shopping List Order",
         shopping_category_order_description: "Reorder the categories to match how your store is laid out.",
         settings_backup: "💾 Backup",
@@ -2460,6 +2470,7 @@ const translations = {
         enter_both_translation_fields: "Fyll i båda fälten.",
         translation_saved: "Översättning sparad",
         no_custom_translations_yet: "Inga egna översättningar tillagda än.",
+        day_note_placeholder: "📝 Anteckning (t.ex. äter ute, rester)",
         settings_shopping_categories: "🛒 Inköpslistans ordning",
         shopping_category_order_description: "Ändra ordningen på kategorierna så att den matchar din butik.",
         settings_backup: "💾 Säkerhetskopia",
@@ -4244,6 +4255,62 @@ function handleMealTypeSelectChange(select){
 }
 
 
+// =======================
+// PER-DAY NOTES
+// =======================
+// Quick free-text notes per calendar day (e.g. "eating out", "leftovers")
+// that show in the planner without needing a full meal entry.
+
+let dayNotes = loadDayNotes();
+
+function loadDayNotes(){
+
+    try{
+
+        let saved = localStorage.getItem("foodflowDayNotes");
+
+        return saved ? JSON.parse(saved) : {};
+
+    }catch(e){
+
+        return {};
+
+    }
+
+}
+
+function saveDayNotes(){
+
+    localStorage.setItem(
+        "foodflowDayNotes",
+        JSON.stringify(dayNotes)
+    );
+
+}
+
+function dayNoteKey(day){
+
+    return `${currentWeekKey}_${day}`;
+
+}
+
+function updateDayNote(day, value){
+
+    let key = dayNoteKey(day);
+
+    let trimmed = value.trim();
+
+    if(trimmed === ""){
+        delete dayNotes[key];
+    }else{
+        dayNotes[key] = trimmed;
+    }
+
+    saveDayNotes();
+
+}
+
+
 function render(){
 
 
@@ -4271,6 +4338,26 @@ card.className="day";
 card.innerHTML = `
 
 <h2>${translateDayName(day)}</h2>
+
+<input
+    class="day-note-input"
+    type="text"
+    placeholder="${t("day_note_placeholder")}"
+    value="${(dayNotes[dayNoteKey(day)] || "").replace(/"/g, "&quot;")}"
+    onchange="updateDayNote('${day}', this.value)"
+    style="
+        width:100%;
+        box-sizing:border-box;
+        font-size:0.85em;
+        font-style:italic;
+        padding:4px 8px;
+        margin-bottom:6px;
+        border:1px dashed var(--primary);
+        border-radius:6px;
+        background:transparent;
+        color:inherit;
+    "
+>
 
 <button onclick="openModal('${day}')">
 ${t("planner_add")}
@@ -4904,7 +4991,8 @@ const foodflowStorageKeys = [
     "foodflowShoppingRangeStart",
     "foodflowShoppingRangeEnd",
     "foodflowCategoryOrder",
-    "foodflowCustomIngredientTranslations"
+    "foodflowCustomIngredientTranslations",
+    "foodflowDayNotes"
 ];
 
 
@@ -7618,9 +7706,16 @@ function printMealPlanner(){
 
             : `<div class="print-planner-empty">${t("print_no_meals_day")}</div>`;
 
+        let note = dayNotes[dayNoteKey(day)];
+
+        let noteHtml = note
+            ? `<div class="print-planner-note">📝 ${note}</div>`
+            : "";
+
         return `
             <div class="print-planner-day">
                 <div class="print-planner-day-name">${translateDayName(day)}</div>
+                ${noteHtml}
                 ${mealsHtml}
             </div>
         `;
