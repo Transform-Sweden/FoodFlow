@@ -1292,9 +1292,9 @@ bottom:90px;
 <span class="nav-short" data-i18n="nav_short_today">📍 Today</span>
 </button>
 
-<button onclick="openCopyWeekModal()" class="week-nav-copy">
-<span class="nav-full" data-i18n="nav_full_copy_forward">📆 Copy Week To...</span>
-<span class="nav-short" data-i18n="nav_short_copy_forward">📆 Copy To...</span>
+<button onclick="openWeekActionsMenu()">
+<span class="nav-full" data-i18n="nav_full_week_actions">📆 Week Actions</span>
+<span class="nav-short" data-i18n="nav_short_week_actions">📆 Actions</span>
 </button>
 
 <button onclick="printMealPlanner()">
@@ -2201,6 +2201,30 @@ Recipe
 
 <div id="printArea"></div>
 
+<!-- WEEK ACTIONS MENU -->
+
+<div class="modal" role="dialog" aria-modal="true" id="weekActionsMenu">
+
+<div class="modal-box">
+
+<h2 data-i18n="week_actions_menu_title">📆 Week Actions</h2>
+
+<div class="action-list">
+
+<button onclick="closeWeekActionsMenu(); openCopyWeekModal();"><span data-i18n="nav_full_copy_forward">📆 Copy Week To...</span></button>
+<button onclick="closeWeekActionsMenu(); openSaveTemplateModal();"><span data-i18n="nav_full_save_template">💾 Save as Template</span></button>
+<button onclick="closeWeekActionsMenu(); openLoadTemplateModal();"><span data-i18n="nav_full_load_template">📂 Load Template</span></button>
+
+</div>
+
+<br>
+
+<button data-i18n="close" onclick="closeWeekActionsMenu()">Close</button>
+
+</div>
+
+</div>
+
 <!-- COPY WEEK TO... -->
 
 <div class="modal" role="dialog" aria-modal="true" id="copyWeekModal">
@@ -2225,6 +2249,59 @@ Recipe
 
 <button data-primary onclick="confirmCopyWeek()" data-i18n="copy">Copy</button>
 <button onclick="closeCopyWeekModal()" data-i18n="cancel">Cancel</button>
+
+</div>
+
+</div>
+
+<!-- SAVE WEEK AS TEMPLATE -->
+
+<div class="modal" role="dialog" aria-modal="true" id="saveTemplateModal">
+
+<div class="modal-box">
+
+<h2 data-i18n="save_template_modal_title">💾 Save as Template</h2>
+
+<p class="small" data-i18n="save_template_description">
+Save this week's meals as a reusable template you can apply to any week later.
+</p>
+
+<label>
+<span data-i18n="save_template_name_label">Template name</span>
+</label>
+
+<input
+    id="saveTemplateNameInput"
+    placeholder="e.g. Typical week"
+    data-i18n-placeholder="save_template_name_placeholder"
+>
+
+<br>
+
+<button data-primary onclick="confirmSaveTemplate()" data-i18n="save">Save</button>
+<button onclick="closeSaveTemplateModal()" data-i18n="cancel">Cancel</button>
+
+</div>
+
+</div>
+
+<!-- LOAD WEEK TEMPLATE -->
+
+<div class="modal" role="dialog" aria-modal="true" id="loadTemplateModal">
+
+<div class="modal-box">
+
+<h2 data-i18n="load_template_modal_title">📂 Load Template</h2>
+
+<p class="small" data-i18n="load_template_description">
+Applying a template replaces this week's meals.
+</p>
+
+<div id="templateList"></div>
+
+<br>
+
+<button onclick="closeLoadTemplateModal()" data-i18n="close">Close</button>
 
 </div>
 
@@ -2301,6 +2378,7 @@ const translations = {
         close: "Close",
         save: "Save",
         cancel: "Cancel",
+        apply: "Apply",
         add: "Add",
 
         category_title: "📂 Categories",
@@ -2405,6 +2483,22 @@ const translations = {
         replace_target_week_message: "That week already has meals planned. This will replace that plan with a copy of this week. Continue?",
         replace_target_week_title: "Replace that week's plan?",
         copied_to_chosen_week: "Copied to the chosen week!",
+        nav_full_save_template: "💾 Save as Template",
+        nav_full_load_template: "📂 Load Template",
+        nav_full_week_actions: "📆 Week Actions",
+        nav_short_week_actions: "📆 Actions",
+        week_actions_menu_title: "📆 Week Actions",
+        save_template_modal_title: "💾 Save as Template",
+        save_template_description: "Save this week's meals as a reusable template you can apply to any week later.",
+        save_template_name_label: "Template name",
+        save_template_name_placeholder: "e.g. Typical week",
+        enter_template_name: "Please enter a name for the template.",
+        template_saved: "Template saved",
+        load_template_modal_title: "📂 Load Template",
+        load_template_description: "Applying a template replaces this week's meals.",
+        no_templates_yet: "No templates saved yet.",
+        replace_current_week_message: "This week already has meals planned. Applying this template will replace them. Continue?",
+        template_applied: "Template applied!",
         copy_week_modal_title: "📆 Copy This Week To...",
         copy_week_target_label: "Target week (any date in that week)",
         copy_week_preset_next: "Next Week",
@@ -2490,6 +2584,7 @@ const translations = {
         close: "Stäng",
         save: "Spara",
         cancel: "Avbryt",
+        apply: "Använd",
         add: "Lägg till",
 
         category_title: "📂 Kategorier",
@@ -2594,6 +2689,22 @@ const translations = {
         replace_target_week_message: "Den veckan har redan måltider planerade. Detta ersätter den planen med en kopia av denna vecka. Fortsätt?",
         replace_target_week_title: "Ersätta den veckans plan?",
         copied_to_chosen_week: "Kopierat till den valda veckan!",
+        nav_full_save_template: "💾 Spara som mall",
+        nav_full_load_template: "📂 Ladda mall",
+        nav_full_week_actions: "📆 Veckoåtgärder",
+        nav_short_week_actions: "📆 Åtgärder",
+        week_actions_menu_title: "📆 Veckoåtgärder",
+        save_template_modal_title: "💾 Spara som mall",
+        save_template_description: "Spara den här veckans måltider som en återanvändbar mall du kan använda för valfri vecka senare.",
+        save_template_name_label: "Mallens namn",
+        save_template_name_placeholder: "t.ex. Vanlig vecka",
+        enter_template_name: "Ange ett namn för mallen.",
+        template_saved: "Mall sparad",
+        load_template_modal_title: "📂 Ladda mall",
+        load_template_description: "Att använda en mall ersätter den här veckans måltider.",
+        no_templates_yet: "Inga mallar sparade än.",
+        replace_current_week_message: "Den här veckan har redan måltider planerade. Att använda mallen ersätter dem. Fortsätt?",
+        template_applied: "Mall tillämpad!",
         copy_week_modal_title: "📆 Kopiera denna vecka till...",
         copy_week_target_label: "Målvecka (valfritt datum den veckan)",
         copy_week_preset_next: "Nästa vecka",
@@ -4076,6 +4187,19 @@ function updateWeekLabel(){
 }
 
 
+function openWeekActionsMenu(){
+
+    document.getElementById("weekActionsMenu").style.display = "flex";
+
+}
+
+function closeWeekActionsMenu(){
+
+    document.getElementById("weekActionsMenu").style.display = "none";
+
+}
+
+
 function openCopyWeekModal(){
 
     let hasAnyMeals = Object.values(meals)
@@ -4163,6 +4287,204 @@ async function confirmCopyWeek(){
     closeCopyWeekModal();
 
     showToast(t("copied_to_chosen_week"));
+
+}
+
+
+// =======================
+// WEEK TEMPLATES
+// =======================
+// Named, reusable sets of meals (e.g. "Typical week") that can be
+// applied to any calendar week, separate from the weeks themselves.
+
+let weekTemplates = loadWeekTemplates();
+
+function loadWeekTemplates(){
+
+    try{
+
+        let saved = localStorage.getItem("foodflowWeekTemplates");
+
+        return saved ? JSON.parse(saved) : [];
+
+    }catch(e){
+
+        return [];
+
+    }
+
+}
+
+function saveWeekTemplates(){
+
+    localStorage.setItem(
+        "foodflowWeekTemplates",
+        JSON.stringify(weekTemplates)
+    );
+
+}
+
+function openSaveTemplateModal(){
+
+    let hasAnyMeals = Object.values(meals)
+        .some(dayMeals => dayMeals && dayMeals.length > 0);
+
+    if(!hasAnyMeals){
+
+        showToast(t("no_meals_this_week"), { type:"error" });
+        return;
+
+    }
+
+    document.getElementById("saveTemplateNameInput").value = "";
+
+    document.getElementById("saveTemplateModal").style.display = "flex";
+
+}
+
+function closeSaveTemplateModal(){
+
+    document.getElementById("saveTemplateModal").style.display = "none";
+
+}
+
+function confirmSaveTemplate(){
+
+    let name = document.getElementById("saveTemplateNameInput").value.trim();
+
+    if(name === ""){
+
+        showToast(t("enter_template_name"), { type:"error" });
+        return;
+
+    }
+
+    // Deep copy, with expanded state collapsed, so this template
+    // opens tidy wherever it's later applied.
+    let templateDays = JSON.parse(JSON.stringify(meals));
+
+    days.forEach(day=>{
+        if(templateDays[day]){
+            templateDays[day].forEach(m => m.expanded = false);
+        }
+    });
+
+    weekTemplates.push({
+        id: Date.now().toString(),
+        name: name,
+        days: templateDays
+    });
+
+    saveWeekTemplates();
+
+    closeSaveTemplateModal();
+
+    showToast(t("template_saved"));
+
+}
+
+function openLoadTemplateModal(){
+
+    renderTemplateList();
+
+    document.getElementById("loadTemplateModal").style.display = "flex";
+
+}
+
+function closeLoadTemplateModal(){
+
+    document.getElementById("loadTemplateModal").style.display = "none";
+
+}
+
+function renderTemplateList(){
+
+    let container = document.getElementById("templateList");
+
+    if(!container) return;
+
+    if(weekTemplates.length === 0){
+
+        container.innerHTML = `<p class="small" style="opacity:0.7;">${t("no_templates_yet")}</p>`;
+
+        return;
+
+    }
+
+    container.innerHTML = weekTemplates.map(template => `
+
+        <div style="
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:8px;
+            padding:8px 10px;
+            margin-bottom:6px;
+            border-radius:8px;
+            background:var(--bg);
+        ">
+            <span>${template.name}</span>
+
+            <span style="display:flex; gap:6px;">
+                <button
+                    onclick="applyTemplate('${template.id}')"
+                    style="padding:4px 10px;font-size:13px;"
+                >${t("apply")}</button>
+
+                <button
+                    class="delete"
+                    onclick="deleteTemplate('${template.id}')"
+                    style="padding:4px 10px;font-size:13px;"
+                >🗑</button>
+            </span>
+        </div>
+
+    `).join("");
+
+}
+
+async function applyTemplate(templateId){
+
+    let template = weekTemplates.find(t => t.id === templateId);
+
+    if(!template) return;
+
+    let currentHasMeals = Object.values(meals)
+        .some(dayMeals => dayMeals && dayMeals.length > 0);
+
+    if(currentHasMeals){
+
+        let ok = await customConfirm(
+            t("replace_current_week_message"),
+            t("replace_target_week_title")
+        );
+
+        if(!ok) return;
+
+    }
+
+    // Deep copy so editing this week later doesn't also change the template
+    weeks[currentWeekKey] = JSON.parse(JSON.stringify(template.days));
+    meals = weeks[currentWeekKey];
+
+    saveData();
+
+    closeLoadTemplateModal();
+
+    render();
+    renderShoppingList();
+
+    showToast(t("template_applied"));
+
+}
+
+function deleteTemplate(templateId){
+
+    weekTemplates = weekTemplates.filter(t => t.id !== templateId);
+
+    saveWeekTemplates();
+
+    renderTemplateList();
 
 }
 
@@ -5002,7 +5324,8 @@ const foodflowStorageKeys = [
     "foodflowShoppingRangeEnd",
     "foodflowCategoryOrder",
     "foodflowCustomIngredientTranslations",
-    "foodflowDayNotes"
+    "foodflowDayNotes",
+    "foodflowWeekTemplates"
 ];
 
 
