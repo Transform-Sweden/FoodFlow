@@ -20,17 +20,29 @@
 
 <title>🍃 FoodFlow</title>
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
 
 <style>
 
 
 :root {
 
---bg:#f4f6f4;
---card:white;
---text:#222;
---primary:#4caf50;
---shadow:0 8px 20px rgba(0,0,0,0.08);
+--bg:#f3f6f3;
+--card:#ffffff;
+--text:#1d231f;
+--text-soft:#5a6660;
+--primary:#3f9e53;
+--primary-dark:#2f7d40;
+--primary-light:#e7f5e9;
+--radius:16px;
+--radius-sm:10px;
+--shadow-sm:0 2px 6px rgba(20,40,20,0.06);
+--shadow:0 6px 18px rgba(20,40,20,0.09), 0 1px 3px rgba(20,40,20,0.06);
+--shadow-lg:0 14px 34px rgba(20,40,20,0.14), 0 3px 8px rgba(20,40,20,0.08);
+--ease:cubic-bezier(.22,1,.36,1);
 
 }
 
@@ -38,10 +50,16 @@
 
 body.dark {
 
---bg:#121212;
---card:#1e1e1e;
---text:#eeeeee;
---shadow:0 8px 20px rgba(0,0,0,0.5);
+--bg:#13171a;
+--card:#1d2226;
+--text:#eef1ee;
+--text-soft:#a7b0ab;
+--primary:#4fb868;
+--primary-dark:#3c9450;
+--primary-light:#1d2b20;
+--shadow-sm:0 2px 6px rgba(0,0,0,0.25);
+--shadow:0 6px 18px rgba(0,0,0,0.45), 0 1px 3px rgba(0,0,0,0.3);
+--shadow-lg:0 14px 34px rgba(0,0,0,0.55), 0 3px 8px rgba(0,0,0,0.35);
 
 }
 
@@ -75,6 +93,7 @@ body {
 margin:0;
 
 font-family:
+"Plus Jakarta Sans",
 "Segoe UI",
 Arial,
 sans-serif;
@@ -83,8 +102,31 @@ background:var(--bg);
 
 color:var(--text);
 
-transition:.3s;
+transition:background .3s var(--ease), color .3s var(--ease);
 
+-webkit-font-smoothing:antialiased;
+
+}
+
+
+/* Thin, theme-matched scrollbar (WebKit/Chromium — degrades
+gracefully to the default elsewhere). */
+::-webkit-scrollbar {
+width:10px;
+height:10px;
+}
+
+::-webkit-scrollbar-track {
+background:transparent;
+}
+
+::-webkit-scrollbar-thumb {
+background:rgba(120,130,120,.35);
+border-radius:10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+background:rgba(120,130,120,.55);
 }
 
 
@@ -93,7 +135,7 @@ header {
 
 text-align:center;
 
-padding:30px;
+padding:34px 20px 24px;
 
 }
 
@@ -102,6 +144,12 @@ padding:30px;
 text-align:center;
 
 padding:10px;
+
+display:flex;
+
+justify-content:center;
+
+gap:6px;
 
 }
 
@@ -127,20 +175,68 @@ background:var(--bg);
 
 #navbar button {
 
-background:var(--card);
+background:transparent;
 
-color:var(--text);
+color:var(--text-soft);
 
-box-shadow:var(--shadow);
+box-shadow:none;
 
-}    
+font-weight:600;
+
+transition:background .2s var(--ease), color .2s var(--ease), transform .15s var(--ease);
+
+}
+
+#navbar button:hover {
+
+background:var(--primary-light);
+
+color:var(--primary-dark);
+
+transform:translateY(-1px);
+
+}
+
+#navbar button.nav-active {
+
+background:var(--primary);
+
+color:white;
+
+box-shadow:var(--shadow-sm);
+
+}
+
+#navbar button.nav-active:hover {
+
+background:var(--primary);
+
+color:white;
+
+transform:none;
+
+}
 
 
 h1 {
 
 font-size:40px;
 
+font-weight:800;
+
+letter-spacing:-0.02em;
+
 margin-bottom:5px;
+
+background:linear-gradient(135deg, var(--primary-dark), var(--primary));
+
+-webkit-background-clip:text;
+
+background-clip:text;
+
+color:transparent;
+
+display:inline-block;
 
 }
 
@@ -152,6 +248,8 @@ border:none;
 
 background:var(--primary);
 
+background-image:linear-gradient(135deg, var(--primary), var(--primary-dark));
+
 color:white;
 
 padding:10px 15px;
@@ -162,7 +260,47 @@ cursor:pointer;
 
 font-size:15px;
 
+font-family:inherit;
+
+font-weight:600;
+
 margin:4px;
+
+box-shadow:var(--shadow-sm);
+
+transition:transform .15s var(--ease), box-shadow .15s var(--ease), filter .15s var(--ease);
+
+}
+
+button:hover {
+
+filter:brightness(1.06);
+
+box-shadow:var(--shadow);
+
+transform:translateY(-1px);
+
+}
+
+button:active {
+
+transform:translateY(0) scale(.97);
+
+box-shadow:var(--shadow-sm);
+
+filter:brightness(.98);
+
+}
+
+button:disabled {
+
+opacity:.55;
+
+cursor:not-allowed;
+
+transform:none;
+
+filter:none;
 
 }
 
@@ -202,11 +340,11 @@ gap:15px;
 
 background:var(--card);
 
-border-radius:20px;
+border-radius:var(--radius);
 
 padding:18px;
 
-box-shadow:var(--shadow);
+box-shadow:var(--shadow-sm);
 
 min-height:250px;
 
@@ -214,7 +352,19 @@ min-width:0;
 
 overflow-wrap:break-word;
 
-transition:outline .15s ease, background .15s ease;
+transition:outline .15s ease, background .15s ease, box-shadow .25s var(--ease), transform .25s var(--ease);
+
+}
+
+@media(hover:hover) and (min-width:901px){
+
+.day:hover {
+
+box-shadow:var(--shadow-lg);
+
+transform:translateY(-2px);
+
+}
 
 }
 
@@ -248,6 +398,10 @@ margin-top:0;
 
 white-space:nowrap;
 
+font-weight:700;
+
+letter-spacing:-0.01em;
+
 }
 
 
@@ -258,13 +412,25 @@ white-space:nowrap;
 .meal {
 
 background:
-rgba(120,120,120,.12);
+rgba(120,120,120,.09);
 
-border-radius:15px;
+border-radius:var(--radius-sm);
 
 padding:12px;
 
 margin-top:10px;
+
+transition:background .2s var(--ease), box-shadow .2s var(--ease), transform .15s var(--ease);
+
+}
+
+@media(hover:hover){
+
+.meal:hover {
+
+background:rgba(120,120,120,.16);
+
+}
 
 }
 
@@ -364,13 +530,15 @@ position:fixed;
 inset:0;
 
 background:
-rgba(0,0,0,.5);
+rgba(10,15,10,.55);
 
 align-items:center;
 
 justify-content:center;
 
 z-index:1000;
+
+animation:modalBackdropIn .15s ease;
 
 }
 
@@ -382,7 +550,7 @@ background:var(--card);
 
 padding:25px;
 
-border-radius:20px;
+border-radius:var(--radius);
 
 width:90%;
 
@@ -392,15 +560,25 @@ max-height:90vh;
 
 overflow-y:auto;
 
-animation:modalPopIn .15s ease;
+box-shadow:var(--shadow-lg);
+
+animation:modalPopIn .2s var(--ease);
 
 }
 
 @keyframes modalPopIn {
 
-from { opacity:0; transform:scale(.96); }
+from { opacity:0; transform:scale(.96) translateY(6px); }
 
-to { opacity:1; transform:scale(1); }
+to { opacity:1; transform:scale(1) translateY(0); }
+
+}
+
+@keyframes modalBackdropIn {
+
+from { opacity:0; }
+
+to { opacity:1; }
 
 }
 
@@ -929,9 +1107,9 @@ background:var(--card);
 
 color:var(--text);
 
-box-shadow:var(--shadow);
+box-shadow:var(--shadow-lg);
 
-border-radius:14px;
+border-radius:var(--radius-sm);
 
 padding:14px 16px;
 
@@ -1188,9 +1366,17 @@ font-size:26px;
 
 padding:0;
 
-box-shadow:0 4px 14px rgba(0,0,0,.35);
+box-shadow:var(--shadow-lg);
 
 z-index:600;
+
+transition:transform .2s var(--ease), box-shadow .2s var(--ease);
+
+}
+
+#quickAddFab:active {
+
+transform:scale(.92);
 
 }
 
@@ -1243,21 +1429,21 @@ bottom:90px;
 
 <nav id="navbar">
 
-<button onclick="showPage('planner')">
+<button id="navBtnPlanner" onclick="showPage('planner')">
 <span data-i18n="nav_planner">🏠 Meal Planner</span>
 </button>
 
 
-<button onclick="showPage('recipes')">
+<button id="navBtnRecipes" onclick="showPage('recipes')">
 <span data-i18n="nav_recipes">📖 Recipes</span>
 </button>
 
 
-<button onclick="showPage('shopping')">
+<button id="navBtnShopping" onclick="showPage('shopping')">
 <span data-i18n="nav_shopping">🛒 Shopping List</span>
 </button>
 
-</nav>    
+</nav>
 
 
 
@@ -8460,7 +8646,20 @@ function showPage(page){
 localStorage.setItem(
 "foodflowPage",
 page
-);    
+);
+
+
+document.querySelectorAll("#navbar button").forEach(btn=>{
+    btn.classList.remove("nav-active");
+});
+
+let activeNavBtn = document.getElementById(
+    "navBtn" + page.charAt(0).toUpperCase() + page.slice(1)
+);
+
+if(activeNavBtn){
+    activeNavBtn.classList.add("nav-active");
+}
 
 
 document.getElementById("plannerPage")
