@@ -1929,6 +1929,42 @@ Cancel
 
 </div>
 
+<!-- MEAL DETAIL POPUP (from planner "View" button) -->
+
+<div class="modal" role="dialog" aria-modal="true" id="mealDetailModal">
+
+<div class="modal-box">
+
+<h2 id="mealDetailTitle">
+Meal
+</h2>
+
+<div id="mealDetailContent"></div>
+
+<div class="action-list" style="margin-top:15px;">
+
+<button id="mealDetailOpenRecipeBtn" onclick="openRecipeFromMealDetail()">
+📖 Open Recipe
+</button>
+
+<button class="edit" onclick="editMealFromDetail()">
+✏️ Edit
+</button>
+
+<button class="delete" onclick="deleteMealFromDetail()">
+🗑 Delete
+</button>
+
+</div>
+
+<button data-i18n="close" onclick="closeMealDetail()" style="margin-top:10px;">
+Close
+</button>
+
+</div>
+
+</div>
+
 <!-- ADD MEAL WINDOW -->
 
 
@@ -2280,7 +2316,53 @@ Recipe
 
 </div>
 
-</div>    
+</div>
+
+<!-- RECIPE DETAIL POPUP (from Recipes page "View Recipe") -->
+
+<div class="modal" role="dialog" aria-modal="true" id="recipeDetailModal">
+
+<div class="modal-box">
+
+<h2 id="recipeDetailTitle">
+Recipe
+</h2>
+
+<div id="recipeDetailTags"></div>
+
+<div id="recipeDetailContent"></div>
+
+<div class="action-list" style="margin-top:15px;">
+
+<button id="recipeDetailFavoriteBtn" onclick="toggleFavoriteFromDetail()">
+☆ Add Favorite
+</button>
+
+<button class="edit" onclick="editRecipeFromDetail()">
+✏️ Edit
+</button>
+
+<button onclick="duplicateRecipeFromDetail()">
+📄 Duplicate
+</button>
+
+<button onclick="openPlannerRecipeFromDetail()">
+📅 Add to Planner
+</button>
+
+<button class="delete" onclick="deleteRecipeFromDetail()">
+🗑 Delete
+</button>
+
+</div>
+
+<button data-i18n="close" onclick="closeRecipeDetail()" style="margin-top:10px;">
+Close
+</button>
+
+</div>
+
+</div>
 
 <!-- ADD RECIPE TO PLANNER WINDOW -->
 
@@ -4962,7 +5044,7 @@ if(meals[day] && meals[day].length > 0){
         </div>
 
 
-        <strong class="${meal.expanded ? "" : "meal-name-clamp"}" title="${meal.name}">
+        <strong class="meal-name-clamp" title="${meal.name}">
         ${meal.name}
         </strong>
 
@@ -4971,43 +5053,11 @@ if(meals[day] && meals[day].length > 0){
         👥 ${meal.people} people
         </div>
 
-        <button onclick="toggleMeal('${day}',${originalIndex})">
+        <button onclick="openMealDetail('${day}',${originalIndex})">
 
-        ${meal.expanded ? "▲ Hide" : "▼ View"}
+        👁 View
 
         </button>
-
-        ${
-        meal.expanded
-        ?
-
-        `
-
-        ${meal.recipe !== null && meal.recipe !== undefined ?
-
-        `
-        <button onclick="openMealRecipe(${meal.recipe})">
-        📖 Open Recipe
-        </button>
-        `
-
-        : ""}
-
-        <button class="edit"
-        onclick="editMeal('${day}',${originalIndex})">
-        ✏️ Edit
-        </button>
-
-        <button class="delete"
-        onclick="deleteMeal('${day}',${originalIndex})">
-        🗑 Delete
-        </button>
-
-        `
-
-        : ""
-
-        }
 
         `;
 
@@ -5061,7 +5111,89 @@ function toggleMeal(day,index){
     saveData();
     render();
 
-}    
+}
+
+
+let mealDetailDay = null;
+let mealDetailIndex = null;
+
+function openMealDetail(day, index){
+
+let meal = meals[day] && meals[day][index];
+
+if(!meal) return;
+
+mealDetailDay = day;
+mealDetailIndex = index;
+
+document.getElementById("mealDetailTitle").innerText = meal.type + " — " + meal.name;
+
+document.getElementById("mealDetailContent").innerHTML = `
+
+<div class="small">
+👥 ${meal.people} people
+</div>
+
+`;
+
+let openRecipeBtn = document.getElementById("mealDetailOpenRecipeBtn");
+
+if(meal.recipe !== null && meal.recipe !== undefined && recipes[meal.recipe]){
+    openRecipeBtn.style.display = "block";
+} else {
+    openRecipeBtn.style.display = "none";
+}
+
+document.getElementById("mealDetailModal").style.display = "flex";
+
+}
+
+function closeMealDetail(){
+
+document.getElementById("mealDetailModal").style.display = "none";
+
+mealDetailDay = null;
+mealDetailIndex = null;
+
+}
+
+function openRecipeFromMealDetail(){
+
+if(mealDetailIndex === null) return;
+
+let meal = meals[mealDetailDay][mealDetailIndex];
+
+closeMealDetail();
+
+if(meal.recipe !== null && meal.recipe !== undefined){
+    viewMealRecipe(meal.recipe);
+}
+
+}
+
+function editMealFromDetail(){
+
+if(mealDetailIndex === null) return;
+
+let day = mealDetailDay;
+let idx = mealDetailIndex;
+
+closeMealDetail();
+editMeal(day, idx);
+
+}
+
+function deleteMealFromDetail(){
+
+if(mealDetailIndex === null) return;
+
+let day = mealDetailDay;
+let idx = mealDetailIndex;
+
+closeMealDetail();
+deleteMeal(day, idx);
+
+}
 
 
 
@@ -6302,12 +6434,58 @@ ${
 : ""
 }
 
-${
-recipe.expanded
+<div class="small">
+👥 ${recipe.servings} servings &nbsp;·&nbsp; 🥕 ${recipe.ingredients.length} ingredients
+</div>
 
-?
+<button onclick="openRecipeDetail(${index})">
 
-`
+📖 View Recipe
+
+</button>
+
+`;
+
+
+return card;
+
+
+}
+
+
+let recipeDetailIndex = null;
+
+function openRecipeDetail(index){
+
+let recipe = recipes[index];
+
+if(!recipe){
+    showToast(t("recipe_not_found"), { type:"error" });
+    return;
+}
+
+recipeDetailIndex = index;
+
+document.getElementById("recipeDetailTitle").innerText =
+    (recipe.favorite ? "⭐ " : "") + recipe.name;
+
+document.getElementById("recipeDetailTags").innerHTML =
+    (recipe.tags && recipe.tags.length > 0)
+    ? `<div style="display:flex; flex-wrap:wrap; gap:4px; margin:4px 0 10px;">
+        ${recipe.tags.map(tag => `
+            <span style="
+                padding:2px 8px;
+                border-radius:999px;
+                font-size:0.75em;
+                background:var(--bg);
+                border:1px solid var(--primary);
+                opacity:0.85;
+            ">${tag}</span>
+        `).join("")}
+       </div>`
+    : "";
+
+document.getElementById("recipeDetailContent").innerHTML = `
 
 <div class="small">
 👥 ${recipe.servings} servings
@@ -6323,7 +6501,6 @@ recipe.expanded
 Ingredients
 </strong>
 
-
 <ul>
 
 ${recipe.ingredients.map(item=>`
@@ -6338,68 +6515,69 @@ ${recipe.ingredients.map(item=>`
 
 </ul>
 
-<button onclick="toggleFavorite(${index})">
+`;
 
-${recipe.favorite ? "⭐ Remove Favorite" : "☆ Add Favorite"}
+document.getElementById("recipeDetailFavoriteBtn").innerText =
+    recipe.favorite ? "⭐ Remove Favorite" : "☆ Add Favorite";
 
-</button>
-
-<button class="edit"
-
-onclick="editRecipe(${index})">
-
-✏️ Edit
-
-</button>
-
-<button onclick="duplicateRecipe(${index})">
-
-📄 Duplicate
-
-</button>
-
-<button onclick="openPlannerRecipe(${index})">
-
-📅 Add to Planner
-
-</button>
-
-<button onclick="toggleRecipe(${index})">
-
-▲ Hide
-
-</button>
-
-
-<button class="delete"
-
-onclick="deleteRecipe(${index})">
-
-🗑 Delete
-
-</button>
-
-`
-
-:
-
-`
-
-<button onclick="toggleRecipe(${index})">
-
-▼ View Recipe
-
-</button>
-
-`
+document.getElementById("recipeDetailModal").style.display = "flex";
 
 }
 
-`;
+function closeRecipeDetail(){
 
+document.getElementById("recipeDetailModal").style.display = "none";
 
-return card;
+recipeDetailIndex = null;
 
+}
+
+function toggleFavoriteFromDetail(){
+
+if(recipeDetailIndex === null) return;
+
+toggleFavorite(recipeDetailIndex);
+openRecipeDetail(recipeDetailIndex);
+
+}
+
+function editRecipeFromDetail(){
+
+if(recipeDetailIndex === null) return;
+
+let idx = recipeDetailIndex;
+closeRecipeDetail();
+editRecipe(idx);
+
+}
+
+function duplicateRecipeFromDetail(){
+
+if(recipeDetailIndex === null) return;
+
+let idx = recipeDetailIndex;
+closeRecipeDetail();
+duplicateRecipe(idx);
+
+}
+
+function openPlannerRecipeFromDetail(){
+
+if(recipeDetailIndex === null) return;
+
+let idx = recipeDetailIndex;
+closeRecipeDetail();
+openPlannerRecipe(idx);
+
+}
+
+function deleteRecipeFromDetail(){
+
+if(recipeDetailIndex === null) return;
+
+let idx = recipeDetailIndex;
+closeRecipeDetail();
+deleteRecipe(idx);
 
 }
 
