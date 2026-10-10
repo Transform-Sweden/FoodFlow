@@ -453,9 +453,10 @@ font-weight:bold;
 }
 
 
-/* Keeps a meal name to a tidy 2 lines with "..." when collapsed,
-instead of shrinking text or overflowing its box. Expanding the
-meal (▼ View) shows the name in full. */
+/* Keeps a meal name to a tidy 2 lines, with "..." if it's longer
+than that. Reserves the full 2-line height even for a short name
+(min-height), so every meal card is the same height regardless of
+how long its name is — only the "View" popup shows the name in full. */
 .meal-name-clamp {
 
 display:-webkit-box;
@@ -467,6 +468,10 @@ display:-webkit-box;
 overflow:hidden;
 
 word-break:break-word;
+
+line-height:1.3em;
+
+min-height:2.6em;
 
 }
 
@@ -6409,7 +6414,7 @@ card.className="meal";
 
 card.innerHTML = `
 
-<h3>
+<h3 class="meal-name-clamp">
 
 ${recipe.favorite ? "⭐ " : ""}
 
@@ -6417,10 +6422,10 @@ ${recipe.name}
 
 </h3>
 
-${
-(recipe.tags && recipe.tags.length > 0)
-? `<div style="display:flex; flex-wrap:wrap; gap:4px; margin:4px 0;">
-    ${recipe.tags.map(tag => `
+<div style="display:flex; flex-wrap:wrap; gap:4px; margin:4px 0; min-height:22px;">
+    ${
+    (recipe.tags && recipe.tags.length > 0)
+    ? recipe.tags.map(tag => `
         <span style="
             padding:2px 8px;
             border-radius:999px;
@@ -6429,10 +6434,10 @@ ${
             border:1px solid var(--primary);
             opacity:0.85;
         ">${tag}</span>
-    `).join("")}
-   </div>`
-: ""
-}
+    `).join("")
+    : ""
+    }
+</div>
 
 <div class="small">
 👥 ${recipe.servings} servings &nbsp;·&nbsp; 🥕 ${recipe.ingredients.length} ingredients
