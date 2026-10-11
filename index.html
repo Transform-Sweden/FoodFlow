@@ -1336,6 +1336,13 @@ display:flex;
 
 justify-content:space-around;
 
+/* Forces its own compositing layer, which stops iOS Safari from
+letting a fixed-position bar visibly lag/drift during an active
+scroll gesture instead of staying pinned to the viewport. */
+-webkit-transform:translateZ(0);
+transform:translateZ(0);
+will-change:transform;
+
 }
 
 #navbar button {
