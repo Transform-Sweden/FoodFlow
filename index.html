@@ -2755,6 +2755,8 @@ const translations = {
         recipe_servings_label: "Servings",
         servings_label: "servings",
         recipe_scaled_note: "originally serves {servings}",
+        show_original_recipe: "Show original recipe",
+        show_scaled_recipe: "Show scaled amounts",
         recipe_ingredients_label: "Ingredients",
         add_ingredient: "➕ Add Ingredient",
 
@@ -2982,6 +2984,8 @@ const translations = {
         recipe_servings_label: "Portioner",
         servings_label: "portioner",
         recipe_scaled_note: "receptet är för {servings} portioner",
+        show_original_recipe: "Visa originalrecept",
+        show_scaled_recipe: "Visa skalade mängder",
         recipe_ingredients_label: "Ingredienser",
         add_ingredient: "➕ Lägg till ingrediens",
 
@@ -6566,27 +6570,64 @@ document.getElementById("people")
 }
 
 
+// Holds the state for whichever recipe is currently open in the
+// read-only "View Recipe" popup, so the "Show original" / "Show
+// scaled" link can re-render without needing fresh arguments.
+let viewRecipeState = null;
+
 function viewMealRecipe(index, peopleOverride){
 
 let recipe = recipes[index];
 
-
 if(!recipe){
+    showToast(t("recipe_not_found"), { type:"error" });
+    return;
+}
 
-showToast(t("recipe_not_found"), { type:"error" });
+viewRecipeState = {
+    index: index,
+    peopleOverride: peopleOverride || null,
+    showingOriginal: false
+};
 
-return;
+renderViewRecipeContent();
+
+document.getElementById("viewRecipeModal")
+.style.display="flex";
 
 }
 
+function toggleViewRecipeScale(){
+
+if(!viewRecipeState) return;
+
+viewRecipeState.showingOriginal = !viewRecipeState.showingOriginal;
+
+renderViewRecipeContent();
+
+}
+
+function renderViewRecipeContent(){
+
+if(!viewRecipeState) return;
+
+let recipe = recipes[viewRecipeState.index];
+if(!recipe) return;
 
 // When opened from a specific planner meal, scale every ingredient
 // to that meal's people count instead of the recipe's original
-// servings — same math the shopping list uses.
+// servings — same math the shopping list uses — unless the person
+// has flipped to "show original" to compare against the base recipe.
 let servings = Number(recipe.servings) || 1;
-let people = peopleOverride ? (Number(peopleOverride) || servings) : servings;
+let canScale = !!viewRecipeState.peopleOverride;
+let useScaled = canScale && !viewRecipeState.showingOriginal;
+
+let people = useScaled
+    ? (Number(viewRecipeState.peopleOverride) || servings)
+    : servings;
+
 let factor = people / servings;
-let isScaled = peopleOverride && people !== servings;
+let isScaled = useScaled && people !== servings;
 
 
 document.getElementById("viewRecipeTitle")
@@ -6600,6 +6641,14 @@ document.getElementById("viewRecipeContent")
 👥 ${people} ${t("servings_label")}
 ${isScaled ? ` <span style="opacity:0.7;">(${t("recipe_scaled_note").replace("{servings}", servings)})</span>` : ""}
 </div>
+
+${
+canScale
+? `<button type="button" onclick="toggleViewRecipeScale()" style="margin-top:6px;">
+    ${viewRecipeState.showingOriginal ? t("show_scaled_recipe") : t("show_original_recipe")}
+   </button>`
+: ""
+}
 
 <hr>
 
@@ -6629,11 +6678,6 @@ ${item.name}
 </ul>
 
 `;
-
-
-document.getElementById("viewRecipeModal")
-.style.display="flex";
-
 
 }
 
