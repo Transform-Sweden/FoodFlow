@@ -2536,6 +2536,7 @@ Close
 
 <div class="action-list">
 
+<button onclick="closeWeekActionsMenu(); openRenameWeekModal();"><span data-i18n="nav_full_name_week">🏷️ Name This Week</span></button>
 <button onclick="closeWeekActionsMenu(); openCopyWeekModal();"><span data-i18n="nav_full_copy_forward">📆 Copy Week To...</span></button>
 <button onclick="closeWeekActionsMenu(); openSaveTemplateModal();"><span data-i18n="nav_full_save_template">💾 Save as Template</span></button>
 <button onclick="closeWeekActionsMenu(); openLoadTemplateModal();"><span data-i18n="nav_full_load_template">📂 Load Template</span></button>
@@ -2545,6 +2546,37 @@ Close
 <br>
 
 <button data-i18n="close" onclick="closeWeekActionsMenu()">Close</button>
+
+</div>
+
+</div>
+
+<!-- NAME THIS WEEK -->
+
+<div class="modal" role="dialog" aria-modal="true" id="renameWeekModal">
+
+<div class="modal-box">
+
+<h2 data-i18n="rename_week_modal_title">🏷️ Name This Week</h2>
+
+<p class="small" data-i18n="rename_week_description">
+Give this week a name of your own — useful for a rotating schedule, e.g. "Week 1", "Week 2", "Week 3".
+</p>
+
+<label>
+<span data-i18n="rename_week_name_label">Week name</span>
+</label>
+
+<input
+    id="renameWeekNameInput"
+    placeholder="e.g. Week 1"
+>
+
+<br>
+
+<button data-primary onclick="confirmRenameWeek()" data-i18n="save">Save</button>
+<button onclick="clearWeekName()" data-i18n="rename_week_clear">Remove name</button>
+<button onclick="closeRenameWeekModal()" data-i18n="cancel">Cancel</button>
 
 </div>
 
@@ -2833,6 +2865,12 @@ const translations = {
         copied_to_chosen_week: "Copied to the chosen week!",
         nav_full_save_template: "💾 Save as Template",
         nav_full_load_template: "📂 Load Template",
+        nav_full_name_week: "🏷️ Name This Week",
+        rename_week_modal_title: "🏷️ Name This Week",
+        rename_week_description: "Give this week a name of your own — useful for a rotating schedule, e.g. \"Week 1\", \"Week 2\", \"Week 3\".",
+        rename_week_name_label: "Week name",
+        rename_week_clear: "Remove name",
+        week_name_saved: "Week name saved",
         nav_full_week_actions: "📆 Week Actions",
         nav_short_week_actions: "📆 Actions",
         week_actions_menu_title: "📆 Week Actions",
@@ -3062,6 +3100,12 @@ const translations = {
         copied_to_chosen_week: "Kopierat till den valda veckan!",
         nav_full_save_template: "💾 Spara som mall",
         nav_full_load_template: "📂 Ladda mall",
+        nav_full_name_week: "🏷️ Namnge denna vecka",
+        rename_week_modal_title: "🏷️ Namnge denna vecka",
+        rename_week_description: "Ge veckan ett eget namn — praktiskt för ett roterande schema, t.ex. \"Vecka 1\", \"Vecka 2\", \"Vecka 3\".",
+        rename_week_name_label: "Veckans namn",
+        rename_week_clear: "Ta bort namn",
+        week_name_saved: "Veckans namn sparat",
         nav_full_week_actions: "📆 Veckoåtgärder",
         nav_short_week_actions: "📆 Åtgärder",
         week_actions_menu_title: "📆 Veckoåtgärder",
@@ -4647,8 +4691,11 @@ function updateWeekLabel(){
 
     let label = document.getElementById("weekLabel");
 
+    let customName = weekNames[currentWeekKey];
+
     if(label){
         label.innerText =
+            (customName ? customName + " · " : "") +
             startStr + " – " + endStr +
             (isThisWeek ? "  " + t("this_week_suffix") : "");
     }
@@ -4767,6 +4814,79 @@ async function confirmCopyWeek(){
 // applied to any calendar week, separate from the weeks themselves.
 
 let weekTemplates = loadWeekTemplates();
+
+// Custom names for individual weeks (e.g. a rotating "Week 1" / "Week 2" /
+// "Week 3" schedule) — keyed by weekKey, separate from templates, since
+// a name just labels a specific calendar week rather than a reusable plan.
+let weekNames = loadWeekNames();
+
+function loadWeekNames(){
+
+    try{
+
+        let saved = localStorage.getItem("foodflowWeekNames");
+
+        return saved ? JSON.parse(saved) : {};
+
+    }catch(e){
+
+        return {};
+
+    }
+
+}
+
+function saveWeekNames(){
+
+    localStorage.setItem(
+        "foodflowWeekNames",
+        JSON.stringify(weekNames)
+    );
+
+}
+
+function openRenameWeekModal(){
+
+    document.getElementById("renameWeekNameInput").value =
+        weekNames[currentWeekKey] || "";
+
+    document.getElementById("renameWeekModal").style.display = "flex";
+
+}
+
+function closeRenameWeekModal(){
+
+    document.getElementById("renameWeekModal").style.display = "none";
+
+}
+
+function confirmRenameWeek(){
+
+    let name = document.getElementById("renameWeekNameInput").value.trim();
+
+    if(name){
+        weekNames[currentWeekKey] = name;
+    }else{
+        delete weekNames[currentWeekKey];
+    }
+
+    saveWeekNames();
+    closeRenameWeekModal();
+    updateWeekLabel();
+
+    showToast(t("week_name_saved"));
+
+}
+
+function clearWeekName(){
+
+    delete weekNames[currentWeekKey];
+
+    saveWeekNames();
+    closeRenameWeekModal();
+    updateWeekLabel();
+
+}
 
 function loadWeekTemplates(){
 
@@ -6064,7 +6184,8 @@ const foodflowStorageKeys = [
     "foodflowCategoryOrder",
     "foodflowCustomIngredientTranslations",
     "foodflowDayNotes",
-    "foodflowWeekTemplates"
+    "foodflowWeekTemplates",
+    "foodflowWeekNames"
 ];
 
 
@@ -8959,7 +9080,7 @@ function printMealPlanner(){
     }).join("");
 
     document.getElementById("printArea").innerHTML = `
-        <h1>${t("meal_plan_title")}</h1>
+        <h1>${t("meal_plan_title")}${weekNames[currentWeekKey] ? " — " + weekNames[currentWeekKey] : ""}</h1>
         <p class="print-planner-subtitle">${startStr} – ${endStr}</p>
         <div class="print-planner-grid">
             ${dayColumns}
