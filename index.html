@@ -1970,6 +1970,26 @@ Close
 
 </div>
 
+<!-- USE LEFTOVERS PICKER -->
+
+<div class="modal" role="dialog" aria-modal="true" id="leftoverPickerModal">
+
+<div class="modal-box">
+
+<h2 data-i18n="leftover_picker_title">
+🔁 Use Leftovers
+</h2>
+
+<div id="leftoverPickerList"></div>
+
+<button data-i18n="close" onclick="closeLeftoverPicker()" style="margin-top:10px;">
+Close
+</button>
+
+</div>
+
+</div>
+
 <!-- ADD MEAL WINDOW -->
 
 
@@ -1985,6 +2005,16 @@ Add Meal
 
 </h2>
 
+
+<div id="useLeftoversWrap">
+
+<button type="button" id="useLeftoversBtn" onclick="openLeftoverPicker()">
+🔁 <span data-i18n="use_leftovers_button">Use Leftovers</span>
+</button>
+
+<div id="useLeftoversStatus" class="small" style="display:none; margin-top:6px;"></div>
+
+</div>
 
 
 <label>
@@ -2723,6 +2753,8 @@ const translations = {
         recipe_name_label: "Recipe Name",
         recipe_tags_label: "Tags (comma separated)",
         recipe_servings_label: "Servings",
+        servings_label: "servings",
+        recipe_scaled_note: "originally serves {servings}",
         recipe_ingredients_label: "Ingredients",
         add_ingredient: "➕ Add Ingredient",
 
@@ -2750,6 +2782,20 @@ const translations = {
         modal_edit_meal: "Edit Meal",
         modal_add_recipe: "Add Recipe",
         modal_edit_recipe: "Edit Recipe",
+        use_leftovers_button: "Use Leftovers",
+        leftover_picker_title: "🔁 Use Leftovers",
+        no_leftovers_available: "No leftovers marked yet. Mark a meal as having leftovers from its \"View\" popup, then it'll show up here.",
+        portions_label: "portions left",
+        use_this_button: "Use this",
+        using_leftovers_from: "Using leftovers from",
+        unlink_leftovers: "✕ Unlink",
+        leftover_portions_label: "Portions left over from this meal",
+        save_leftovers: "Save",
+        leftovers_saved: "Leftovers saved",
+        leftovers_cleared: "Leftovers cleared",
+        leftover_source_gone: "a meal that no longer exists",
+        leftovers_badge_using: "Leftovers",
+        leftovers_badge_portions: "left",
         paste_recipe_title: "📋 Paste Recipe",
         paste_recipe_description: "Copy a recipe's title, portions, and ingredient list from pretty much any website and paste it below. This works best when it's just the ingredients — not the cooking steps.",
         parse_recipe: "✅ Parse Recipe",
@@ -2934,6 +2980,8 @@ const translations = {
         recipe_name_label: "Receptnamn",
         recipe_tags_label: "Taggar (kommaseparerat)",
         recipe_servings_label: "Portioner",
+        servings_label: "portioner",
+        recipe_scaled_note: "receptet är för {servings} portioner",
         recipe_ingredients_label: "Ingredienser",
         add_ingredient: "➕ Lägg till ingrediens",
 
@@ -2961,6 +3009,20 @@ const translations = {
         modal_edit_meal: "Redigera måltid",
         modal_add_recipe: "Lägg till recept",
         modal_edit_recipe: "Redigera recept",
+        use_leftovers_button: "Använd rester",
+        leftover_picker_title: "🔁 Använd rester",
+        no_leftovers_available: "Inga rester markerade än. Markera en måltid som har rester från dess \"Visa\"-popup, så visas den här.",
+        portions_label: "portioner kvar",
+        use_this_button: "Använd denna",
+        using_leftovers_from: "Använder rester från",
+        unlink_leftovers: "✕ Ta bort länk",
+        leftover_portions_label: "Portioner kvar från denna måltid",
+        save_leftovers: "Spara",
+        leftovers_saved: "Rester sparade",
+        leftovers_cleared: "Rester borttagna",
+        leftover_source_gone: "en måltid som inte längre finns",
+        leftovers_badge_using: "Rester",
+        leftovers_badge_portions: "kvar",
         paste_recipe_title: "📋 Klistra in recept",
         paste_recipe_description: "Kopiera receptets titel, antal portioner och ingredienslista från nästan vilken webbsida som helst och klistra in det nedan. Fungerar bäst om det bara är ingredienserna — inte tillagningsstegen.",
         parse_recipe: "✅ Tolka recept",
@@ -3932,6 +3994,11 @@ JSON.stringify(recipes)
 
 let selectedDay = null;
 let selectedMeal = null;
+
+// Set while the "Use Leftovers" picker is open, and consumed by
+// saveMeal() when the new meal is created — a {weekKey, day, mealId}
+// reference to the meal whose leftovers this new meal is eating.
+let pendingLeftoverSource = null;
 let selectedRecipe = null;
 let activeRecipeTagFilter = null;
 let recipeSortMode = localStorage.getItem("foodflowRecipeSortMode") || "recent";
@@ -4196,6 +4263,88 @@ if(weeks === null){
 // that edits `meals` is automatically editing that week already —
 // saveData() just needs to persist the whole `weeks` object.
 let meals = ensureWeek(currentWeekKey);
+
+// One-time migration: give every existing meal a stable id, so a
+// leftover-tracking link (which points at one specific meal) keeps
+// working even if meals around it are added, removed or reordered.
+(function ensureMealIds(){
+
+    let changed = false;
+
+    Object.keys(weeks).forEach(wk => {
+        let week = weeks[wk];
+        Object.keys(week).forEach(day => {
+            (week[day] || []).forEach(meal => {
+                if(!meal.id){
+                    meal.id = "m" + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+                    changed = true;
+                }
+            });
+        });
+    });
+
+    if(changed){
+        localStorage.setItem("foodflowWeeks", JSON.stringify(weeks));
+    }
+
+})();
+
+
+// =======================
+// LEFTOVER TRACKING
+// =======================
+
+// Finds the actual meal object a leftover link points to, or null
+// if that meal (or its week/day) no longer exists.
+function findMealByRef(ref){
+
+    if(!ref) return null;
+
+    let week = weeks[ref.weekKey];
+    if(!week || !week[ref.day]) return null;
+
+    return week[ref.day].find(m => m.id === ref.mealId) || null;
+
+}
+
+// Short human label for a meal reference, e.g. "Monday Oct 5 — Spaghetti Bolognese".
+function describeMealRef(ref){
+
+    let meal = findMealByRef(ref);
+    if(!meal) return t("leftover_source_gone");
+
+    let dayIndex = days.indexOf(ref.day);
+    let dateKey = dayIndex >= 0 ? addDaysToKey(ref.weekKey, dayIndex) : null;
+    let dateLabel = dateKey ? parseDateKey(dateKey).toLocaleDateString(undefined, { month:"short", day:"numeric" }) : "";
+
+    return `${translateDayName(ref.day)} ${dateLabel} — ${meal.name}`;
+
+}
+
+// Every meal across every week that currently has leftover portions
+// available, newest first, excluding the meal currently being edited
+// (so a meal can't "use leftovers from" itself).
+function getAvailableLeftovers(excludeMealId){
+
+    let results = [];
+
+    Object.keys(weeks).sort().reverse().forEach(weekKey => {
+        let week = weeks[weekKey];
+        days.forEach(day => {
+            (week[day] || []).forEach(meal => {
+                if(
+                    meal.leftoverPortions > 0 &&
+                    meal.id !== excludeMealId
+                ){
+                    results.push({ weekKey, day, meal });
+                }
+            });
+        });
+    });
+
+    return results;
+
+}
 
 
 // Per-week shopping-list state: what's checked off, manual
@@ -5058,6 +5207,14 @@ if(meals[day] && meals[day].length > 0){
         👥 ${meal.people} people
         </div>
 
+        <div class="small" style="min-height:1.3em; line-height:1.3em; opacity:0.85; white-space:nowrap;">
+        ${
+            meal.usingLeftoversFrom
+            ? "🔁 " + t("leftovers_badge_using")
+            : (meal.leftoverPortions > 0 ? "📦 " + meal.leftoverPortions + " " + t("leftovers_badge_portions") : "")
+        }
+        </div>
+
         <button onclick="openMealDetail('${day}',${originalIndex})">
 
         🔍 View
@@ -5133,11 +5290,46 @@ mealDetailIndex = index;
 
 document.getElementById("mealDetailTitle").innerText = meal.type + " — " + meal.name;
 
+let leftoverSectionHtml;
+
+if(meal.usingLeftoversFrom){
+
+    leftoverSectionHtml = `
+    <hr>
+    <div class="small">
+    🔁 ${t("using_leftovers_from")} ${describeMealRef(meal.usingLeftoversFrom)}
+    </div>
+    <button onclick="unlinkMealLeftovers()">
+    ${t("unlink_leftovers")}
+    </button>
+    `;
+
+}else{
+
+    leftoverSectionHtml = `
+    <hr>
+    <label style="display:block; margin-top:4px;">
+    <span class="small">📦 ${t("leftover_portions_label")}</span>
+    </label>
+    <div class="stepper">
+    <button type="button" onclick="adjustMealLeftoverPortions(-1)" data-i18n-aria-label="aria_decrease_servings" aria-label="Decrease">−</button>
+    <input id="mealLeftoverPortionsInput" type="number" min="0" value="${meal.leftoverPortions || 0}">
+    <button type="button" onclick="adjustMealLeftoverPortions(1)" data-i18n-aria-label="aria_increase_servings" aria-label="Increase">+</button>
+    </div>
+    <button onclick="saveMealLeftoverPortions()">
+    ${t("save_leftovers")}
+    </button>
+    `;
+
+}
+
 document.getElementById("mealDetailContent").innerHTML = `
 
 <div class="small">
 👥 ${meal.people} people
 </div>
+
+${leftoverSectionHtml}
 
 `;
 
@@ -5162,6 +5354,126 @@ mealDetailIndex = null;
 
 }
 
+function adjustMealLeftoverPortions(delta){
+
+let input = document.getElementById("mealLeftoverPortionsInput");
+if(!input) return;
+
+let val = Math.max(0, (parseInt(input.value, 10) || 0) + delta);
+input.value = val;
+
+}
+
+function saveMealLeftoverPortions(){
+
+if(mealDetailIndex === null) return;
+
+let input = document.getElementById("mealLeftoverPortionsInput");
+let val = Math.max(0, parseInt(input.value, 10) || 0);
+
+meals[mealDetailDay][mealDetailIndex].leftoverPortions = val;
+
+saveData();
+render();
+
+showToast(val > 0 ? t("leftovers_saved") : t("leftovers_cleared"));
+
+openMealDetail(mealDetailDay, mealDetailIndex);
+
+}
+
+function unlinkMealLeftovers(){
+
+if(mealDetailIndex === null) return;
+
+meals[mealDetailDay][mealDetailIndex].usingLeftoversFrom = null;
+
+saveData();
+render();
+
+openMealDetail(mealDetailDay, mealDetailIndex);
+
+}
+
+
+function openLeftoverPicker(){
+
+let available = getAvailableLeftovers(null);
+
+let list = document.getElementById("leftoverPickerList");
+
+if(available.length === 0){
+
+    list.innerHTML = `<p class="small">${t("no_leftovers_available")}</p>`;
+
+}else{
+
+    list.innerHTML = available.map(({weekKey, day, meal}) => `
+        <div class="meal" style="margin-top:8px;">
+            <strong>${meal.name}</strong>
+            <div class="small">${translateDayName(day)} · 📦 ${meal.leftoverPortions} ${t("portions_label")}</div>
+            <button onclick="chooseLeftoverSource('${weekKey}','${day}','${meal.id}')">
+            ${t("use_this_button")}
+            </button>
+        </div>
+    `).join("");
+
+}
+
+document.getElementById("leftoverPickerModal").style.display = "flex";
+
+}
+
+function closeLeftoverPicker(){
+
+document.getElementById("leftoverPickerModal").style.display = "none";
+
+}
+
+function chooseLeftoverSource(weekKey, day, mealId){
+
+let ref = { weekKey, day, mealId };
+let sourceMeal = findMealByRef(ref);
+
+if(!sourceMeal){
+    showToast(t("recipe_not_found"), { type:"error" });
+    return;
+}
+
+pendingLeftoverSource = ref;
+
+document.getElementById("mealType").value = sourceMeal.type;
+document.getElementById("mealName").value = sourceMeal.name;
+document.getElementById("people").value = sourceMeal.people;
+
+if(sourceMeal.recipe !== null && sourceMeal.recipe !== undefined){
+    updateRecipeSelector();
+    document.getElementById("recipeSelect").value = sourceMeal.recipe;
+}
+
+document.getElementById("useLeftoversBtn").style.display = "none";
+
+let status = document.getElementById("useLeftoversStatus");
+status.style.display = "block";
+status.innerHTML = `🔁 ${t("using_leftovers_from")} ${describeMealRef(ref)}
+    &nbsp; <button type="button" onclick="clearPendingLeftoverSource()">✕ ${t("cancel")}</button>`;
+
+closeLeftoverPicker();
+
+}
+
+function clearPendingLeftoverSource(){
+
+pendingLeftoverSource = null;
+
+document.getElementById("useLeftoversBtn").style.display = "inline-block";
+
+let status = document.getElementById("useLeftoversStatus");
+status.style.display = "none";
+status.innerHTML = "";
+
+}
+
 function openRecipeFromMealDetail(){
 
 if(mealDetailIndex === null) return;
@@ -5171,7 +5483,7 @@ let meal = meals[mealDetailDay][mealDetailIndex];
 closeMealDetail();
 
 if(meal.recipe !== null && meal.recipe !== undefined){
-    viewMealRecipe(meal.recipe);
+    viewMealRecipe(meal.recipe, meal.people);
 }
 
 }
@@ -5235,6 +5547,14 @@ document.getElementById("recipeSearch")
 updateRecipeSelector();
 
 
+// Adding a new meal, so offer "Use Leftovers" and reset any
+// leftover-source pick from a previous time this modal was open.
+clearPendingLeftoverSource();
+
+document.getElementById("useLeftoversWrap")
+.style.display="block";
+
+
 document.getElementById("modal")
 .style.display="flex";
 
@@ -5261,6 +5581,14 @@ meals[day][index];
 document.getElementById("modalTitle")
 .innerText =
 t("modal_edit_meal")
+
+
+// "Use Leftovers" only makes sense when creating a new meal entry —
+// an existing meal's leftover-tracking is managed from its "View" popup.
+pendingLeftoverSource = null;
+
+document.getElementById("useLeftoversWrap")
+.style.display="none";
 
 
 document.getElementById("mealType")
@@ -5327,7 +5655,21 @@ let selectedRecipeIndex =
 document.getElementById("recipeSelect").value;
 
 
+// Editing an existing meal keeps its id and leftover-tracking fields
+// (those are managed from the meal's "View" popup, not this form).
+let existing =
+(selectedMeal !== null && meals[selectedDay])
+? meals[selectedDay][selectedMeal]
+: null;
+
+
 let meal = {
+
+
+id:
+existing
+? existing.id
+: ("m" + Date.now().toString(36) + Math.random().toString(36).slice(2,8)),
 
 
 type:
@@ -5345,7 +5687,19 @@ document.getElementById("people").value,
 recipe:
 selectedRecipeIndex !== ""
 ? Number(selectedRecipeIndex)
-: null
+: null,
+
+
+leftoverPortions:
+existing
+? (existing.leftoverPortions || 0)
+: 0,
+
+
+usingLeftoversFrom:
+existing
+? (existing.usingLeftoversFrom || null)
+: pendingLeftoverSource
 
 
 };
@@ -5378,6 +5732,19 @@ if(selectedMeal === null){
 meals[selectedDay].push(meal);
 
 
+// This new meal was created via "Use Leftovers" — mark the
+// source meal's leftovers as used up so they can't be linked twice.
+if(pendingLeftoverSource){
+
+    let sourceMeal = findMealByRef(pendingLeftoverSource);
+
+    if(sourceMeal){
+        sourceMeal.leftoverPortions = 0;
+    }
+
+}
+
+
 }else{
 
 
@@ -5386,6 +5753,8 @@ meals[selectedDay][selectedMeal]=meal;
 
 }
 
+
+pendingLeftoverSource = null;
 
 
 saveData();
@@ -6197,7 +6566,7 @@ document.getElementById("people")
 }
 
 
-function viewMealRecipe(index){
+function viewMealRecipe(index, peopleOverride){
 
 let recipe = recipes[index];
 
@@ -6211,6 +6580,15 @@ return;
 }
 
 
+// When opened from a specific planner meal, scale every ingredient
+// to that meal's people count instead of the recipe's original
+// servings — same math the shopping list uses.
+let servings = Number(recipe.servings) || 1;
+let people = peopleOverride ? (Number(peopleOverride) || servings) : servings;
+let factor = people / servings;
+let isScaled = peopleOverride && people !== servings;
+
+
 document.getElementById("viewRecipeTitle")
 .innerText = recipe.name;
 
@@ -6219,7 +6597,8 @@ document.getElementById("viewRecipeContent")
 .innerHTML = `
 
 <div class="small">
-👥 ${recipe.servings} servings
+👥 ${people} ${t("servings_label")}
+${isScaled ? ` <span style="opacity:0.7;">(${t("recipe_scaled_note").replace("{servings}", servings)})</span>` : ""}
 </div>
 
 <hr>
@@ -6235,7 +6614,9 @@ recipe.ingredients.map(item=>`
 
 <li>
 ${
-item.amount || ""
+item.amount
+? formatAmount(Number(item.amount) * factor)
+: ""
 }
 ${item.unit || ""}
 ${item.name}
@@ -6254,7 +6635,7 @@ document.getElementById("viewRecipeModal")
 .style.display="flex";
 
 
-}  
+}
 
 
 function closeViewRecipe(){
