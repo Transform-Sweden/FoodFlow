@@ -2557,6 +2557,7 @@ Close
 <button onclick="closeWeekActionsMenu(); openCopyWeekModal();"><span data-i18n="nav_full_copy_forward">📆 Copy Week To...</span></button>
 <button onclick="closeWeekActionsMenu(); openSaveTemplateModal();"><span data-i18n="nav_full_save_template">💾 Save as Template</span></button>
 <button onclick="closeWeekActionsMenu(); openLoadTemplateModal();"><span data-i18n="nav_full_load_template">📂 Load Template</span></button>
+<button class="delete" onclick="closeWeekActionsMenu(); clearWeek();"><span data-i18n="nav_full_clear_week">🧹 Clear This Week</span></button>
 
 </div>
 
@@ -2884,6 +2885,11 @@ const translations = {
         copied_to_chosen_week: "Copied to the chosen week!",
         nav_full_save_template: "💾 Save as Template",
         nav_full_load_template: "📂 Load Template",
+        nav_full_clear_week: "🧹 Clear This Week",
+        clear_week_title: "Clear this whole week?",
+        clear_week_message: "This removes every meal planned for this week. It won't affect any other week, and you can undo it right after.",
+        clear_week_nothing_to_clear: "This week is already empty.",
+        clear_week_cleared: "Week cleared",
         nav_full_name_week: "🏷️ Name This Week",
         rename_week_modal_title: "🏷️ Name This Week",
         rename_week_description: "Give this week a name of your own — useful for a rotating schedule, e.g. \"Week 1\", \"Week 2\", \"Week 3\".",
@@ -3121,6 +3127,11 @@ const translations = {
         copied_to_chosen_week: "Kopierat till den valda veckan!",
         nav_full_save_template: "💾 Spara som mall",
         nav_full_load_template: "📂 Ladda mall",
+        nav_full_clear_week: "🧹 Rensa denna vecka",
+        clear_week_title: "Rensa hela denna vecka?",
+        clear_week_message: "Detta tar bort alla måltider planerade för denna vecka. Det påverkar inga andra veckor, och du kan ångra det direkt efteråt.",
+        clear_week_nothing_to_clear: "Denna vecka är redan tom.",
+        clear_week_cleared: "Veckan rensad",
         nav_full_name_week: "🏷️ Namnge denna vecka",
         rename_week_modal_title: "🏷️ Namnge denna vecka",
         rename_week_description: "Ge veckan ett eget namn — praktiskt för ett roterande schema, t.ex. \"Vecka 1\", \"Vecka 2\", \"Vecka 3\".",
@@ -6038,6 +6049,54 @@ render();
 
 
 
+// Clears every meal from every day of the currently viewed week in
+// one go, instead of deleting each one individually. Doesn't touch
+// any other week, and doesn't touch the week's name or notes.
+async function clearWeek(){
+
+let totalMeals = Object.values(meals)
+    .reduce((sum, dayMeals) => sum + (dayMeals ? dayMeals.length : 0), 0);
+
+if(totalMeals === 0){
+    showToast(t("clear_week_nothing_to_clear"));
+    return;
+}
+
+let ok = await customConfirm(
+    t("clear_week_message"),
+    t("clear_week_title")
+);
+
+if(!ok) return;
+
+let removedMealsByDay = JSON.parse(JSON.stringify(meals));
+
+days.forEach(day=>{
+    meals[day] = [];
+});
+
+saveData();
+render();
+renderShoppingList();
+
+showToast(t("clear_week_cleared"), {
+    actionLabel: "Undo",
+    onAction: () => {
+
+        days.forEach(day=>{
+            meals[day] = removedMealsByDay[day] || [];
+        });
+
+        saveData();
+        render();
+        renderShoppingList();
+
+    }
+});
+
+}
+
+
 function deleteMeal(day,index){
 
 
@@ -8505,10 +8564,15 @@ function setShoppingRangePreset(preset){
 
     if(preset === "thisWeek"){
 
-        // The Monday-to-Sunday of whichever week you're currently
-        // viewing in the planner.
-        shoppingRangeStart = currentWeekKey;
-        shoppingRangeEnd = addDaysToKey(currentWeekKey, 6);
+        // The Monday-to-Sunday of today's actual current week.
+        // Deliberately recomputed from `today` here rather than using
+        // the `currentWeekKey` variable, which is only set once when
+        // the app first loads — if the tab's been open since before
+        // midnight, that would still point at yesterday's week.
+        let todayWeekKey = getMondayKey(today);
+
+        shoppingRangeStart = todayWeekKey;
+        shoppingRangeEnd = addDaysToKey(todayWeekKey, 6);
 
     }else if(preset === "restOfWeek"){
 
