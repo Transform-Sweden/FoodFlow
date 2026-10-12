@@ -7806,7 +7806,72 @@ const ingredientTranslations = {
     "vanilj":"vanilla", "vanilla":"vanilla",
     "dill":"dill",
     "rosmarin":"rosemary", "rosemary":"rosemary",
-    "citronjuice":"lemon juice", "citron juice":"lemon juice", "lemon juice":"lemon juice"
+    "citronjuice":"lemon juice", "citron juice":"lemon juice", "lemon juice":"lemon juice",
+    "citronpeppar":"lemon pepper", "lemon pepper":"lemon pepper",
+    "allroundkrydda":"all-purpose seasoning",
+    "curry pulver":"curry powder", "currypulver":"curry powder", "curry powder":"curry powder",
+    "lökpulver":"onion powder", "onion powder":"onion powder",
+    "garlic powder":"garlic powder", "vitlökspulver":"garlic powder",
+    "cumin":"cumin", "spiskummin":"cumin",
+    "bay leaf":"bay leaves", "bay leaves":"bay leaves", "lagerblad":"bay leaves",
+    "chilisås":"chili sauce", "chili sauce":"chili sauce",
+    "taco spices":"taco seasoning", "tacokrydda":"taco seasoning", "taco seasoning":"taco seasoning",
+    "tacosås":"taco sauce", "taco sauce":"taco sauce",
+
+    // more vegetables
+    "cucumbers":"cucumber",
+    "isbergsallad":"lettuce",
+    "red cabbage":"red cabbage", "rödkål":"red cabbage",
+    "vitkål":"white cabbage", "white cabbage":"white cabbage",
+    "rucola":"arugula", "arugula":"arugula",
+    "pumpa":"pumpkin", "pumpkin":"pumpkin",
+    "beetroot":"beetroot", "beets":"beetroot", "beet":"beetroot", "rödbeta":"beetroot", "rödbetor":"beetroot",
+    "olives":"olives", "oliver":"olives", "olive":"olives",
+    "mais":"corn", "sweetcorn":"corn", "sweet corn":"corn",
+    "kidneybönor":"kidney beans", "kidney beans":"kidney beans", "kidney bean":"kidney beans",
+    "vita bönor":"white beans", "vita bönor i tomatsås":"white beans in tomato sauce", "white beans":"white beans",
+    "limes":"lime", "limejuice":"lime juice", "lime juice":"lime juice",
+
+    // more meat, fish & ready-made
+    "ham":"ham", "skinka":"ham",
+    "salami":"salami",
+    "kebab":"kebab",
+    "kebabsauce":"kebab sauce", "kebabsås":"kebab sauce", "kebab sauce":"kebab sauce",
+    "köttfärs":"ground beef",
+    "tuna":"tuna", "tonfisk":"tuna",
+    "breaded fish":"breaded fish", "panerad fisk":"breaded fish",
+    "falafel":"falafel",
+    "hummus":"hummus",
+    "guacamole":"guacamole",
+    "pesto":"pesto",
+    "pyttipanna":"pyttipanna",
+
+    // more dairy & bread
+    "mozzarella":"mozzarella",
+    "fetaost":"feta cheese", "feta cheese":"feta cheese", "feta":"feta cheese",
+    "mayonaise":"mayonnaise",
+    "pitabröd":"pita bread", "pita bread":"pita bread", "pitabread":"pita bread",
+    "tortillas":"tortilla", "tortilla":"tortilla",
+    "tortilla chips":"tortilla chips", "tortillachips":"tortilla chips",
+
+    // more pantry & sauces
+    "garlic clove":"garlic", "garlic cloves":"garlic",
+    "köttbuljongtärningar":"beef broth",
+    "grönsaksfond":"vegetable stock concentrate",
+    "oxfond":"beef stock concentrate", "oxfond med rödvin":"beef stock concentrate with red wine",
+    "rapsolja":"canola oil", "canola oil":"canola oil",
+    "balsamvinäger":"balsamic vinegar", "balsamic vinegar":"balsamic vinegar",
+    "vitvinäger":"white wine vinegar", "white wine vinegar":"white wine vinegar",
+    "worcestershire sauce":"worcestershire sauce", "worcestersås":"worcestershire sauce",
+    "soya":"soy sauce",
+    "farinsocker":"brown sugar", "brown sugar":"brown sugar",
+    "strösocker":"caster sugar", "caster sugar":"caster sugar",
+    "strödlök":"crispy fried onion", "strölök":"crispy fried onion",
+    "bulgur":"bulgur",
+    "mash potato powder":"instant mashed potato", "mashed potato powder":"instant mashed potato", "potatismospulver":"instant mashed potato",
+    "brunsås":"brown gravy", "powder brunsås":"brown gravy mix", "brunsås pulver":"brown gravy mix", "gravy mix":"brown gravy mix",
+    "lingonsylt":"lingonberry jam", "lignonsylt":"lingonberry jam", "lingonberry jam":"lingonberry jam",
+    "frozen peppers":"frozen bell peppers", "frysta paprikor":"frozen bell peppers"
 
 };
 
@@ -9304,8 +9369,8 @@ function printMealPlanner(){
 const knownUnits = [
     "g","kg","dl","msk","tsk","st","ml","l","cl","liter",
     "förp","förpackning","burk","burkar","klyfta","klyftor",
-    "kruka","skiva","skivor","bunt","nypa","kryddmått","paket","påse",
-    "port","portion","portioner","personer",
+    "kruka","skiva","skivor","bunt","nypa","kryddmått","krm","paket","påse",
+    "port","portion","portioner","potions","personer",
 
     // English units — metric/weight/volume
     "oz","ounce","ounces","lb","lbs","pound","pounds",
@@ -9346,7 +9411,9 @@ const unitAliases = {
     "burkar":"burk",
     "klyftor":"klyfta",
     "skivor":"skiva",
-    "liter":"l"
+    "liter":"l",
+    "krm":"kryddmått",
+    "potions":"portion"
 };
 
 // Normalizes a unit word to its canonical form so "cans"/"can",
