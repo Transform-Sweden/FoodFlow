@@ -2860,6 +2860,7 @@ const translations = {
         leftovers_badge_portions: "left",
         leftovers_external_label: "Leftovers (not tracked here)",
         leftovers_external_description: "From somewhere that isn't in your planner, e.g. a restaurant.",
+        leftovers_default_meal_name: "Leftovers",
         paste_recipe_title: "📋 Paste Recipe",
         paste_recipe_description: "Copy a recipe's title, portions, and ingredient list from pretty much any website and paste it below. This works best when it's just the ingredients — not the cooking steps.",
         parse_recipe: "✅ Parse Recipe",
@@ -3104,6 +3105,7 @@ const translations = {
         leftovers_badge_portions: "kvar",
         leftovers_external_label: "Rester (ej spårade här)",
         leftovers_external_description: "Från något som inte finns i din planerare, t.ex. en restaurang.",
+        leftovers_default_meal_name: "Rester",
         paste_recipe_title: "📋 Klistra in recept",
         paste_recipe_description: "Kopiera receptets titel, antal portioner och ingredienslista från nästan vilken webbsida som helst och klistra in det nedan. Fungerar bäst om det bara är ingredienserna — inte tillagningsstegen.",
         parse_recipe: "✅ Tolka recept",
@@ -5737,6 +5739,14 @@ closeLeftoverPicker();
 function chooseExternalLeftovers(){
 
 pendingLeftoverSource = { external:true };
+
+// Prefill the meal name so it shows up as something in the planner
+// right away — only if nothing's been typed yet, so this never
+// overwrites a name already entered.
+let mealNameInput = document.getElementById("mealName");
+if(mealNameInput && !mealNameInput.value.trim()){
+    mealNameInput.value = t("leftovers_default_meal_name");
+}
 
 document.getElementById("useLeftoversBtn").style.display = "none";
 
