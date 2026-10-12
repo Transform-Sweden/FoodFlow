@@ -2044,13 +2044,13 @@ Add Meal
 <select id="mealType" onchange="handleMealTypeSelectChange(this)">
 
 
-<option>🍳 Frukost</option>
+<option>🍳 Breakfast</option>
+
+<option>☕ Fika</option>
 
 <option>🥗 Lunch</option>
 
-<option>🍝 Middag</option>
-
-<option>☕ Fika</option>
+<option>🍽️ Dinner</option>
 
 
 </select>
@@ -2454,13 +2454,13 @@ Close
 
 <select id="plannerRecipeType" onchange="handleMealTypeSelectChange(this)">
 
-<option>🍳 Frukost</option>
+<option>🍳 Breakfast</option>
+
+<option>☕ Fika</option>
 
 <option>🥗 Lunch</option>
 
-<option>🍝 Middag</option>
-
-<option>☕ Fika</option>
+<option>🍽️ Dinner</option>
 
 </select>
 
@@ -2847,6 +2847,8 @@ const translations = {
         leftover_source_gone: "a meal that no longer exists",
         leftovers_badge_using: "Leftovers",
         leftovers_badge_portions: "left",
+        leftovers_external_label: "Leftovers (not tracked here)",
+        leftovers_external_description: "From somewhere that isn't in your planner, e.g. a restaurant.",
         paste_recipe_title: "📋 Paste Recipe",
         paste_recipe_description: "Copy a recipe's title, portions, and ingredient list from pretty much any website and paste it below. This works best when it's just the ingredients — not the cooking steps.",
         parse_recipe: "✅ Parse Recipe",
@@ -3082,6 +3084,8 @@ const translations = {
         leftover_source_gone: "en måltid som inte längre finns",
         leftovers_badge_using: "Rester",
         leftovers_badge_portions: "kvar",
+        leftovers_external_label: "Rester (ej spårade här)",
+        leftovers_external_description: "Från något som inte finns i din planerare, t.ex. en restaurang.",
         paste_recipe_title: "📋 Klistra in recept",
         paste_recipe_description: "Kopiera receptets titel, antal portioner och ingredienslista från nästan vilken webbsida som helst och klistra in det nedan. Fungerar bäst om det bara är ingredienserna — inte tillagningsstegen.",
         parse_recipe: "✅ Tolka recept",
@@ -4114,7 +4118,7 @@ function migrateOldData(){
 
             data[day] = [
                 {
-                    type:"🍝 Middag",
+                    type:"🍽️ Dinner",
                     name:data[day].name,
                     people:data[day].people
                 }
@@ -4380,6 +4384,8 @@ function findMealByRef(ref){
 
 // Short human label for a meal reference, e.g. "Monday Oct 5 — Spaghetti Bolognese".
 function describeMealRef(ref){
+
+    if(ref && ref.external) return t("leftovers_external_label");
 
     let meal = findMealByRef(ref);
     if(!meal) return t("leftover_source_gone");
@@ -5105,7 +5111,71 @@ function deleteTemplate(templateId){
 // added through Settings -> Manage Categories.
 let mealCategories = JSON.parse(
     localStorage.getItem("foodflowCategories")
-) || ["🍳 Frukost","🥗 Lunch","🍝 Middag","☕ Fika"];
+) || ["🍳 Breakfast","☕ Fika","🥗 Lunch","🍽️ Dinner"];
+
+
+// One-time migration: the original built-in categories were named
+// in Swedish ("Frukost"/"Middag"), and Fika used to sit at the end.
+// Rename them to English for anyone who already had them saved, move
+// Fika between Breakfast and Lunch, and update any already-planned
+// meals so they keep matching their category correctly.
+(function migrateSwedishMealCategoryNames(){
+
+    const renameMap = {
+        "🍳 Frukost":"🍳 Breakfast",
+        "🍝 Middag":"🍽️ Dinner"
+    };
+
+    const canonicalOrder = ["🍳 Breakfast","☕ Fika","🥗 Lunch","🍽️ Dinner"];
+
+    let changed = false;
+
+    mealCategories = mealCategories.map(cat=>{
+        if(renameMap[cat]){
+            changed = true;
+            return renameMap[cat];
+        }
+        return cat;
+    });
+
+    // Only reorder if it's still exactly the four built-in categories
+    // with nothing custom added — otherwise leave whatever order the
+    // person has already set up through Manage Categories alone.
+    if(
+        mealCategories.length === canonicalOrder.length &&
+        canonicalOrder.every(cat => mealCategories.includes(cat))
+    ){
+        let reordered = canonicalOrder.slice();
+        if(JSON.stringify(reordered) !== JSON.stringify(mealCategories)){
+            changed = true;
+        }
+        mealCategories = reordered;
+    }
+
+    if(!changed) return;
+
+    localStorage.setItem(
+        "foodflowCategories",
+        JSON.stringify(mealCategories)
+    );
+
+    Object.values(weeks || {}).forEach(week=>{
+        Object.values(week).forEach(dayMeals=>{
+            if(!Array.isArray(dayMeals)) return;
+            dayMeals.forEach(meal=>{
+                if(meal && renameMap[meal.type]){
+                    meal.type = renameMap[meal.type];
+                }
+            });
+        });
+    });
+
+    localStorage.setItem(
+        "foodflowWeeks",
+        JSON.stringify(weeks)
+    );
+
+})();
 
 
 // A distinct accent color per meal type, so the planner is scannable
@@ -5549,13 +5619,15 @@ let available = getAvailableLeftovers(null);
 
 let list = document.getElementById("leftoverPickerList");
 
+let trackedHtml;
+
 if(available.length === 0){
 
-    list.innerHTML = `<p class="small">${t("no_leftovers_available")}</p>`;
+    trackedHtml = `<p class="small">${t("no_leftovers_available")}</p>`;
 
 }else{
 
-    list.innerHTML = available.map(({weekKey, day, meal}) => `
+    trackedHtml = available.map(({weekKey, day, meal}) => `
         <div class="meal" style="margin-top:8px;">
             <strong>${meal.name}</strong>
             <div class="small">${translateDayName(day)} · 📦 ${meal.leftoverPortions} ${t("portions_label")}</div>
@@ -5566,6 +5638,22 @@ if(available.length === 0){
     `).join("");
 
 }
+
+// Also always offer a plain, untracked "leftovers" option — for food
+// that didn't come from a meal logged here at all, e.g. a restaurant
+// doggy bag. This doesn't link to anything or use up any tracked
+// portions; it just marks the new meal as leftovers.
+let externalHtml = `
+    <div class="meal" style="margin-top:8px;">
+        <strong>${t("leftovers_external_label")}</strong>
+        <div class="small">${t("leftovers_external_description")}</div>
+        <button onclick="chooseExternalLeftovers()">
+        ${t("use_this_button")}
+        </button>
+    </div>
+`;
+
+list.innerHTML = trackedHtml + externalHtml;
 
 document.getElementById("leftoverPickerModal").style.display = "flex";
 
@@ -5603,6 +5691,24 @@ document.getElementById("useLeftoversBtn").style.display = "none";
 let status = document.getElementById("useLeftoversStatus");
 status.style.display = "block";
 status.innerHTML = `🔁 ${t("using_leftovers_from")} ${describeMealRef(ref)}
+    &nbsp; <button type="button" onclick="clearPendingLeftoverSource()">✕ ${t("cancel")}</button>`;
+
+closeLeftoverPicker();
+
+}
+
+// "Use Leftovers" picked as untracked/external — not linked to any
+// specific logged meal, so there's nothing to prefill and nothing to
+// mark as used up when this meal is saved.
+function chooseExternalLeftovers(){
+
+pendingLeftoverSource = { external:true };
+
+document.getElementById("useLeftoversBtn").style.display = "none";
+
+let status = document.getElementById("useLeftoversStatus");
+status.style.display = "block";
+status.innerHTML = `🔁 ${describeMealRef(pendingLeftoverSource)}
     &nbsp; <button type="button" onclick="clearPendingLeftoverSource()">✕ ${t("cancel")}</button>`;
 
 closeLeftoverPicker();
