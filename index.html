@@ -1741,6 +1741,14 @@ Add your own word so it always combines on the shopping list, no matter which la
     data-i18n-placeholder="custom_translation_target_placeholder"
 >
 
+<label style="display:block; margin-top:4px;">
+<span class="small" data-i18n="custom_translation_category_label">Shopping list section (optional)</span>
+</label>
+
+<select id="customTranslationCategory">
+<option value="">🛒 Other (default)</option>
+</select>
+
 <button onclick="addCustomIngredientTranslation()">
 <span data-i18n="add_translation">➕ Add Translation</span>
 </button>
@@ -2739,6 +2747,8 @@ const translations = {
         custom_translations_description: "Add your own word so it always combines on the shopping list, no matter which language it's written in.",
         custom_translation_alias_placeholder: "e.g. kycklingfilé",
         custom_translation_target_placeholder: "e.g. chicken breast",
+        custom_translation_category_label: "Shopping list section (optional)",
+        category_auto_other: "Other (default)",
         add_translation: "➕ Add Translation",
         enter_both_translation_fields: "Please fill in both fields.",
         translation_saved: "Translation saved",
@@ -2981,6 +2991,8 @@ const translations = {
         custom_translations_description: "Lägg till ett eget ord så att det alltid kombineras på inköpslistan, oavsett vilket språk det är skrivet på.",
         custom_translation_alias_placeholder: "t.ex. kycklingfilé",
         custom_translation_target_placeholder: "t.ex. chicken breast",
+        custom_translation_category_label: "Avsnitt på inköpslistan (valfritt)",
+        category_auto_other: "Övrigt (standard)",
         add_translation: "➕ Lägg till översättning",
         enter_both_translation_fields: "Fyll i båda fälten.",
         translation_saved: "Översättning sparad",
@@ -7871,7 +7883,12 @@ const ingredientTranslations = {
     "mash potato powder":"instant mashed potato", "mashed potato powder":"instant mashed potato", "potatismospulver":"instant mashed potato",
     "brunsås":"brown gravy", "powder brunsås":"brown gravy mix", "brunsås pulver":"brown gravy mix", "gravy mix":"brown gravy mix",
     "lingonsylt":"lingonberry jam", "lignonsylt":"lingonberry jam", "lingonberry jam":"lingonberry jam",
-    "frozen peppers":"frozen bell peppers", "frysta paprikor":"frozen bell peppers"
+    "frozen peppers":"frozen bell peppers", "frysta paprikor":"frozen bell peppers",
+    "zucchini":"zucchini", "courgette":"zucchini",
+    "cabbage":"cabbage", "kål":"cabbage",
+    "ham package":"ham", "salami package":"salami",
+    "mos pulver":"instant mashed potato", "pulvermos":"instant mashed potato",
+    "potatismos":"instant mashed potato"
 
 };
 
@@ -7911,6 +7928,7 @@ const ingredientCategories = {
     "red cabbage":"Produce", "white cabbage":"Produce", "arugula":"Produce",
     "pumpkin":"Produce", "beetroot":"Produce", "kidney beans":"Produce",
     "white beans":"Produce", "frozen bell peppers":"Produce",
+    "zucchini":"Produce", "cabbage":"Produce", "olives":"Pantry",
 
     "milk":"Dairy & Eggs", "cream":"Dairy & Eggs", "butter":"Dairy & Eggs",
     "egg":"Dairy & Eggs", "cheese":"Dairy & Eggs", "yogurt":"Dairy & Eggs",
@@ -8082,7 +8100,9 @@ const categoryAccents = {
 
 
 function getIngredientCategory(normalizedName){
-    return ingredientCategories[normalizedName] || "Other";
+    return customIngredientCategories[normalizedName]
+        || ingredientCategories[normalizedName]
+        || "Other";
 }
 
 
@@ -8159,6 +8179,60 @@ function simplifyUnit(amount, unitKey){
 // Checked before the built-in dictionary so a user override always wins.
 let customIngredientTranslations = loadCustomIngredientTranslations();
 
+// Which shopping-list section each user-added translation's target
+// word belongs to (keyed by the translation's target, e.g. "ham"),
+// so a new word the built-in dictionary doesn't know can still be
+// sorted into Produce/Dairy & Eggs/etc. instead of always landing
+// in "Other".
+let customIngredientCategories = loadCustomIngredientCategories();
+
+function loadCustomIngredientCategories(){
+
+    try{
+
+        let saved = localStorage.getItem("foodflowCustomIngredientCategories");
+
+        return saved ? JSON.parse(saved) : {};
+
+    }catch(e){
+
+        return {};
+
+    }
+
+}
+
+function saveCustomIngredientCategories(){
+
+    localStorage.setItem(
+        "foodflowCustomIngredientCategories",
+        JSON.stringify(customIngredientCategories)
+    );
+
+}
+
+// Fills the "Shopping list section" dropdown in the Custom Ingredient
+// Translations form with every real category (everything except
+// "Other", which is already the default when nothing is picked).
+function populateCustomTranslationCategorySelect(){
+
+    let select = document.getElementById("customTranslationCategory");
+
+    if(!select) return;
+
+    let current = select.value;
+
+    select.innerHTML =
+        `<option value="">${categoryIcons["Other"] || "🛒"} ${t("category_auto_other")}</option>` +
+        categoryOrder
+            .filter(cat => cat !== "Other")
+            .map(cat => `<option value="${cat}">${categoryIcons[cat] || "🛒"} ${cat}</option>`)
+            .join("");
+
+    select.value = current;
+
+}
+
 function loadCustomIngredientTranslations(){
 
     try{
@@ -8188,9 +8262,11 @@ function addCustomIngredientTranslation(){
 
     let aliasInput = document.getElementById("customTranslationAlias");
     let targetInput = document.getElementById("customTranslationTarget");
+    let categorySelect = document.getElementById("customTranslationCategory");
 
     let alias = aliasInput.value.trim().toLowerCase();
     let target = targetInput.value.trim().toLowerCase();
+    let category = categorySelect ? categorySelect.value : "";
 
     if(alias === "" || target === ""){
 
@@ -8202,10 +8278,18 @@ function addCustomIngredientTranslation(){
 
     customIngredientTranslations[alias] = target;
 
+    if(category){
+        customIngredientCategories[target] = category;
+    }else{
+        delete customIngredientCategories[target];
+    }
+
     saveCustomIngredientTranslations();
+    saveCustomIngredientCategories();
 
     aliasInput.value = "";
     targetInput.value = "";
+    if(categorySelect) categorySelect.value = "";
 
     renderCustomIngredientTranslations();
 
@@ -8217,9 +8301,20 @@ function addCustomIngredientTranslation(){
 
 function deleteCustomIngredientTranslation(alias){
 
+    let target = customIngredientTranslations[alias];
+
     delete customIngredientTranslations[alias];
 
+    // Only drop the category for that target word if no other saved
+    // translation still points to it.
+    let stillUsed = Object.values(customIngredientTranslations).includes(target);
+
+    if(!stillUsed){
+        delete customIngredientCategories[target];
+    }
+
     saveCustomIngredientTranslations();
+    saveCustomIngredientCategories();
 
     renderCustomIngredientTranslations();
 
@@ -8230,6 +8325,8 @@ function deleteCustomIngredientTranslation(alias){
 function renderCustomIngredientTranslations(){
 
     let container = document.getElementById("customTranslationList");
+
+    populateCustomTranslationCategorySelect();
 
     if(!container) return;
 
@@ -8243,7 +8340,14 @@ function renderCustomIngredientTranslations(){
 
     }
 
-    container.innerHTML = entries.map(([alias, target]) => `
+    container.innerHTML = entries.map(([alias, target]) => {
+
+        let category = customIngredientCategories[target];
+        let categoryLabel = category
+            ? ` · ${categoryIcons[category] || "🛒"} ${category}`
+            : "";
+
+        return `
 
         <div style="
             display:flex;
@@ -8255,7 +8359,7 @@ function renderCustomIngredientTranslations(){
             border-radius:8px;
             background:var(--bg);
         ">
-            <span>${alias} → ${target}</span>
+            <span>${alias} → ${target}${categoryLabel}</span>
 
             <button
                 onclick="deleteCustomIngredientTranslation('${alias.replace(/'/g,"\\'")}')"
@@ -8264,7 +8368,9 @@ function renderCustomIngredientTranslations(){
             >🗑</button>
         </div>
 
-    `).join("");
+    `;
+
+    }).join("");
 
 }
 
