@@ -2050,7 +2050,7 @@ Add Meal
 
 <option>🥗 Lunch</option>
 
-<option>🍽️ Dinner</option>
+<option>🍝 Dinner</option>
 
 
 </select>
@@ -2460,7 +2460,7 @@ Close
 
 <option>🥗 Lunch</option>
 
-<option>🍽️ Dinner</option>
+<option>🍝 Dinner</option>
 
 </select>
 
@@ -4118,7 +4118,7 @@ function migrateOldData(){
 
             data[day] = [
                 {
-                    type:"🍽️ Dinner",
+                    type:"🍝 Dinner",
                     name:data[day].name,
                     people:data[day].people
                 }
@@ -5111,7 +5111,7 @@ function deleteTemplate(templateId){
 // added through Settings -> Manage Categories.
 let mealCategories = JSON.parse(
     localStorage.getItem("foodflowCategories")
-) || ["🍳 Breakfast","☕ Fika","🥗 Lunch","🍽️ Dinner"];
+) || ["🍳 Breakfast","☕ Fika","🥗 Lunch","🍝 Dinner"];
 
 
 // One-time migration: the original built-in categories were named
@@ -5123,16 +5123,16 @@ let mealCategories = JSON.parse(
 
     const renameMap = {
         "🍳 Frukost":"🍳 Breakfast",
-        "🍝 Middag":"🍽️ Dinner"
+        "🍝 Middag":"🍝 Dinner"
     };
 
-    const canonicalOrder = ["🍳 Breakfast","☕ Fika","🥗 Lunch","🍽️ Dinner"];
+    const canonicalOrder = ["🍳 Breakfast","☕ Fika","🥗 Lunch","🍝 Dinner"];
 
-    let changed = false;
+    let categoriesChanged = false;
 
     mealCategories = mealCategories.map(cat=>{
         if(renameMap[cat]){
-            changed = true;
+            categoriesChanged = true;
             return renameMap[cat];
         }
         return cat;
@@ -5147,17 +5147,25 @@ let mealCategories = JSON.parse(
     ){
         let reordered = canonicalOrder.slice();
         if(JSON.stringify(reordered) !== JSON.stringify(mealCategories)){
-            changed = true;
+            categoriesChanged = true;
         }
         mealCategories = reordered;
     }
 
-    if(!changed) return;
+    if(categoriesChanged){
+        localStorage.setItem(
+            "foodflowCategories",
+            JSON.stringify(mealCategories)
+        );
+    }
 
-    localStorage.setItem(
-        "foodflowCategories",
-        JSON.stringify(mealCategories)
-    );
+    // Separately — and every time, regardless of whether the category
+    // list above needed changing — rename any already-planned meals
+    // still carrying the old Swedish type string. The category list
+    // may already have defaulted to English (e.g. it was never
+    // customized, so nothing was ever saved under foodflowCategories)
+    // while meals saved earlier still have the old literal string.
+    let mealsChanged = false;
 
     Object.values(weeks || {}).forEach(week=>{
         Object.values(week).forEach(dayMeals=>{
@@ -5165,15 +5173,18 @@ let mealCategories = JSON.parse(
             dayMeals.forEach(meal=>{
                 if(meal && renameMap[meal.type]){
                     meal.type = renameMap[meal.type];
+                    mealsChanged = true;
                 }
             });
         });
     });
 
-    localStorage.setItem(
-        "foodflowWeeks",
-        JSON.stringify(weeks)
-    );
+    if(mealsChanged){
+        localStorage.setItem(
+            "foodflowWeeks",
+            JSON.stringify(weeks)
+        );
+    }
 
 })();
 
