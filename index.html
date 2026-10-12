@@ -3909,9 +3909,15 @@ document.addEventListener("keydown", function(e){
 
         if(openModal){
 
+            // Prefer an explicit primary button; otherwise fall back to
+            // the first *visible* button in the modal — skipping any
+            // button that's currently hidden (display:none), since a
+            // popup like the meal-detail view keeps some buttons in the
+            // DOM but hidden depending on that meal's state.
             let primaryButton =
                 openModal.querySelector("[data-primary]") ||
-                openModal.querySelector(".modal-box button");
+                Array.from(openModal.querySelectorAll(".modal-box button"))
+                    .find(btn => btn.offsetParent !== null);
 
             if(primaryButton){
                 e.preventDefault();
@@ -5449,7 +5455,7 @@ if(meal.usingLeftoversFrom){
     <input id="mealLeftoverPortionsInput" type="number" min="0" value="${meal.leftoverPortions || 0}">
     <button type="button" onclick="adjustMealLeftoverPortions(1)" data-i18n-aria-label="aria_increase_servings" aria-label="Increase">+</button>
     </div>
-    <button onclick="saveMealLeftoverPortions()">
+    <button data-primary onclick="saveMealLeftoverPortions()">
     ${t("save_leftovers")}
     </button>
     `;
@@ -9596,6 +9602,19 @@ document.head.appendChild(link);
 
 
 setupPWAManifest();
+
+
+// Lets the app open (and keep working) even with no signal, once it's
+// been loaded at least once — useful since this is often added to a
+// phone's home screen like a regular app. Registering sw.js is wrapped
+// in a feature check and a catch, so browsers or hosting setups without
+// it (or without HTTPS) just silently skip this and the app works the
+// same as before, only without the offline fallback.
+if("serviceWorker" in navigator){
+    window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").catch(() => {});
+    });
+}
 
 
 let savedPage =
