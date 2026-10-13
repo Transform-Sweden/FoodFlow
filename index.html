@@ -2276,6 +2276,26 @@ placeholder="e.g. g, dl, st"
 
 </div>
 
+<!-- WHICH RECIPE(S) AN INGREDIENT COMES FROM -->
+
+<div class="modal" role="dialog" aria-modal="true" id="ingredientSourcesModal">
+
+<div class="modal-box">
+
+<h2 id="ingredientSourcesTitle" data-i18n="ingredient_sources_title">
+📖 Where this comes from
+</h2>
+
+<div id="ingredientSourcesList"></div>
+
+<button data-i18n="close" onclick="closeIngredientSources()" style="margin-top:10px;">
+Close
+</button>
+
+</div>
+
+</div>
+
 <!-- ADD RECIPE WINDOW -->
 
 <div class="modal" role="dialog" aria-modal="true" id="recipeModal">
@@ -2335,6 +2355,20 @@ placeholder="e.g. quick, vegetarian, dessert"
 <button type="button" onclick="addIngredientRow()">
 <span data-i18n="add_ingredient">➕ Add Ingredient</span>
 </button>
+
+
+
+<label style="display:block; margin-top:10px;">
+<span data-i18n="recipe_instructions_label">📝 Instructions / Steps (optional)</span>
+</label>
+
+<textarea
+id="recipeInstructions"
+rows="8"
+placeholder="1. Chop the onions...&#10;2. Fry until golden...&#10;3. Add the rest and simmer for 20 minutes..."
+data-i18n-placeholder="recipe_instructions_placeholder"
+style="width:100%;padding:12px;border-radius:12px;border:1px solid #ccc;font-size:15px;font-family:inherit;"
+></textarea>
 
 
 
@@ -2819,6 +2853,9 @@ const translations = {
         show_scaled_recipe: "Show scaled amounts",
         recipe_ingredients_label: "Ingredients",
         add_ingredient: "➕ Add Ingredient",
+        recipe_instructions_label: "📝 Instructions / Steps (optional)",
+        recipe_instructions_label_short: "Instructions",
+        recipe_instructions_placeholder: "1. Chop the onions...\n2. Fry until golden...\n3. Add the rest and simmer for 20 minutes...",
 
         meal_type_label: "Meal Type",
         choose_recipe_label: "📖 Choose Recipe",
@@ -2861,6 +2898,9 @@ const translations = {
         leftovers_external_label: "Leftovers (not tracked here)",
         leftovers_external_description: "From somewhere that isn't in your planner, e.g. a restaurant.",
         leftovers_default_meal_name: "Leftovers",
+        ingredient_sources_title: "📖 Where this comes from",
+        ingredient_sources_intro: "This ingredient is used in:",
+        ingredient_sources_none: "Not linked to a recipe (added by hand).",
         paste_recipe_title: "📋 Paste Recipe",
         paste_recipe_description: "Copy a recipe's title, portions, and ingredient list from pretty much any website and paste it below. This works best when it's just the ingredients — not the cooking steps.",
         parse_recipe: "✅ Parse Recipe",
@@ -3064,6 +3104,9 @@ const translations = {
         show_scaled_recipe: "Visa skalade mängder",
         recipe_ingredients_label: "Ingredienser",
         add_ingredient: "➕ Lägg till ingrediens",
+        recipe_instructions_label: "📝 Instruktioner / Steg (valfritt)",
+        recipe_instructions_label_short: "Instruktioner",
+        recipe_instructions_placeholder: "1. Hacka löken...\n2. Stek tills den är gyllenbrun...\n3. Lägg i resten och låt sjuda i 20 minuter...",
 
         meal_type_label: "Måltidstyp",
         choose_recipe_label: "📖 Välj recept",
@@ -3106,6 +3149,9 @@ const translations = {
         leftovers_external_label: "Rester (ej spårade här)",
         leftovers_external_description: "Från något som inte finns i din planerare, t.ex. en restaurang.",
         leftovers_default_meal_name: "Rester",
+        ingredient_sources_title: "📖 Varifrån detta kommer",
+        ingredient_sources_intro: "Denna ingrediens används i:",
+        ingredient_sources_none: "Inte kopplad till ett recept (tillagd för hand).",
         paste_recipe_title: "📋 Klistra in recept",
         paste_recipe_description: "Kopiera receptets titel, antal portioner och ingredienslista från nästan vilken webbsida som helst och klistra in det nedan. Fungerar bäst om det bara är ingredienserna — inte tillagningsstegen.",
         parse_recipe: "✅ Tolka recept",
@@ -6687,6 +6733,10 @@ document.getElementById("recipeTags")
 .value="";
 
 
+document.getElementById("recipeInstructions")
+.value="";
+
+
 document.getElementById("ingredientList")
 .innerHTML="";
 
@@ -6734,6 +6784,8 @@ tags: document.getElementById("recipeTags").value
 .split(",")
 .map(tag => tag.trim())
 .filter(tag => tag !== ""),
+
+instructions: document.getElementById("recipeInstructions").value.trim(),
 
 expanded:false,
 
@@ -7019,10 +7071,30 @@ ${item.name}
 
 </ul>
 
+${
+recipe.instructions
+? `<hr>
+<strong>${t("recipe_instructions_label_short")}</strong>
+<div style="white-space:pre-wrap; margin-top:6px;">${escapeHtml(recipe.instructions)}</div>`
+: ""
+}
+
 `;
 
 }
 
+
+// Minimal HTML escaping for free-text fields like recipe instructions,
+// which are far more likely than a short name to contain a stray
+// "<" or "&" (oven temps, "if <5 min left", etc).
+function escapeHtml(text){
+
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+}
 
 function closeViewRecipe(){
 
@@ -7287,6 +7359,14 @@ ${recipe.ingredients.map(item=>`
 
 </ul>
 
+${
+recipe.instructions
+? `<hr>
+<strong>${t("recipe_instructions_label_short")}</strong>
+<div style="white-space:pre-wrap; margin-top:6px;">${escapeHtml(recipe.instructions)}</div>`
+: ""
+}
+
 `;
 
 document.getElementById("recipeDetailFavoriteBtn").innerText =
@@ -7438,6 +7518,10 @@ document.getElementById("recipePeople")
 
 document.getElementById("recipeTags")
 .value = (recipe.tags || []).join(", ");
+
+
+document.getElementById("recipeInstructions")
+.value = recipe.instructions || "";
 
 
 document.getElementById("ingredientList")
@@ -8515,10 +8599,18 @@ function generateShoppingList(){
                                 ? combinable.unitKey
                                 : unit,
                             amount: combinable.amount,
-                            category: getIngredientCategory(normalizedName)
+                            category: getIngredientCategory(normalizedName),
+                            // Which recipe(s) this ingredient is pulled
+                            // from, keyed by recipe index to de-dupe —
+                            // converted to a plain array further down.
+                            sourcesByIndex: {}
                         };
 
                     }
+
+                    // Record this recipe as a source, whether the item
+                    // is brand new or combining into an existing one.
+                    items[key].sourcesByIndex[meal.recipe] = recipe.name;
 
                 });
 
@@ -8571,7 +8663,16 @@ function generateShoppingList(){
     });
 
     let list = Object.keys(items)
-        .map(key => ({ key, ...items[key], isExtra:false }))
+        .map(key => {
+
+            let { sourcesByIndex, ...rest } = items[key];
+
+            let sources = Object.entries(sourcesByIndex || {})
+                .map(([index, name]) => ({ index: Number(index), name }));
+
+            return { key, ...rest, sources, isExtra:false };
+
+        })
         .concat(
             shoppingExtras.map(extra => {
 
@@ -8583,6 +8684,7 @@ function generateShoppingList(){
                     unit: extra.unit,
                     amount: Number(extra.amount) || 0,
                     category: getIngredientCategory(normalizedName),
+                    sources: [],
                     isExtra: true
                 };
 
@@ -8645,6 +8747,7 @@ function renderShoppingItemRow(item){
     }
 
     let checked = shoppingChecked[item.key] ? "checked" : "";
+    let hasSources = item.sources && item.sources.length > 0;
 
     return `
         <div class="meal" data-swipe-key="${safeKey}" style="--accent:${accent};display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -8654,9 +8757,13 @@ function renderShoppingItemRow(item){
                 ${checked}
                 onchange="toggleShoppingItem('${safeKey}')"
             >
-            <span style="flex:1;${checked ? "opacity:.5;text-decoration:line-through;" : ""}">
+            <span
+                style="flex:1;${checked ? "opacity:.5;text-decoration:line-through;" : ""}${hasSources ? "cursor:pointer;" : ""}"
+                ${hasSources ? `onclick="showIngredientSources('${safeKey}')"` : ""}
+            >
                 ${amountText}${item.name}
                 ${item.isExtra ? `<span class="small">(added by you)</span>` : ""}
+                ${hasSources ? `<span class="small" style="opacity:0.6;"> 📖</span>` : ""}
             </span>
             <button
                 class="edit"
@@ -8674,6 +8781,50 @@ function renderShoppingItemRow(item){
             </button>
         </div>
     `;
+
+}
+
+
+// Shows which recipe(s) a shopping list ingredient was pulled from.
+// Tapping a recipe in the list jumps straight to that recipe's detail
+// popup, same as opening it from the Recipes page.
+function showIngredientSources(key){
+
+    let item = lastShoppingList.find(i => i.key === key);
+
+    if(!item) return;
+
+    document.getElementById("ingredientSourcesTitle").innerText =
+        "📖 " + item.name;
+
+    let list = document.getElementById("ingredientSourcesList");
+
+    if(!item.sources || item.sources.length === 0){
+
+        list.innerHTML = `<p class="small">${t("ingredient_sources_none")}</p>`;
+
+    }else{
+
+        list.innerHTML = `
+            <p class="small">${t("ingredient_sources_intro")}</p>
+            <div class="action-list">
+            ${item.sources.map(source => `
+                <button onclick="closeIngredientSources(); openRecipeDetail(${source.index});">
+                📖 ${source.name}
+                </button>
+            `).join("")}
+            </div>
+        `;
+
+    }
+
+    document.getElementById("ingredientSourcesModal").style.display = "flex";
+
+}
+
+function closeIngredientSources(){
+
+    document.getElementById("ingredientSourcesModal").style.display = "none";
 
 }
 
@@ -8804,12 +8955,19 @@ function setShoppingRangePreset(preset){
 }
 
 
+// The most recently rendered shopping list, kept around so tapping an
+// item's name can look up which recipe(s) it came from without
+// regenerating the whole list again.
+let lastShoppingList = [];
+
 function renderShoppingList(){
 
     updateShoppingRangeInputs();
     renderShoppingSelectionBar();
 
     const { list: fullList, manualMeals } = generateShoppingList();
+
+    lastShoppingList = fullList;
 
     const container = document.getElementById("shoppingList");
     const notes = document.getElementById("shoppingNotes");
