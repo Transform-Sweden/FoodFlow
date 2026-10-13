@@ -8477,7 +8477,13 @@ function normalizeIngredientName(name){
         .replace(/\([^)]*\)/g, "")   // strip parenthetical asides
         .replace(/[.,;:!?]+$/g, "")  // strip trailing punctuation
         .trim()
-        .replace(/\s+/g, " ");
+        .replace(/\s+/g, " ")
+        // Strip a trailing "in water/oil/tomato sauce/brine" style
+        // descriptor (common on canned fish) — without this, the
+        // last-word fallback below would grab "vatten"/"water" itself
+        // and mislabel e.g. "tonfisk i vatten" (tuna in water) as
+        // plain "water".
+        .replace(/\s+(i|in)\s+(vatten|olja|tomatsås|saltlake|spad|lag|water|oil|tomato sauce|brine)$/, "");
 
     // Custom user translations take priority over the built-in dictionary.
     if(customIngredientTranslations[base]){
