@@ -7907,7 +7907,7 @@ const ingredientTranslations = {
     "basilika":"basil", "basil":"basil",
     "timjan":"thyme", "thyme":"thyme",
     "oregano":"oregano",
-    "curry":"curry",
+    "curry":"curry powder",
     "kanel":"cinnamon", "cinnamon":"cinnamon",
     "vanilj":"vanilla", "vanilla":"vanilla",
     "dill":"dill",
@@ -8060,7 +8060,7 @@ const ingredientCategories = {
     "crispy fried onion":"Pantry", "bulgur":"Pantry", "instant mashed potato":"Pantry",
     "brown gravy":"Pantry", "brown gravy mix":"Pantry", "lingonberry jam":"Pantry",
 
-    "thyme":"Herbs & Spices", "oregano":"Herbs & Spices", "curry":"Herbs & Spices",
+    "thyme":"Herbs & Spices", "oregano":"Herbs & Spices",
     "cinnamon":"Herbs & Spices", "vanilla":"Herbs & Spices",
     "dill":"Herbs & Spices", "rosemary":"Herbs & Spices", "lemon juice":"Herbs & Spices",
     "lemon pepper":"Herbs & Spices", "all-purpose seasoning":"Herbs & Spices",
@@ -9708,12 +9708,21 @@ const unitAliases = {
     "bunches":"bunch",
     "heads":"head",
     "sticks":"stick",
-    "burkar":"burk",
+    // Swedish "burk"/"burkar" means the same thing as English "can" —
+    // combine them so e.g. "5 burk tonfisk" and "2 cans tuna" add up
+    // on the same shopping list line instead of staying separate.
+    "burk":"can", "burkar":"can",
     "klyftor":"klyfta",
     "skivor":"skiva",
     "liter":"l",
     "krm":"kryddmått",
-    "potions":"portion"
+    "potions":"portion",
+    // Swedish spoon measures are the same units as their English
+    // names, just spelled differently — "msk" (matsked) = tablespoon,
+    // "tsk" (tesked) = teaspoon. Without this, "2 msk" and "2 tbsp"
+    // of the same ingredient showed as two separate lines.
+    "msk":"tbsp",
+    "tsk":"tsp"
 };
 
 // Normalizes a unit word to its canonical form so "cans"/"can",
