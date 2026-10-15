@@ -8,7 +8,7 @@
 // when you're online), and only fall back to the cached copy if that
 // fails — e.g. no signal, or airplane mode.
 
-const CACHE_NAME = "foodflow-cache-v1";
+const CACHE_NAME = "foodflow-cache-v2";
 
 self.addEventListener("install", () => {
     self.skipWaiting();
@@ -31,6 +31,11 @@ self.addEventListener("fetch", (event) => {
 
     // Only GET requests can be cached/replayed this way.
     if(event.request.method !== "GET") return;
+
+    // Only handle FoodFlow's own files and the Firebase library files.
+    // Live sync traffic to Firebase's servers must go straight through.
+    let url = new URL(event.request.url);
+    if(url.origin !== self.location.origin && url.hostname !== "www.gstatic.com") return;
 
     event.respondWith(
         caches.open(CACHE_NAME).then(async (cache) => {
