@@ -1776,6 +1776,9 @@ Share your planner, recipes and shopping list with your household. Everyone sees
 <div id="syncStatus" class="small" style="margin:6px 0;"></div>
 
 <div id="syncOffBlock">
+<button onclick="ffSyncRestore()">
+<span data-i18n="sync_restore">♻️ Restore data from before sync</span>
+</button>
 <button onclick="ffSyncCreate()">
 <span data-i18n="sync_create">➕ Create household</span>
 </button>
@@ -1792,6 +1795,9 @@ data-i18n-placeholder="sync_code_placeholder" placeholder="XXXX-XXXX-XXXX">
 <div style="font-size:20px;font-weight:600;letter-spacing:1px;margin:6px 0;" id="syncCodeDisplay"></div>
 <button onclick="ffSyncCopy()">
 <span data-i18n="sync_copy">📋 Copy code</span>
+</button>
+<button onclick="ffSyncRestore()">
+<span data-i18n="sync_restore">♻️ Restore data from before sync</span>
 </button>
 <button class="delete" onclick="ffSyncLeave()">
 <span data-i18n="sync_leave">🚪 Leave household</span>
@@ -2824,6 +2830,11 @@ const translations = {
         day_note_placeholder: "📝 Note (e.g. eating out, leftovers)",
         settings_shopping_categories: "🛒 Shopping List Order",
         shopping_category_order_description: "Reorder the categories to match how your store is laid out.",
+        sync_restore: "♻️ Restore data from before sync",
+        sync_restore_title: "Restore backup?",
+        sync_restore_message: "This puts back the planner, recipes and shopping list that were on this device before you created or joined a household.",
+        sync_restored: "Backup restored",
+        sync_no_backup: "No backup found on this device.",
         sync_title: "👨‍👩‍👧 Household Sync",
         sync_description: "Share your planner, recipes and shopping list with your household. Everyone sees changes live.",
         sync_create: "➕ Create household",
@@ -3097,6 +3108,11 @@ const translations = {
         day_note_placeholder: "📝 Anteckning (t.ex. äter ute, rester)",
         settings_shopping_categories: "🛒 Inköpslistans ordning",
         shopping_category_order_description: "Ändra ordningen på kategorierna så att den matchar din butik.",
+        sync_restore: "♻️ Återställ data från före synk",
+        sync_restore_title: "Återställa säkerhetskopia?",
+        sync_restore_message: "Detta återställer planering, recept och inköpslista som fanns på den här enheten innan du skapade eller gick med i ett hushåll.",
+        sync_restored: "Säkerhetskopia återställd",
+        sync_no_backup: "Ingen säkerhetskopia hittades på den här enheten.",
         sync_title: "👨‍👩‍👧 Hushållssynk",
         sync_description: "Dela din planering, dina recept och inköpslista med hushållet. Alla ser ändringar direkt.",
         sync_create: "➕ Skapa hushåll",
@@ -10474,18 +10490,14 @@ function onSnapshotData(snap){
         if(base[id] === data.v) return;                    // already in sync
         if(local[id] && local[id].v !== base[id]) return;  // we have newer local edits; push wins
         if(local[id] && local[id].v === data.v){ base[id] = data.v; return; }
+        if(local[id] && base[id] === undefined && (data.v === "[]" || data.v === "{}")){ return; } // never replace real data with an empty doc
         try{ applyRemote(data.k, data.e, data.v); base[id] = data.v; changed = true; }catch(e){}
     });
 
-    // First server-confirmed snapshot: drop things others deleted while we were away.
+    // First server-confirmed snapshot: connection is live. (We never delete
+    // local data from this snapshot - only explicit live deletions by others.)
     if(!snap.metadata.fromCache && !onSnapshotData.done){
         onSnapshotData.done = true;
-        for(const id of Object.keys(base)){
-            if(!remoteIds.has(id)){
-                const l = local[id];
-                if(l && l.v === base[id]){ removeRemote(l.k, l.e); delete base[id]; changed = true; }
-            }
-        }
         setStatus("on");
         schedulePush();
     }
@@ -10560,6 +10572,9 @@ window.ffSyncCreate = async function(){
     try{
         await ensureReady();
         const c = newCode();
+        const bk = {};
+        for(const k of Object.keys(SYNC_KEYS)) bk[k] = ls.get(k);
+        ls.set("foodflowPreJoinBackup", JSON.stringify(bk));
         await setDoc(doc(db, "households", c, "docs", "meta"), { created: serverTimestamp() });
         code = c; ls.set(CODE_KEY, c); base = {}; saveBase();
         setStatus("connecting");
@@ -10603,6 +10618,20 @@ window.ffSyncLeave = async function(){
     code = ""; ls.del(CODE_KEY); ls.del(BASE_KEY); base = {};
     setStatus("off");
     toast(tr("sync_left"));
+};
+
+window.ffSyncRestore = async function(){
+    const raw = ls.get("foodflowPreJoinBackup");
+    if(!raw){ toast(tr("sync_no_backup"), { type: "error" }); return; }
+    const ok = await customConfirm(tr("sync_restore_message"), tr("sync_restore_title"));
+    if(!ok) return;
+    const bk = parse(raw) || {};
+    for(const k of Object.keys(bk)){ if(bk[k] !== null) ls.set(k, bk[k]); }
+    // make the restored data count as new local edits so it syncs back up
+    base = {}; saveBase();
+    if(code) schedulePush();
+    toast(tr("sync_restored"));
+    setTimeout(() => location.reload(), 900);
 };
 
 window.ffSyncCopy = async function(){
