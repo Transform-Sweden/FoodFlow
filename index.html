@@ -10315,7 +10315,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {
     initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
-    collection, doc, getDoc, setDoc, writeBatch, onSnapshot, serverTimestamp
+    collection, doc, getDoc, getDocs, setDoc, writeBatch, onSnapshot, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -10359,6 +10359,7 @@ const ls = {
 
 let db = null, auth = null, unsub = null, code = ls.get(CODE_KEY) || "";
 let status = code ? "connecting" : "off";
+let ready = false;
 let pushTimer = null, reloadTimer = null, pendingReload = false, forceReload = false;
 let base = {};
 try { base = JSON.parse(ls.get(BASE_KEY) || "{}"); } catch(e){ base = {}; }
@@ -10405,13 +10406,13 @@ function removeRemote(k, e){
 
 // ---- pushing local changes up ----
 function schedulePush(){
-    if(!code || !db) return;
+    if(!code || !db || !ready) return;
     clearTimeout(pushTimer);
     pushTimer = setTimeout(pushLocal, 700);
 }
 
 async function pushLocal(){
-    if(!code || !db) return;
+    if(!code || !db || !ready) return;
     const local = localDocs();
     const col = collection(db, "households", code, "docs");
     let batch = writeBatch(db), n = 0;
@@ -10419,6 +10420,9 @@ async function pushLocal(){
     try{
         for(const [id, d] of Object.entries(local)){
             if(base[id] === d.v) continue;
+            // An empty list/object that was never synced is just an app default
+            // written at startup - never let it overwrite the household's data.
+            if(!(id in base) && (d.v === "[]" || d.v === "{}" || d.v === "null")) continue;
             batch.set(doc(col, id), { k: d.k, e: d.e, v: d.v, t: serverTimestamp() });
             base[id] = d.v;
             if(++n >= 400) await flush();
@@ -10488,7 +10492,8 @@ function onSnapshotData(snap){
         }
         if(!data || typeof data.v !== "string") return;
         if(base[id] === data.v) return;                    // already in sync
-        if(local[id] && local[id].v !== base[id]) return;  // we have newer local edits; push wins
+        const localIsEmptyDefault = local[id] && !(id in base) && (local[id].v === "[]" || local[id].v === "{}");
+        if(local[id] && local[id].v !== base[id] && !localIsEmptyDefault) return;  // we have newer local edits; push wins
         if(local[id] && local[id].v === data.v){ base[id] = data.v; return; }
         if(local[id] && base[id] === undefined && (data.v === "[]" || data.v === "{}")){ return; } // never replace real data with an empty doc
         try{ applyRemote(data.k, data.e, data.v); base[id] = data.v; changed = true; }catch(e){}
@@ -10498,6 +10503,7 @@ function onSnapshotData(snap){
     // local data from this snapshot - only explicit live deletions by others.)
     if(!snap.metadata.fromCache && !onSnapshotData.done){
         onSnapshotData.done = true;
+        ready = true;
         setStatus("on");
         schedulePush();
     }
@@ -10533,7 +10539,6 @@ async function start(){
     try{
         await ensureReady();
         attach();
-        schedulePush();
     }catch(err){
         console.warn("FoodFlow sync start failed", err);
         setStatus("error");
@@ -10578,6 +10583,7 @@ window.ffSyncCreate = async function(){
         await setDoc(doc(db, "households", c, "docs", "meta"), { created: serverTimestamp() });
         code = c; ls.set(CODE_KEY, c); base = {}; saveBase();
         setStatus("connecting");
+        ready = true;
         attach(); await pushLocal();
         toast(tr("sync_created"));
     }catch(err){
@@ -10598,14 +10604,22 @@ window.ffSyncJoin = async function(){
         const backup = {};
         for(const k of Object.keys(SYNC_KEYS)) backup[k] = ls.get(k);
         ls.set("foodflowPreJoinBackup", JSON.stringify(backup));
+        // fetch everything first and apply it in one go, so the app never
+        // starts up with half of the household's data
+        const all = await getDocs(collection(db, "households", c, "docs"));
         for(const k of Object.keys(SYNC_KEYS)) ls.del(k);
-        code = c; ls.set(CODE_KEY, c); base = {}; saveBase();
-        setStatus("connecting");
-        forceReload = true;
-        attach();
+        const newBase = {};
+        all.forEach(d => {
+            if(d.id === "meta") return;
+            const data = d.data();
+            if(!data || typeof data.v !== "string") return;
+            try{ applyRemote(data.k, data.e, data.v); newBase[d.id] = data.v; }catch(e){}
+        });
+        base = newBase; saveBase();
+        code = c; ls.set(CODE_KEY, c);
         toast(tr("sync_joined"));
-        // the first snapshot fills localStorage and reloads the page
-        setTimeout(() => { if(!pendingReload) scheduleReload(); }, 4000);
+        try { sessionStorage.setItem("ff_synced", "1"); } catch(e){}
+        setTimeout(() => location.reload(), 800);
     }catch(err){
         console.warn(err); toast(tr("sync_status_error"), { type: "error" });
     }
