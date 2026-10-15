@@ -1457,6 +1457,8 @@ bottom:90px;
 
 <p data-i18n="app_tagline">Plan • Shop • Cook</p>
 
+<p id="wsLabel" class="small" style="display:none;cursor:pointer;" onclick="openSettings()"></p>
+
 
 
 
@@ -1771,6 +1773,24 @@ Reorder the categories to match how your store is laid out.
 </p>
 
 <div id="categoryOrderList"></div>
+
+
+<h3 data-i18n="ws_title">
+📅 My Planners
+</h3>
+
+<p class="small" data-i18n="ws_description">
+Keep several separate planners on this device – for example a private one and one for each household – and switch between them.
+</p>
+
+<div id="wsList"></div>
+
+<div style="margin:8px 0 18px;">
+<input type="text" id="wsNewName" autocomplete="off" data-i18n-placeholder="ws_new_placeholder" placeholder="Name of new planner">
+<button onclick="ffWsNew()">
+<span data-i18n="ws_new">➕ New planner</span>
+</button>
+</div>
 
 
 <h3 data-i18n="sync_title">
@@ -2843,10 +2863,25 @@ const translations = {
         sync_restore_message: "This puts back the planner, recipes and shopping list that were on this device before you created or joined a household.",
         sync_restored: "Backup restored",
         sync_no_backup: "No backup found on this device.",
+        ws_title: "📅 My Planners",
+        ws_description: "Keep several separate planners on this device – for example a private one and one for each household – and switch between them.",
+        ws_default_name: "My planner",
+        ws_new_default_name: "New planner",
+        ws_household_default_name: "Household",
+        ws_new: "➕ New planner",
+        ws_new_placeholder: "Name of new planner",
+        ws_switch: "Switch",
+        ws_local_tag: "this device only",
+        ws_shared_tag: "shared",
+        ws_rename_prompt: "Name of this planner:",
+        ws_delete_title: "Delete planner?",
+        ws_delete_message: "This removes the planner from this device. A shared household stays in the cloud and can be joined again with its code.",
+        ws_cannot_delete_active: "Switch to another planner first.",
+        ws_already_joined: "You already have a planner for that household.",
         sync_title: "👨‍👩‍👧 Household Sync",
         sync_description: "Share your planner, recipes and shopping list with your household. Everyone sees changes live.",
         sync_create: "➕ Create household",
-        sync_join: "🔗 Join with code",
+        sync_join: "🔗 Join household as new planner",
         sync_copy: "📋 Copy code",
         sync_leave: "🚪 Leave household",
         sync_code_placeholder: "XXXX-XXXX-XXXX",
@@ -3121,10 +3156,25 @@ const translations = {
         sync_restore_message: "Detta återställer planering, recept och inköpslista som fanns på den här enheten innan du skapade eller gick med i ett hushåll.",
         sync_restored: "Säkerhetskopia återställd",
         sync_no_backup: "Ingen säkerhetskopia hittades på den här enheten.",
+        ws_title: "📅 Mina planeringar",
+        ws_description: "Ha flera separata planeringar på den här enheten – till exempel en privat och en för varje hushåll – och byt mellan dem.",
+        ws_default_name: "Min planering",
+        ws_new_default_name: "Ny planering",
+        ws_household_default_name: "Hushåll",
+        ws_new: "➕ Ny planering",
+        ws_new_placeholder: "Namn på ny planering",
+        ws_switch: "Byt",
+        ws_local_tag: "bara den här enheten",
+        ws_shared_tag: "delad",
+        ws_rename_prompt: "Namn på den här planeringen:",
+        ws_delete_title: "Ta bort planering?",
+        ws_delete_message: "Detta tar bort planeringen från den här enheten. Ett delat hushåll finns kvar i molnet och kan anslutas igen med sin kod.",
+        ws_cannot_delete_active: "Byt till en annan planering först.",
+        ws_already_joined: "Du har redan en planering för det hushållet.",
         sync_title: "👨‍👩‍👧 Hushållssynk",
         sync_description: "Dela din planering, dina recept och inköpslista med hushållet. Alla ser ändringar direkt.",
         sync_create: "➕ Skapa hushåll",
-        sync_join: "🔗 Gå med via kod",
+        sync_join: "🔗 Gå med i hushåll som ny planering",
         sync_copy: "📋 Kopiera kod",
         sync_leave: "🚪 Lämna hushållet",
         sync_code_placeholder: "XXXX-XXXX-XXXX",
@@ -10366,6 +10416,9 @@ const SYNC_KEYS = {
     foodflowCategoryOrder: "whole",
     foodflowWeekTemplates: "whole"
 };
+const WS_KEY = "foodflowWorkspaces";
+const WS_PREFIX = "foodflowWS_";
+let switching = false;
 const SHORT = k => k.replace(/^foodflow/, "");
 
 const origSet = Storage.prototype.setItem;
@@ -10425,7 +10478,7 @@ function removeRemote(k, e){
 
 // ---- pushing local changes up ----
 function schedulePush(){
-    if(!code || !db || !ready) return;
+    if(!code || !db || !ready || switching) return;
     clearTimeout(pushTimer);
     pushTimer = setTimeout(pushLocal, 700);
 }
@@ -10570,6 +10623,112 @@ async function start(){
     }
 }
 
+// ---- several planners on one device ----
+// The active planner's data lives in the normal localStorage keys (so the rest of
+// the app doesn't need to know). Inactive planners are stored as snapshots.
+const WS_DATA_KEYS = [...Object.keys(SYNC_KEYS), "foodflowShoppingRemoved", "foodflowShoppingRangeStart", "foodflowShoppingRangeEnd", BASE_KEY];
+
+function saveWS(w){ ls.set(WS_KEY, JSON.stringify(w)); }
+function loadWS(){
+    let w = parse(ls.get(WS_KEY));
+    if(!w || !Array.isArray(w.list) || !w.list.length){
+        w = { active: "main", list: [{ id: "main", name: null, code: code || null }] };
+    }
+    let a = w.list.find(x => x.id === w.active);
+    if(!a){ a = w.list[0]; w.active = a.id; }
+    a.code = code || null;
+    saveWS(w);
+    return w;
+}
+function updateActiveWsCode(){ loadWS(); renderSyncSettings(); }
+const wsName = x => x.name || tr("ws_default_name");
+
+async function switchTo(id){
+    const w = loadWS();
+    if(id === w.active) return;
+    const target = w.list.find(x => x.id === id);
+    if(!target) return;
+    switching = true;
+    clearTimeout(pushTimer);
+    try{ if(code && db && ready) await Promise.race([pushLocal(), new Promise(r => setTimeout(r, 3000))]); }catch(e){}
+    const snap = {};
+    for(const k of WS_DATA_KEYS){ const v = ls.get(k); if(v !== null) snap[k] = v; }
+    ls.set(WS_PREFIX + w.active, JSON.stringify(snap));
+    if(unsub){ unsub(); unsub = null; }
+    for(const k of WS_DATA_KEYS) ls.del(k);
+    const ts = parse(ls.get(WS_PREFIX + id)) || {};
+    for(const k of Object.keys(ts)) ls.set(k, ts[k]);
+    if(target.code) ls.set(CODE_KEY, target.code); else ls.del(CODE_KEY);
+    w.active = id; saveWS(w);
+    try { sessionStorage.removeItem("ff_week"); sessionStorage.removeItem("ff_scroll"); } catch(e){}
+    location.reload();
+}
+
+window.ffWsSwitch = id => switchTo(id);
+
+window.ffWsNew = async function(){
+    const input = document.getElementById("wsNewName");
+    const name = (input.value || "").trim() || tr("ws_new_default_name");
+    const w = loadWS();
+    const id = "ws" + Date.now().toString(36);
+    w.list.push({ id, name, code: null });
+    saveWS(w);
+    ls.set(WS_PREFIX + id, "{}");
+    input.value = "";
+    await switchTo(id);
+};
+
+window.ffWsRename = function(id){
+    const w = loadWS();
+    const x = w.list.find(y => y.id === id);
+    if(!x) return;
+    const n = prompt(tr("ws_rename_prompt"), wsName(x));
+    if(n === null) return;
+    x.name = n.trim() || null;
+    saveWS(w);
+    renderSyncSettings();
+};
+
+window.ffWsDelete = async function(id){
+    const w = loadWS();
+    if(id === w.active){ toast(tr("ws_cannot_delete_active"), { type: "error" }); return; }
+    if(w.list.length <= 1) return;
+    const ok = await customConfirm(tr("ws_delete_message"), tr("ws_delete_title"));
+    if(!ok) return;
+    w.list = w.list.filter(x => x.id !== id);
+    saveWS(w);
+    ls.del(WS_PREFIX + id);
+    renderSyncSettings();
+};
+
+function renderWorkspaces(){
+    const box = document.getElementById("wsList");
+    const label = document.getElementById("wsLabel");
+    if(!box) return;
+    const w = loadWS();
+    box.textContent = "";
+    w.list.forEach(x => {
+        const row = document.createElement("div");
+        row.style.cssText = "display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0;";
+        const nm = document.createElement("strong");
+        nm.textContent = (x.id === w.active ? "✓ " : "") + wsName(x);
+        const tag = document.createElement("span");
+        tag.className = "small";
+        tag.textContent = x.code ? "👨‍👩‍👧 " + tr("ws_shared_tag") : "💻 " + tr("ws_local_tag");
+        row.append(nm, tag);
+        const mk = (txt, fn, cls) => { const b = document.createElement("button"); b.textContent = txt; if(cls) b.className = cls; b.onclick = fn; row.append(b); };
+        if(x.id !== w.active) mk(tr("ws_switch"), () => switchTo(x.id));
+        mk("✏️", () => window.ffWsRename(x.id));
+        if(x.id !== w.active && w.list.length > 1) mk("🗑️", () => window.ffWsDelete(x.id), "delete");
+        box.append(row);
+    });
+    if(label){
+        const a = w.list.find(x => x.id === w.active);
+        label.style.display = w.list.length > 1 ? "" : "none";
+        label.textContent = "📅 " + wsName(a);
+    }
+}
+
 // ---- settings UI ----
 const fmt = c => c.replace(/(.{4})(?=.)/g, "$1-");
 const normalize = s => (s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -10579,6 +10738,7 @@ function setStatus(s){ status = s; renderSyncSettings(); }
 function renderSyncSettings(){
     const st = document.getElementById("syncStatus");
     if(!st) return;
+    renderWorkspaces();
     const on = !!code;
     document.getElementById("syncOffBlock").style.display = on ? "none" : "";
     document.getElementById("syncOnBlock").style.display = on ? "" : "none";
@@ -10606,7 +10766,7 @@ window.ffSyncCreate = async function(){
         for(const k of Object.keys(SYNC_KEYS)) bk[k] = ls.get(k);
         ls.set("foodflowPreJoinBackup", JSON.stringify(bk));
         await setDoc(doc(db, "households", c, "docs", "meta"), { created: serverTimestamp() });
-        code = c; ls.set(CODE_KEY, c); base = {}; saveBase();
+        code = c; ls.set(CODE_KEY, c); base = {}; saveBase(); updateActiveWsCode();
         setStatus("connecting");
         ready = true;
         attach(); await pushLocal();
@@ -10620,31 +10780,34 @@ window.ffSyncJoin = async function(){
     const c = normalize(document.getElementById("syncJoinCode").value);
     if(c.length !== 12){ toast(tr("sync_invalid_code"), { type: "error" }); return; }
     try{
+        const w = loadWS();
+        const existing = w.list.find(x => x.code === c);
+        if(existing){ toast(tr("ws_already_joined"), { type: "error" }); return; }
         await ensureReady();
         const snap = await getDoc(doc(db, "households", c, "docs", "meta"));
         if(!snap.exists()){ toast(tr("sync_not_found"), { type: "error" }); return; }
-        const ok = await customConfirm(tr("sync_join_message"), tr("sync_join_title"));
-        if(!ok) return;
-        // keep a safety copy of this device's data, then start from the household's data
-        const backup = {};
-        for(const k of Object.keys(SYNC_KEYS)) backup[k] = ls.get(k);
-        ls.set("foodflowPreJoinBackup", JSON.stringify(backup));
-        // fetch everything first and apply it in one go, so the app never
-        // starts up with half of the household's data
+        // download the household's data into a brand-new planner, leaving the current one untouched
         const all = await getDocs(collection(db, "households", c, "docs"));
-        for(const k of Object.keys(SYNC_KEYS)) ls.del(k);
-        const newBase = {};
+        const data = {}, newBase = {};
         all.forEach(d => {
             if(d.id === "meta") return;
-            const data = d.data();
-            if(!data || typeof data.v !== "string") return;
-            try{ applyRemote(data.k, data.e, data.v); newBase[d.id] = data.v; }catch(e){}
+            const x = d.data();
+            if(!x || typeof x.v !== "string") return;
+            try{
+                const val = JSON.parse(x.v);
+                if(x.e === null) data[x.k] = JSON.stringify(val);
+                else { const cur = parse(data[x.k]) || {}; cur[x.e] = val; data[x.k] = JSON.stringify(cur); }
+                newBase[d.id] = x.v;
+            }catch(e){}
         });
-        base = newBase; saveBase();
-        code = c; ls.set(CODE_KEY, c);
+        data[BASE_KEY] = JSON.stringify(newBase);
+        const id = "ws" + Date.now().toString(36);
+        ls.set(WS_PREFIX + id, JSON.stringify(data));
+        w.list.push({ id, name: tr("ws_household_default_name") + " " + fmt(c).slice(0, 4), code: c });
+        saveWS(w);
+        document.getElementById("syncJoinCode").value = "";
         toast(tr("sync_joined"));
-        try { sessionStorage.setItem("ff_synced", "1"); } catch(e){}
-        setTimeout(() => location.reload(), 800);
+        await switchTo(id);
     }catch(err){
         console.warn(err); toast(tr("sync_status_error"), { type: "error" });
     }
@@ -10654,7 +10817,7 @@ window.ffSyncLeave = async function(){
     const ok = await customConfirm(tr("sync_leave_message"), tr("sync_leave_title"));
     if(!ok) return;
     if(unsub){ unsub(); unsub = null; }
-    code = ""; ls.del(CODE_KEY); ls.del(BASE_KEY); base = {};
+    code = ""; ls.del(CODE_KEY); ls.del(BASE_KEY); base = {}; updateActiveWsCode();
     setStatus("off");
     toast(tr("sync_left"));
 };
@@ -10691,6 +10854,7 @@ try{
     }
 }catch(e){}
 
+loadWS();
 renderSyncSettings();
 start();
 window.addEventListener("online", () => { if(code) schedulePush(); });
