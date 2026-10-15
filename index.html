@@ -1765,6 +1765,40 @@ Reorder the categories to match how your store is laid out.
 <div id="categoryOrderList"></div>
 
 
+<h3 data-i18n="sync_title">
+👨‍👩‍👧 Household Sync
+</h3>
+
+<p class="small" data-i18n="sync_description">
+Share your planner, recipes and shopping list with your household. Everyone sees changes live.
+</p>
+
+<div id="syncStatus" class="small" style="margin:6px 0;"></div>
+
+<div id="syncOffBlock">
+<button onclick="ffSyncCreate()">
+<span data-i18n="sync_create">➕ Create household</span>
+</button>
+<div style="margin-top:8px;">
+<input type="text" id="syncJoinCode" autocomplete="off" autocapitalize="characters" spellcheck="false"
+data-i18n-placeholder="sync_code_placeholder" placeholder="XXXX-XXXX-XXXX">
+<button onclick="ffSyncJoin()">
+<span data-i18n="sync_join">🔗 Join with code</span>
+</button>
+</div>
+</div>
+
+<div id="syncOnBlock" style="display:none;">
+<div style="font-size:20px;font-weight:600;letter-spacing:1px;margin:6px 0;" id="syncCodeDisplay"></div>
+<button onclick="ffSyncCopy()">
+<span data-i18n="sync_copy">📋 Copy code</span>
+</button>
+<button class="delete" onclick="ffSyncLeave()">
+<span data-i18n="sync_leave">🚪 Leave household</span>
+</button>
+</div>
+
+
 <h3 data-i18n="settings_backup">
 💾 Backup
 </h3>
@@ -2790,6 +2824,28 @@ const translations = {
         day_note_placeholder: "📝 Note (e.g. eating out, leftovers)",
         settings_shopping_categories: "🛒 Shopping List Order",
         shopping_category_order_description: "Reorder the categories to match how your store is laid out.",
+        sync_title: "👨‍👩‍👧 Household Sync",
+        sync_description: "Share your planner, recipes and shopping list with your household. Everyone sees changes live.",
+        sync_create: "➕ Create household",
+        sync_join: "🔗 Join with code",
+        sync_copy: "📋 Copy code",
+        sync_leave: "🚪 Leave household",
+        sync_code_placeholder: "XXXX-XXXX-XXXX",
+        sync_status_off: "Not shared – your data stays on this device only.",
+        sync_status_on: "Shared – your household code is:",
+        sync_status_connecting: "Connecting…",
+        sync_status_error: "Sync problem – will retry. Your data is safe on this device.",
+        sync_created: "Household created. Share the code with the others.",
+        sync_joined: "Joined household – loading shared data…",
+        sync_left: "You left the household. Data stays on this device.",
+        sync_copied: "Code copied",
+        sync_invalid_code: "That code isn't valid. It should look like XXXX-XXXX-XXXX.",
+        sync_not_found: "No household found with that code.",
+        sync_join_title: "Join household?",
+        sync_join_message: "This replaces the planner, recipes and shopping list on this device with the household's data. A backup of your current data is kept on this device.",
+        sync_leave_title: "Leave household?",
+        sync_leave_message: "This device stops syncing. Your data stays here, but changes won't be shared anymore.",
+        sync_updated: "Updated by your household",
         settings_backup: "💾 Backup",
         backup_description: "Your data lives only in this browser. Export it now and then to keep a safe copy, or to move it to another device.",
         export_data: "⬇️ Export Data",
@@ -3041,6 +3097,28 @@ const translations = {
         day_note_placeholder: "📝 Anteckning (t.ex. äter ute, rester)",
         settings_shopping_categories: "🛒 Inköpslistans ordning",
         shopping_category_order_description: "Ändra ordningen på kategorierna så att den matchar din butik.",
+        sync_title: "👨‍👩‍👧 Hushållssynk",
+        sync_description: "Dela din planering, dina recept och inköpslista med hushållet. Alla ser ändringar direkt.",
+        sync_create: "➕ Skapa hushåll",
+        sync_join: "🔗 Gå med via kod",
+        sync_copy: "📋 Kopiera kod",
+        sync_leave: "🚪 Lämna hushållet",
+        sync_code_placeholder: "XXXX-XXXX-XXXX",
+        sync_status_off: "Inte delad – din data finns bara på den här enheten.",
+        sync_status_on: "Delad – din hushållskod är:",
+        sync_status_connecting: "Ansluter…",
+        sync_status_error: "Synkproblem – försöker igen. Din data är säker på den här enheten.",
+        sync_created: "Hushåll skapat. Dela koden med de andra.",
+        sync_joined: "Gick med i hushållet – hämtar delad data…",
+        sync_left: "Du lämnade hushållet. Datan finns kvar på den här enheten.",
+        sync_copied: "Koden kopierad",
+        sync_invalid_code: "Koden är ogiltig. Den ska se ut som XXXX-XXXX-XXXX.",
+        sync_not_found: "Inget hushåll hittades med den koden.",
+        sync_join_title: "Gå med i hushåll?",
+        sync_join_message: "Detta ersätter planering, recept och inköpslista på den här enheten med hushållets data. En säkerhetskopia av din nuvarande data sparas på enheten.",
+        sync_leave_title: "Lämna hushållet?",
+        sync_leave_message: "Den här enheten slutar synka. Din data finns kvar, men ändringar delas inte längre.",
+        sync_updated: "Uppdaterad av ditt hushåll",
         settings_backup: "💾 Säkerhetskopia",
         backup_description: "Din data finns bara i den här webbläsaren. Exportera då och då för att ha en säker kopia, eller för att flytta den till en annan enhet.",
         export_data: "⬇️ Exportera data",
@@ -3323,6 +3401,8 @@ function applyTranslations(){
     });
 
     document.documentElement.lang = currentLanguage;
+
+    if(window.renderSyncSettings) window.renderSyncSettings();
 
 }
 
@@ -6450,6 +6530,7 @@ const foodflowStorageKeys = [
     "foodflowShoppingRangeEnd",
     "foodflowCategoryOrder",
     "foodflowCustomIngredientTranslations",
+    "foodflowCustomIngredientCategories",
     "foodflowDayNotes",
     "foodflowWeekTemplates",
     "foodflowWeekNames"
@@ -10202,6 +10283,349 @@ renderRecipes();
 renderShoppingList();
 
 
+</script>
+
+<script type="module">
+// =======================
+// HOUSEHOLD SYNC (Firebase Firestore, free Spark plan)
+// =======================
+// Your data still lives in localStorage and the app works exactly as
+// before. When a household code is set, every change is also copied to
+// Firestore (split into small documents so people editing different
+// things don't overwrite each other) and changes from others are copied
+// back in and shown live.
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {
+    initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+    collection, doc, getDoc, setDoc, writeBatch, onSnapshot, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCbtUYkhZUxF3iZZeDe40S1qlyi5c5bNtM",
+    authDomain: "foodflow-84bf9.firebaseapp.com",
+    projectId: "foodflow-84bf9",
+    storageBucket: "foodflow-84bf9.firebasestorage.app",
+    messagingSenderId: "760720420185",
+    appId: "1:760720420185:web:929f3e308dd9c193a7f048"
+};
+
+const CODE_KEY = "foodflowHouseholdCode";
+const BASE_KEY = "foodflowSyncBase";
+
+// Which localStorage keys are shared. "map" keys hold an object whose
+// entries (a week, a day note, a translation…) each become their own
+// document; "whole" keys are stored as one document.
+const SYNC_KEYS = {
+    foodflowWeeks: "map",
+    foodflowShoppingCheckedByWeek: "map",
+    foodflowShoppingOverridesByWeek: "map",
+    foodflowShoppingExtrasByWeek: "map",
+    foodflowDayNotes: "map",
+    foodflowWeekNames: "map",
+    foodflowCustomIngredientTranslations: "map",
+    foodflowCustomIngredientCategories: "map",
+    foodflowRecipes: "whole",
+    foodflowCategories: "whole",
+    foodflowCategoryOrder: "whole",
+    foodflowWeekTemplates: "whole"
+};
+const SHORT = k => k.replace(/^foodflow/, "");
+
+const origSet = Storage.prototype.setItem;
+const origRemove = Storage.prototype.removeItem;
+const ls = {
+    get: k => localStorage.getItem(k),
+    set: (k, v) => origSet.call(localStorage, k, v),
+    del: k => origRemove.call(localStorage, k)
+};
+
+let db = null, auth = null, unsub = null, code = ls.get(CODE_KEY) || "";
+let status = code ? "connecting" : "off";
+let pushTimer = null, reloadTimer = null, pendingReload = false, forceReload = false;
+let base = {};
+try { base = JSON.parse(ls.get(BASE_KEY) || "{}"); } catch(e){ base = {}; }
+const saveBase = () => { try { ls.set(BASE_KEY, JSON.stringify(base)); } catch(e){} };
+
+const tr = k => (typeof t === "function" ? t(k) : k);
+const toast = (m, o) => { if (typeof showToast === "function") showToast(m, o); };
+
+function parse(v){ try { return v ? JSON.parse(v) : null; } catch(e){ return null; } }
+const isObj = x => x && typeof x === "object" && !Array.isArray(x);
+const docId = (k, e) => e === null ? SHORT(k) : SHORT(k) + "~" + encodeURIComponent(e);
+
+// Everything shared, as { docId: {k, e, v} } where v is a JSON string.
+function localDocs(){
+    const out = {};
+    for(const k of Object.keys(SYNC_KEYS)){
+        const raw = ls.get(k);
+        if(raw === null) continue;
+        const val = parse(raw);
+        if(SYNC_KEYS[k] === "map" && isObj(val)){
+            for(const e of Object.keys(val)){
+                out[docId(k, e)] = { k, e, v: JSON.stringify(val[e]) };
+            }
+        }else if(val !== null){
+            out[docId(k, null)] = { k, e: null, v: JSON.stringify(val) };
+        }
+    }
+    return out;
+}
+
+function applyRemote(k, e, v){
+    const val = JSON.parse(v);
+    if(e === null){ ls.set(k, JSON.stringify(val)); return; }
+    let cur = parse(ls.get(k));
+    if(!isObj(cur)) cur = {};
+    cur[e] = val;
+    ls.set(k, JSON.stringify(cur));
+}
+function removeRemote(k, e){
+    if(e === null) return;
+    const cur = parse(ls.get(k));
+    if(isObj(cur) && e in cur){ delete cur[e]; ls.set(k, JSON.stringify(cur)); }
+}
+
+// ---- pushing local changes up ----
+function schedulePush(){
+    if(!code || !db) return;
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(pushLocal, 700);
+}
+
+async function pushLocal(){
+    if(!code || !db) return;
+    const local = localDocs();
+    const col = collection(db, "households", code, "docs");
+    let batch = writeBatch(db), n = 0;
+    const flush = async () => { if(n){ const b = batch; batch = writeBatch(db); n = 0; await b.commit(); } };
+    try{
+        for(const [id, d] of Object.entries(local)){
+            if(base[id] === d.v) continue;
+            batch.set(doc(col, id), { k: d.k, e: d.e, v: d.v, t: serverTimestamp() });
+            base[id] = d.v;
+            if(++n >= 400) await flush();
+        }
+        for(const id of Object.keys(base)){
+            if(!(id in local)){
+                batch.delete(doc(col, id));
+                delete base[id];
+                if(++n >= 400) await flush();
+            }
+        }
+        saveBase();
+        await flush();
+    }catch(err){
+        console.warn("FoodFlow sync push failed", err);
+        base = parse(ls.get(BASE_KEY)) || {};
+        setStatus("error");
+    }
+}
+
+// Any write to a shared key from the app triggers a push.
+Storage.prototype.setItem = function(key, value){
+    origSet.call(this, key, value);
+    if(this === localStorage && key in SYNC_KEYS) schedulePush();
+};
+Storage.prototype.removeItem = function(key){
+    origRemove.call(this, key);
+    if(this === localStorage && key in SYNC_KEYS) schedulePush();
+};
+
+// ---- pulling remote changes down ----
+function modalOpenOrTyping(){
+    const a = document.activeElement;
+    if(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return true;
+    return [...document.querySelectorAll(".modal")].some(m => getComputedStyle(m).display !== "none");
+}
+
+function scheduleReload(){
+    pendingReload = true;
+    clearTimeout(reloadTimer);
+    const tick = () => {
+        if(!pendingReload) return;
+        if(!forceReload && modalOpenOrTyping()){ reloadTimer = setTimeout(tick, 2000); return; }
+        try { sessionStorage.setItem("ff_scroll", String(window.scrollY)); sessionStorage.setItem("ff_synced", "1"); } catch(e){}
+        location.reload();
+    };
+    reloadTimer = setTimeout(tick, 600);
+}
+
+function onSnapshotData(snap){
+    let changed = false;
+    const local = localDocs();
+    const remoteIds = new Set();
+
+    snap.forEach(d => { if(d.id !== "meta") remoteIds.add(d.id); });
+
+    snap.docChanges().forEach(ch => {
+        const id = ch.doc.id;
+        if(id === "meta") return;
+        if(ch.doc.metadata.hasPendingWrites) return;      // our own write echoing back
+        const data = ch.doc.data();
+        if(ch.type === "removed"){
+            if(local[id] && local[id].v === base[id]){
+                removeRemote(data.k, data.e); delete base[id]; changed = true;
+            }
+            return;
+        }
+        if(!data || typeof data.v !== "string") return;
+        if(base[id] === data.v) return;                    // already in sync
+        if(local[id] && local[id].v !== base[id]) return;  // we have newer local edits; push wins
+        if(local[id] && local[id].v === data.v){ base[id] = data.v; return; }
+        try{ applyRemote(data.k, data.e, data.v); base[id] = data.v; changed = true; }catch(e){}
+    });
+
+    // First server-confirmed snapshot: drop things others deleted while we were away.
+    if(!snap.metadata.fromCache && !onSnapshotData.done){
+        onSnapshotData.done = true;
+        for(const id of Object.keys(base)){
+            if(!remoteIds.has(id)){
+                const l = local[id];
+                if(l && l.v === base[id]){ removeRemote(l.k, l.e); delete base[id]; changed = true; }
+            }
+        }
+        setStatus("on");
+        schedulePush();
+    }
+    saveBase();
+    if(changed) scheduleReload();
+}
+
+function attach(){
+    if(unsub){ unsub(); unsub = null; }
+    onSnapshotData.done = false;
+    unsub = onSnapshot(
+        collection(db, "households", code, "docs"),
+        onSnapshotData,
+        err => { console.warn("FoodFlow sync listener error", err); setStatus("error"); }
+    );
+}
+
+async function ensureReady(){
+    if(!db){
+        const app = initializeApp(firebaseConfig);
+        try{
+            db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+        }catch(e){
+            db = initializeFirestore(app, {});
+        }
+        auth = getAuth(app);
+    }
+    if(!auth.currentUser) await signInAnonymously(auth);
+}
+
+async function start(){
+    if(!code) return;
+    try{
+        await ensureReady();
+        attach();
+        schedulePush();
+    }catch(err){
+        console.warn("FoodFlow sync start failed", err);
+        setStatus("error");
+    }
+}
+
+// ---- settings UI ----
+const fmt = c => c.replace(/(.{4})(?=.)/g, "$1-");
+const normalize = s => (s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+function setStatus(s){ status = s; renderSyncSettings(); }
+
+function renderSyncSettings(){
+    const st = document.getElementById("syncStatus");
+    if(!st) return;
+    const on = !!code;
+    document.getElementById("syncOffBlock").style.display = on ? "none" : "";
+    document.getElementById("syncOnBlock").style.display = on ? "" : "none";
+    document.getElementById("syncCodeDisplay").textContent = on ? fmt(code) : "";
+    st.textContent =
+        !on ? tr("sync_status_off") :
+        status === "error" ? tr("sync_status_error") :
+        status === "connecting" ? tr("sync_status_connecting") :
+        tr("sync_status_on");
+}
+window.renderSyncSettings = renderSyncSettings;
+
+function newCode(){
+    const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const b = new Uint8Array(12);
+    crypto.getRandomValues(b);
+    return [...b].map(x => A[x % A.length]).join("");
+}
+
+window.ffSyncCreate = async function(){
+    try{
+        await ensureReady();
+        const c = newCode();
+        await setDoc(doc(db, "households", c, "docs", "meta"), { created: serverTimestamp() });
+        code = c; ls.set(CODE_KEY, c); base = {}; saveBase();
+        setStatus("connecting");
+        attach(); await pushLocal();
+        toast(tr("sync_created"));
+    }catch(err){
+        console.warn(err); toast(tr("sync_status_error"), { type: "error" });
+    }
+};
+
+window.ffSyncJoin = async function(){
+    const c = normalize(document.getElementById("syncJoinCode").value);
+    if(c.length !== 12){ toast(tr("sync_invalid_code"), { type: "error" }); return; }
+    try{
+        await ensureReady();
+        const snap = await getDoc(doc(db, "households", c, "docs", "meta"));
+        if(!snap.exists()){ toast(tr("sync_not_found"), { type: "error" }); return; }
+        const ok = await customConfirm(tr("sync_join_message"), tr("sync_join_title"));
+        if(!ok) return;
+        // keep a safety copy of this device's data, then start from the household's data
+        const backup = {};
+        for(const k of Object.keys(SYNC_KEYS)) backup[k] = ls.get(k);
+        ls.set("foodflowPreJoinBackup", JSON.stringify(backup));
+        for(const k of Object.keys(SYNC_KEYS)) ls.del(k);
+        code = c; ls.set(CODE_KEY, c); base = {}; saveBase();
+        setStatus("connecting");
+        forceReload = true;
+        attach();
+        toast(tr("sync_joined"));
+        // the first snapshot fills localStorage and reloads the page
+        setTimeout(() => { if(!pendingReload) scheduleReload(); }, 4000);
+    }catch(err){
+        console.warn(err); toast(tr("sync_status_error"), { type: "error" });
+    }
+};
+
+window.ffSyncLeave = async function(){
+    const ok = await customConfirm(tr("sync_leave_message"), tr("sync_leave_title"));
+    if(!ok) return;
+    if(unsub){ unsub(); unsub = null; }
+    code = ""; ls.del(CODE_KEY); ls.del(BASE_KEY); base = {};
+    setStatus("off");
+    toast(tr("sync_left"));
+};
+
+window.ffSyncCopy = async function(){
+    try{ await navigator.clipboard.writeText(fmt(code)); toast(tr("sync_copied")); }
+    catch(e){ prompt("", fmt(code)); }
+};
+
+// restore scroll after a sync-triggered reload
+try{
+    const y = sessionStorage.getItem("ff_scroll");
+    if(y !== null){
+        sessionStorage.removeItem("ff_scroll");
+        requestAnimationFrame(() => window.scrollTo(0, Number(y)));
+    }
+    if(sessionStorage.getItem("ff_synced")){
+        sessionStorage.removeItem("ff_synced");
+        setTimeout(() => toast(tr("sync_updated")), 400);
+    }
+}catch(e){}
+
+renderSyncSettings();
+start();
+window.addEventListener("online", () => { if(code) schedulePush(); });
 </script>
 
 </body>
