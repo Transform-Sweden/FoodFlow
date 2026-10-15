@@ -458,6 +458,14 @@ padding-right:5px;
 
 font-weight:bold;
 
+/* Always one line, so every meal card has the same height. A long
+category name (e.g. "Breakfast") is shortened with "..." instead of
+pushing its emoji onto a separate row. */
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis;
+font-size:0.95em;
+
 }
 
 
@@ -4418,7 +4426,18 @@ let weeks = JSON.parse(
     localStorage.getItem("foodflowWeeks")
 ) || null;
 
-let currentWeekKey = getMondayKey(new Date());
+// After a live-sync refresh, stay on the week being worked on
+// instead of jumping back to the current week.
+let currentWeekKey = (function(){
+    try{
+        let k = sessionStorage.getItem("ff_week");
+        if(k){
+            sessionStorage.removeItem("ff_week");
+            if(/^\d{4}-\d{2}-\d{2}$/.test(k)) return k;
+        }
+    }catch(e){}
+    return getMondayKey(new Date());
+})();
 
 if(weeks === null){
 
@@ -5586,7 +5605,7 @@ if(meals[day] && meals[day].length > 0){
 
         box.innerHTML = `
 
-        <div class="meal-title">
+        <div class="meal-title" title="${meal.type}">
 
         ${meal.type}
 
@@ -10466,7 +10485,7 @@ function scheduleReload(){
     const tick = () => {
         if(!pendingReload) return;
         if(!forceReload && modalOpenOrTyping()){ reloadTimer = setTimeout(tick, 2000); return; }
-        try { sessionStorage.setItem("ff_scroll", String(window.scrollY)); sessionStorage.setItem("ff_synced", "1"); } catch(e){}
+        try { sessionStorage.setItem("ff_scroll", String(window.scrollY)); sessionStorage.setItem("ff_synced", "1"); if(typeof currentWeekKey === "string") sessionStorage.setItem("ff_week", currentWeekKey); } catch(e){}
         location.reload();
     };
     reloadTimer = setTimeout(tick, 600);
