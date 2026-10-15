@@ -10513,9 +10513,15 @@ function onSnapshotData(snap){
 
 function attach(){
     if(unsub){ unsub(); unsub = null; }
+    // safety net: if the server can't be confirmed within 10s (slow or offline),
+    // start queueing uploads anyway - Firestore sends them when the connection is back.
+    setTimeout(() => { if(code && !ready){ ready = true; setStatus("on"); schedulePush(); } }, 10000);
     onSnapshotData.done = false;
+    // includeMetadataChanges: we need the "now in sync with the server" event
+    // even when no documents changed, otherwise this device never starts uploading.
     unsub = onSnapshot(
         collection(db, "households", code, "docs"),
+        { includeMetadataChanges: true },
         onSnapshotData,
         err => { console.warn("FoodFlow sync listener error", err); setStatus("error"); }
     );
