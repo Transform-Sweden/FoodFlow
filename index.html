@@ -1440,6 +1440,65 @@ bottom:90px;
 
 
 
+/* SETTINGS MENU (collapsible sections) + hamburger button */
+
+header { position:relative; }
+
+.menu-btn {
+position:absolute;
+top:18px;
+/* lines up with the left edge of the page content, also on wide screens */
+left:max(12px, calc((100% - 1200px) / 2 + 12px));
+width:44px;
+height:44px;
+padding:0;
+margin:0;
+display:flex;
+align-items:center;
+justify-content:center;
+background:transparent;
+background-image:none;
+box-shadow:none;
+color:var(--text);
+border-radius:12px;
+}
+
+.menu-btn:hover { background:rgba(120,120,120,.16); background-image:none; box-shadow:none; filter:none; }
+.menu-btn:active { background:rgba(120,120,120,.26); }
+
+.menu-btn svg { width:26px; height:26px; display:block; }
+
+.settings-section {
+border-bottom:1px solid rgba(120,120,120,.25);
+}
+
+.settings-section > summary {
+list-style:none;
+cursor:pointer;
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:14px 4px;
+user-select:none;
+}
+
+.settings-section > summary::-webkit-details-marker { display:none; }
+
+.settings-section > summary h3 {
+margin:0;
+font-size:1.05em;
+}
+
+.settings-section > summary::after {
+content:"▾";
+opacity:.6;
+transition:transform .2s ease;
+}
+
+.settings-section[open] > summary::after { transform:rotate(180deg); }
+
+.settings-section .section-body { padding:0 4px 16px; }
+
 </style>
 
 
@@ -1462,10 +1521,8 @@ bottom:90px;
 
 
 
-<button onclick="openSettings()">
-
-<span data-i18n="settings_button">⚙️ Settings</span>
-
+<button class="menu-btn" onclick="openSettings()" data-i18n-aria-label="settings_button" aria-label="Settings">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
 </button>
 
 
@@ -1663,122 +1720,11 @@ oninput="renderShoppingList()"
 
 
 
-<h3 data-i18n="settings_language">
-🌍 Language
-</h3>
-
-    
-<button onclick="changeLanguage('en')">
-
-🇬🇧 English
-
-</button>
-    
-
-<button onclick="changeLanguage('sv')">
-
-🇸🇪 Svenska
-
-</button>
-
-
-
-
-
-
-
-
-<h3 data-i18n="settings_theme">
-🎨 Theme
-</h3>
-
-
-<button onclick="setTheme('auto')">
-
-<span data-i18n="theme_auto">🌗 Auto (match device)</span>
-
-</button>
-
-
-<button onclick="setTheme('light')">
-
-<span data-i18n="theme_light">☀️ Light</span>
-
-</button>
-
-
-<button onclick="setTheme('dark')">
-
-<span data-i18n="theme_dark">🌙 Dark</span>
-
-</button>
-
-
-
-
-
-<h3 data-i18n="settings_categories">
-📂 Categories
-</h3>
-
-
-<button onclick="openCategoryManager()">
-
-<span data-i18n="manage_categories">Manage Categories</span>
-
-</button>
-
-
-<h3 data-i18n="settings_custom_translations">
-🔤 Custom Ingredient Translations
-</h3>
-
-<p class="small" data-i18n="custom_translations_description">
-Add your own word so it always combines on the shopping list, no matter which language it's written in.
-</p>
-
-<div id="customTranslationList"></div>
-
-<input
-    id="customTranslationAlias"
-    placeholder="e.g. kycklingfilé"
-    data-i18n-placeholder="custom_translation_alias_placeholder"
->
-
-<input
-    id="customTranslationTarget"
-    placeholder="e.g. chicken breast"
-    data-i18n-placeholder="custom_translation_target_placeholder"
->
-
-<label style="display:block; margin-top:4px;">
-<span class="small" data-i18n="custom_translation_category_label">Shopping list section (optional)</span>
-</label>
-
-<select id="customTranslationCategory">
-<option value="">🛒 Other (default)</option>
-</select>
-
-<button onclick="addCustomIngredientTranslation()">
-<span data-i18n="add_translation">➕ Add Translation</span>
-</button>
-
-
-<h3 data-i18n="settings_shopping_categories">
-🛒 Shopping List Order
-</h3>
-
-<p class="small" data-i18n="shopping_category_order_description">
-Reorder the categories to match how your store is laid out.
-</p>
-
-<div id="categoryOrderList"></div>
-
-
-<h3 data-i18n="ws_title">
+<details class="settings-section">
+<summary><h3 data-i18n="ws_title">
 📅 My Planners
-</h3>
-
+</h3></summary>
+<div class="section-body">
 <p class="small" data-i18n="ws_description">
 Keep several separate planners on this device – for example a private one and one for each household – and switch between them.
 </p>
@@ -1791,12 +1737,14 @@ Keep several separate planners on this device – for example a private one and 
 <span data-i18n="ws_new">➕ New planner</span>
 </button>
 </div>
+</div>
+</details>
 
-
-<h3 data-i18n="sync_title">
+<details class="settings-section">
+<summary><h3 data-i18n="sync_title">
 👨‍👩‍👧 Household Sync
-</h3>
-
+</h3></summary>
+<div class="section-body">
 <p class="small" data-i18n="sync_description">
 Share your planner, recipes and shopping list with your household. Everyone sees changes live.
 </p>
@@ -1831,12 +1779,124 @@ data-i18n-placeholder="sync_code_placeholder" placeholder="XXXX-XXXX-XXXX">
 <span data-i18n="sync_leave">🚪 Leave household</span>
 </button>
 </div>
+</div>
+</details>
+
+<details class="settings-section">
+<summary><h3 data-i18n="settings_language">
+🌍 Language
+</h3></summary>
+<div class="section-body">
+<button onclick="changeLanguage('en')">
+
+🇬🇧 English
+
+</button>
+    
+
+<button onclick="changeLanguage('sv')">
+
+🇸🇪 Svenska
+
+</button>
+</div>
+</details>
+
+<details class="settings-section">
+<summary><h3 data-i18n="settings_theme">
+🎨 Theme
+</h3></summary>
+<div class="section-body">
+<button onclick="setTheme('auto')">
+
+<span data-i18n="theme_auto">🌗 Auto (match device)</span>
+
+</button>
 
 
-<h3 data-i18n="settings_backup">
+<button onclick="setTheme('light')">
+
+<span data-i18n="theme_light">☀️ Light</span>
+
+</button>
+
+
+<button onclick="setTheme('dark')">
+
+<span data-i18n="theme_dark">🌙 Dark</span>
+
+</button>
+</div>
+</details>
+
+<details class="settings-section">
+<summary><h3 data-i18n="settings_categories">
+📂 Categories
+</h3></summary>
+<div class="section-body">
+<button onclick="openCategoryManager()">
+
+<span data-i18n="manage_categories">Manage Categories</span>
+
+</button>
+</div>
+</details>
+
+<details class="settings-section">
+<summary><h3 data-i18n="settings_custom_translations">
+🔤 Custom Ingredient Translations
+</h3></summary>
+<div class="section-body">
+<p class="small" data-i18n="custom_translations_description">
+Add your own word so it always combines on the shopping list, no matter which language it's written in.
+</p>
+
+<div id="customTranslationList"></div>
+
+<input
+    id="customTranslationAlias"
+    placeholder="e.g. kycklingfilé"
+    data-i18n-placeholder="custom_translation_alias_placeholder"
+>
+
+<input
+    id="customTranslationTarget"
+    placeholder="e.g. chicken breast"
+    data-i18n-placeholder="custom_translation_target_placeholder"
+>
+
+<label style="display:block; margin-top:4px;">
+<span class="small" data-i18n="custom_translation_category_label">Shopping list section (optional)</span>
+</label>
+
+<select id="customTranslationCategory">
+<option value="">🛒 Other (default)</option>
+</select>
+
+<button onclick="addCustomIngredientTranslation()">
+<span data-i18n="add_translation">➕ Add Translation</span>
+</button>
+</div>
+</details>
+
+<details class="settings-section">
+<summary><h3 data-i18n="settings_shopping_categories">
+🛒 Shopping List Order
+</h3></summary>
+<div class="section-body">
+<p class="small" data-i18n="shopping_category_order_description">
+Reorder the categories to match how your store is laid out.
+</p>
+
+<div id="categoryOrderList"></div>
+</div>
+</details>
+
+<details class="settings-section">
+<summary><h3 data-i18n="settings_backup">
 💾 Backup
-</h3>
-
+</h3></summary>
+<div class="section-body">
 <p class="small" data-i18n="backup_description">
 Your data lives only in this browser. Export it now and then to keep a safe copy, or to move it to another device.
 </p>
@@ -1856,9 +1916,10 @@ accept="application/json"
 style="display:none;"
 onchange="importData(event)"
 >
+</div>
+</details>
 
-
-<br><br>
+<br>
 
 
 <button onclick="closeSettings()">
@@ -6536,6 +6597,13 @@ if(window.matchMedia){
 // SETTINGS SYSTEM
 // =======================
 
+
+// Settings menu: only one section open at a time
+document.addEventListener("toggle", function(e){
+    let el = e.target;
+    if(!el.classList || !el.classList.contains("settings-section") || !el.open) return;
+    document.querySelectorAll(".settings-section[open]").forEach(o => { if(o !== el) o.open = false; });
+}, true);
 
 function openSettings(){
 
