@@ -16,15 +16,24 @@ self.addEventListener("install", () => {
 
 self.addEventListener("activate", (event) => {
     event.waitUntil(
-        caches.keys().then((keys) =>
-            Promise.all(
+        (async () => {
+            const keys = await caches.keys();
+
+            // Only remove old FoodFlow caches - other apps on the same
+            // site (transform-sweden.github.io) share the cache storage.
+            await Promise.all(
                 keys
-                    .filter((key) => key !== CACHE_NAME)
-                    .map((key) => caches.delete(key))
-            )
-        )
+                    .filter(
+                        key =>
+                            key.startsWith("foodflow-cache-") &&
+                            key !== CACHE_NAME
+                    )
+                    .map(key => caches.delete(key))
+            );
+
+            await self.clients.claim();
+        })()
     );
-    self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
