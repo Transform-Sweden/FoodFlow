@@ -10452,7 +10452,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {
     initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
-    collection, doc, getDoc, getDocs, setDoc, writeBatch, onSnapshot, serverTimestamp
+    collection, doc, getDoc, getDocs, setDoc, writeBatch, runTransaction, onSnapshot, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -10551,18 +10551,54 @@ function schedulePush(){
     pushTimer = setTimeout(pushLocal, 700);
 }
 
+// Three-way merge: "base" is what both sides started from, "theirs" is the
+// other device's version, "mine" is ours. Changes made on only one side are
+// kept, and changes made on both sides are combined instead of one replacing
+// the other (lists are merged item by item, objects key by key).
+function merge3(b, t, m){
+    const S = JSON.stringify;
+    if(S(m) === S(b)) return t;
+    if(S(t) === S(b)) return m;
+    if(S(m) === S(t)) return m;
+    if(Array.isArray(t) && Array.isArray(m)){
+        const bb = Array.isArray(b) ? b : [];
+        const bs = new Set(bb.map(S)), ts = new Set(t.map(S)), ms = new Set(m.map(S));
+        const out = m.filter(x => !(bs.has(S(x)) && !ts.has(S(x))));     // drop items the other side removed
+        const seen = new Set(out.map(S));
+        t.forEach(x => { const k = S(x); if(!bs.has(k) && !ms.has(k) && !seen.has(k)){ out.push(x); seen.add(k); } });  // add items the other side added
+        return out;
+    }
+    if(isObj(t) && isObj(m)){
+        const bb = isObj(b) ? b : {};
+        const out = {};
+        new Set([...Object.keys(bb), ...Object.keys(t), ...Object.keys(m)]).forEach(k => {
+            const v = merge3(bb[k], t[k], m[k]);
+            if(v !== undefined) out[k] = v;
+        });
+        return out;
+    }
+    return m;
+}
+
+let pushing = false, pushAgain = false, retryTimer = null;
+
 async function pushLocal(){
     if(!code || !db || !ready) return;
-    const local = localDocs();
-    const col = collection(db, "households", code, "docs");
-    let batch = writeBatch(db), n = 0;
-    const flush = async () => { if(n){ const b = batch; batch = writeBatch(db); n = 0; await b.commit(); } };
+    if(pushing){ pushAgain = true; return; }
+    pushing = true;
+    let changedLocal = false, failed = false;
     try{
+        const local = localDocs();
+        const col = collection(db, "households", code, "docs");
+        let batch = writeBatch(db), n = 0;
+        const flush = async () => { if(n){ const bt = batch; batch = writeBatch(db); n = 0; await bt.commit(); } };
+        const updates = [];
         for(const [id, d] of Object.entries(local)){
             if(base[id] === d.v) continue;
             // An empty list/object that was never synced is just an app default
             // written at startup - never let it overwrite the household's data.
             if(!(id in base) && (d.v === "[]" || d.v === "{}" || d.v === "null")) continue;
+            if(id in base){ updates.push([id, d]); continue; }
             batch.set(doc(col, id), { k: d.k, e: d.e, v: d.v, t: serverTimestamp() });
             base[id] = d.v;
             if(++n >= 400) await flush();
@@ -10576,15 +10612,92 @@ async function pushLocal(){
         }
         saveBase();
         await flush();
+
+        // Changes to existing documents: read the cloud copy first and merge, so
+        // another person's change made in the meantime is combined with ours
+        // instead of being overwritten.
+        for(const [id, d] of updates){
+            const ref = doc(col, id);
+            const b0 = base[id];                       // the version both sides started from
+            const tx = runTransaction(db, async t => {
+                const snap = await t.get(ref);
+                let v = d.v;
+                if(snap.exists()){
+                    const c = snap.data().v;
+                    if(typeof c === "string" && c !== b0 && c !== d.v){
+                        v = JSON.stringify(merge3(parse(b0), parse(c), parse(d.v)));
+                    }
+                }
+                t.set(ref, { k: d.k, e: d.e, v, t: serverTimestamp() });
+                return v;
+            });
+            const written = await Promise.race([tx, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 10000))]);
+            base[id] = written;
+            saveBase();
+            if(written !== d.v){
+                // bring the merged result into local data, keeping anything typed in the meantime
+                const nowLocal = (localDocs()[id] || {}).v;
+                const next = nowLocal === undefined ? written : JSON.stringify(merge3(parse(d.v), parse(written), parse(nowLocal)));
+                if(next !== nowLocal){ applyRemote(d.k, d.e, next); changedLocal = true; }
+            }
+        }
+        if(status === "error") setStatus("on");
     }catch(err){
+        // typically offline: keep the changes locally and try again later
         console.warn("FoodFlow sync push failed", err);
-        base = parse(ls.get(BASE_KEY)) || {};
+        failed = true;
         setStatus("error");
     }
+    pushing = false;
+    if(failed){
+        clearTimeout(retryTimer);
+        retryTimer = setTimeout(schedulePush, 8000);
+    }else if(pushAgain){
+        pushAgain = false;
+        schedulePush();
+    }
+    if(changedLocal) scheduleReload();
+}
+
+// What the open page itself currently holds (it only re-reads storage on reload).
+// When someone else's change has been saved to storage but the page hasn't
+// refreshed yet, a save from this page is merged with it instead of overwriting it.
+let appView = {};
+(function(){ const l = localDocs(); for(const id of Object.keys(l)) appView[id] = l[id].v; })();
+
+function mergeWithRemote(key, value){
+    let mine;
+    try{ mine = JSON.parse(value); }catch(e){ return value; }
+    const kind = SYNC_KEYS[key];
+    const cur = parse(ls.get(key));
+    const S = JSON.stringify;
+    const doMerge = !!code && !switching;
+    const av = id => appView[id] === undefined ? undefined : JSON.parse(appView[id]);
+
+    if(kind === "map" && isObj(mine) && (cur === null || isObj(cur))){
+        const c = cur || {};
+        const out = {};
+        let differs = false;
+        new Set([...Object.keys(mine), ...Object.keys(c)]).forEach(e => {
+            const id = docId(key, e);
+            const merged = doMerge ? merge3(av(id), c[e], mine[e]) : mine[e];
+            if(merged !== undefined) out[e] = merged;
+            if(S(merged) !== S(mine[e])) differs = true;
+            if(mine[e] !== undefined) appView[id] = S(mine[e]); else delete appView[id];
+        });
+        if(differs) scheduleReload();
+        return S(out);
+    }
+    const id = docId(key, null);
+    const merged = doMerge && cur !== null ? merge3(av(id), cur, mine) : mine;
+    appView[id] = S(mine);
+    if(S(merged) !== S(mine)){ scheduleReload(); return S(merged); }
+    return value;
 }
 
 // Any write to a shared key from the app triggers a push.
 Storage.prototype.setItem = function(key, value){
+    if(this === localStorage && key in SYNC_KEYS) value = mergeWithRemote(key, value);
     origSet.call(this, key, value);
     if(this === localStorage && key in SYNC_KEYS) schedulePush();
 };
@@ -10633,7 +10746,14 @@ function onSnapshotData(snap){
         if(!data || typeof data.v !== "string") return;
         if(base[id] === data.v) return;                    // already in sync
         const localIsEmptyDefault = local[id] && !(id in base) && (local[id].v === "[]" || local[id].v === "{}");
-        if(local[id] && local[id].v !== base[id] && !localIsEmptyDefault) return;  // we have newer local edits; push wins
+        if(local[id] && local[id].v !== base[id] && !localIsEmptyDefault){
+            // both sides changed it: combine the two versions instead of picking one
+            const merged = JSON.stringify(merge3(parse(base[id]), parse(data.v), parse(local[id].v)));
+            base[id] = data.v;
+            if(merged !== local[id].v){ try{ applyRemote(data.k, data.e, merged); changed = true; }catch(e){} }
+            schedulePush();
+            return;
+        }
         if(local[id] && local[id].v === data.v){ base[id] = data.v; return; }
         if(local[id] && base[id] === undefined && (data.v === "[]" || data.v === "{}")){ return; } // never replace real data with an empty doc
         try{ applyRemote(data.k, data.e, data.v); base[id] = data.v; changed = true; }catch(e){}
