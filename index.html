@@ -702,6 +702,14 @@ flex:1;
 
 
 
+/* MEAL PLANNER – smaller Add / Copy Day / View buttons (only change) */
+#plannerPage .day > button,
+#plannerPage .meal button {
+font-size:13px; font-weight:500; padding:4px 11px;
+border-radius:999px; margin:2px 4px 2px 0;
+}
+#plannerPage .meal button { margin:6px 0 0; }
+
 /* WEEK NAVIGATION */
 
 #weekNav {
@@ -1574,7 +1582,7 @@ transition:transform .2s ease;
 
 <div class="week-nav-secondary">
 
-<button onclick="goToThisWeek()" class="week-nav-today">
+<button onclick="goToThisWeek()" class="week-nav-today" id="thisWeekBtn">
 <span class="nav-full" data-i18n="nav_full_today">📍 This Week</span>
 <span class="nav-short" data-i18n="nav_short_today">📍 Today</span>
 </button>
@@ -5014,6 +5022,8 @@ function updateWeekLabel(){
     let endStr = end.toLocaleDateString(locale, { ...options, year:"numeric" });
 
     let isThisWeek = currentWeekKey === getMondayKey(new Date());
+    let thisWeekBtn = document.getElementById("thisWeekBtn");
+    if(thisWeekBtn){ thisWeekBtn.classList.toggle("active", isThisWeek); }
 
     let label = document.getElementById("weekLabel");
 
