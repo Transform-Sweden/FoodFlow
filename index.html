@@ -710,6 +710,50 @@ border-radius:999px; margin:2px 4px 2px 0;
 }
 #plannerPage .meal button { margin:6px 0 0; }
 
+/* MEAL PLANNER – month view */
+.view-toggle { display:flex; justify-content:center; gap:6px; margin:10px 0 16px; }
+.view-toggle button {
+font-size:13px; font-weight:500; padding:4px 16px; margin:0; border-radius:999px;
+background:var(--card); background-image:none; color:var(--primary-dark);
+border:1px solid var(--primary); box-shadow:none;
+}
+.view-toggle button.active { background:var(--primary); background-image:none; color:#fff; }
+.view-toggle button:hover { transform:none; }
+#weekNav.month-mode .wk-only { display:none; }
+#weekNav:not(.month-mode) .mo-only { display:none; }
+
+.month { display:none; }
+.month-head, .month-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; }
+.month-head { margin-bottom:6px; }
+.month-head div { text-align:center; font-size:12px; font-weight:600; opacity:.65; text-transform:uppercase; letter-spacing:.04em; }
+.mcell {
+background:var(--card); border-radius:var(--radius-sm); box-shadow:var(--shadow-sm);
+padding:6px; min-height:104px; min-width:0; cursor:pointer;
+display:flex; flex-direction:column; gap:3px;
+transition:background .15s ease, box-shadow .2s var(--ease);
+}
+.mcell:hover { box-shadow:var(--shadow); }
+.mcell.out { opacity:.45; }
+.mcell.today { outline:2px solid var(--primary); outline-offset:-2px; }
+.mnum { font-size:12px; font-weight:600; opacity:.75; }
+.mcell.today .mnum { color:var(--primary-dark); opacity:1; }
+.mchip {
+font-size:11.5px; line-height:1.25; padding:2px 6px; border-radius:6px;
+background:rgba(120,120,120,.10); border-left:3px solid var(--accent);
+white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.mchip:hover { background:rgba(120,120,120,.2); }
+.mmore { font-size:11px; opacity:.65; padding-left:4px; }
+.mdots { display:none; flex-wrap:wrap; gap:3px; }
+.mdot { width:7px; height:7px; border-radius:50%; }
+@media(max-width:700px){
+.month-grid, .month-head { gap:3px; }
+.mcell { min-height:56px; padding:4px; }
+.mchips { display:none; }
+.mdots { display:flex; }
+.month-head div { font-size:10px; }
+}
+
 /* WEEK NAVIGATION */
 
 #weekNav {
@@ -1582,17 +1626,19 @@ transition:transform .2s ease;
 
 <div class="week-nav-secondary">
 
-<button onclick="goToThisWeek()" class="week-nav-today" id="thisWeekBtn">
+<button onclick="goToThisWeek()" class="week-nav-today wk-only" id="thisWeekBtn">
 <span class="nav-full" data-i18n="nav_full_today">📍 This Week</span>
 <span class="nav-short" data-i18n="nav_short_today">📍 Today</span>
 </button>
 
-<button onclick="openWeekActionsMenu()">
+<button onclick="goToThisWeek()" class="mo-only" id="thisMonthBtn" data-i18n="nav_this_month">📍 This Month</button>
+
+<button onclick="openWeekActionsMenu()" class="wk-only">
 <span class="nav-full" data-i18n="nav_full_week_actions">📆 Week Actions</span>
 <span class="nav-short" data-i18n="nav_short_week_actions">📆 Actions</span>
 </button>
 
-<button onclick="printMealPlanner()">
+<button onclick="printMealPlanner()" class="wk-only">
 <span class="nav-full" data-i18n="print_planner_full">🖨️ Print / Save as PDF</span>
 <span class="nav-short" data-i18n="print_planner_short">🖨️ Print</span>
 </button>
@@ -1601,7 +1647,14 @@ transition:transform .2s ease;
 
 </div>
 
+<div class="view-toggle" id="viewToggle">
+<button type="button" id="viewWeekBtn" onclick="setPlannerView('week')" data-i18n="view_week">Week</button>
+<button type="button" id="viewMonthBtn" onclick="setPlannerView('month')" data-i18n="view_month">Month</button>
+</div>
+
 <div class="week" id="week"></div>
+
+<div class="month" id="month"></div>
 
 </div>
 
@@ -2999,6 +3052,10 @@ const translations = {
         recipes_no_match: "No recipes match",
 
         planner_no_meals: "No meals planned yet",
+        view_week: "Week",
+        view_month: "Month",
+        nav_this_month: "📍 This Month",
+        month_more: "+{n} more",
         planner_add: "➕ Add",
         planner_copy_day: "📋 Copy Day",
 
@@ -3292,6 +3349,10 @@ const translations = {
         recipes_no_match: "Inga recept matchar",
 
         planner_no_meals: "Inga måltider planerade än",
+        view_week: "Vecka",
+        view_month: "Månad",
+        nav_this_month: "📍 Denna månad",
+        month_more: "+{n} till",
         planner_add: "➕ Lägg till",
         planner_copy_day: "📋 Kopiera dag",
 
@@ -4966,6 +5027,167 @@ function saveShoppingState(){
 }
 
 
+// =======================
+// PLANNER VIEW: Week / Month (per device)
+// =======================
+let plannerView = (function(){
+    try{ return localStorage.getItem("foodflowPlannerView") === "month" ? "month" : "week"; }
+    catch(e){ return "week"; }
+})();
+
+let monthAnchor = (function(){
+    try{
+        let saved = sessionStorage.getItem("ff_month");
+        if(saved && /^\d{4}-\d{2}$/.test(saved)){
+            let [y, m] = saved.split("-").map(Number);
+            return new Date(y, m - 1, 1);
+        }
+    }catch(e){}
+    // Month that contains most of the displayed week (its Thursday)
+    let d = parseDateKey(currentWeekKey);
+    d.setDate(d.getDate() + 3);
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+})();
+
+function saveMonthAnchor(){
+    try{
+        sessionStorage.setItem("ff_month",
+            monthAnchor.getFullYear() + "-" + String(monthAnchor.getMonth() + 1).padStart(2, "0"));
+    }catch(e){}
+}
+
+function applyPlannerView(){
+    let isMonth = plannerView === "month";
+    let nav = document.getElementById("weekNav");
+    if(nav) nav.classList.toggle("month-mode", isMonth);
+    let weekEl = document.getElementById("week");
+    let monthEl = document.getElementById("month");
+    if(weekEl) weekEl.style.display = isMonth ? "none" : "";
+    if(monthEl) monthEl.style.display = isMonth ? "block" : "none";
+    let bw = document.getElementById("viewWeekBtn");
+    let bm = document.getElementById("viewMonthBtn");
+    if(bw) bw.classList.toggle("active", !isMonth);
+    if(bm) bm.classList.toggle("active", isMonth);
+}
+
+function setPlannerView(view){
+    plannerView = view === "month" ? "month" : "week";
+    try{ localStorage.setItem("foodflowPlannerView", plannerView); }catch(e){}
+    if(plannerView === "month"){
+        let d = parseDateKey(currentWeekKey);
+        d.setDate(d.getDate() + 3);
+        monthAnchor = new Date(d.getFullYear(), d.getMonth(), 1);
+        saveMonthAnchor();
+    }
+    updateWeekLabel();
+    render();
+}
+
+function shiftMonth(n){
+    monthAnchor = new Date(monthAnchor.getFullYear(), monthAnchor.getMonth() + n, 1);
+    saveMonthAnchor();
+    updateWeekLabel();
+    render();
+}
+
+function goToThisMonth(){
+    let now = new Date();
+    monthAnchor = new Date(now.getFullYear(), now.getMonth(), 1);
+    saveMonthAnchor();
+    updateWeekLabel();
+    render();
+}
+
+function monthOpenDay(weekKey){
+    plannerView = "week";
+    try{ localStorage.setItem("foodflowPlannerView", "week"); }catch(e){}
+    switchToWeek(weekKey);
+}
+
+function monthOpenMeal(weekKey, day, index){
+    monthOpenDay(weekKey);
+    openMealDetail(day, index);
+}
+
+function renderMonth(){
+
+    let box = document.getElementById("month");
+    if(!box) return;
+
+    let locale = currentLanguage === "sv" ? "sv-SE" : "en-US";
+    let esc = str => String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+    let y = monthAnchor.getFullYear();
+    let m = monthAnchor.getMonth();
+    let start = parseDateKey(getMondayKey(new Date(y, m, 1)));
+    let lastMon = parseDateKey(getMondayKey(new Date(y, m + 1, 0)));
+    let weekCount = Math.round((lastMon - start) / (7 * 86400000)) + 1;
+    let todayKey = formatDateKey(new Date());
+    let order = getMealOrder();
+
+    // Weekday header (2024-01-01 is a Monday)
+    let head = "";
+    for(let i = 0; i < 7; i++){
+        head += "<div>" + new Date(2024, 0, 1 + i).toLocaleDateString(locale, { weekday:"short" }) + "</div>";
+    }
+
+    let cells = "";
+
+    for(let w = 0; w < weekCount; w++){
+
+        let wk = new Date(start);
+        wk.setDate(start.getDate() + 7 * w);
+        let wkKey = formatDateKey(wk);
+        let wdata = weeks[wkKey] || {};
+
+        for(let i = 0; i < 7; i++){
+
+            let d = new Date(wk);
+            d.setDate(wk.getDate() + i);
+
+            let dayName = days[i];
+            let list = (wdata[dayName] || [])
+                .map((meal, idx) => ({ meal, idx }))
+                .sort((a, b) => (order[a.meal.type] ?? 99) - (order[b.meal.type] ?? 99));
+
+            let numLabel = d.getDate() === 1
+                ? d.getDate() + " " + d.toLocaleDateString(locale, { month:"short" })
+                : String(d.getDate());
+
+            let shown = list.slice(0, 3);
+            let chips = shown.map(({meal, idx}) => `
+                <div class="mchip" style="--accent:${getMealTypeAccent(meal.type)}"
+                     title="${esc(meal.type)} — ${esc(meal.name)}"
+                     onclick="event.stopPropagation(); monthOpenMeal('${wkKey}','${dayName}',${idx})">${esc(meal.name)}</div>
+            `).join("");
+
+            let more = list.length > shown.length
+                ? `<div class="mmore">${t("month_more").replace("{n}", list.length - shown.length)}</div>`
+                : "";
+
+            let dots = list.map(({meal}) =>
+                `<span class="mdot" style="background:${getMealTypeAccent(meal.type)}"></span>`
+            ).join("");
+
+            cells += `
+            <div class="mcell${d.getMonth() !== m ? " out" : ""}${formatDateKey(d) === todayKey ? " today" : ""}"
+                 role="button" tabindex="0"
+                 onclick="monthOpenDay('${wkKey}')"
+                 onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();monthOpenDay('${wkKey}');}">
+                <div class="mnum">${numLabel}</div>
+                <div class="mchips">${chips}${more}</div>
+                <div class="mdots">${dots}</div>
+            </div>`;
+
+        }
+
+    }
+
+    box.innerHTML = `<div class="month-head">${head}</div><div class="month-grid">${cells}</div>`;
+
+}
+
+
 function switchToWeek(weekKey){
 
     currentWeekKey = weekKey;
@@ -4984,6 +5206,8 @@ function switchToWeek(weekKey){
 
 function goToPreviousWeek(){
 
+    if(plannerView === "month"){ shiftMonth(-1); return; }
+
     let d = parseDateKey(currentWeekKey);
     d.setDate(d.getDate() - 7);
 
@@ -4993,6 +5217,8 @@ function goToPreviousWeek(){
 
 
 function goToNextWeek(){
+
+    if(plannerView === "month"){ shiftMonth(1); return; }
 
     let d = parseDateKey(currentWeekKey);
     d.setDate(d.getDate() + 7);
@@ -5004,12 +5230,30 @@ function goToNextWeek(){
 
 function goToThisWeek(){
 
+    if(plannerView === "month"){ goToThisMonth(); return; }
+
     switchToWeek(getMondayKey(new Date()));
 
 }
 
 
 function updateWeekLabel(){
+
+    if(plannerView === "month"){
+
+        let loc = currentLanguage === "sv" ? "sv-SE" : "en-US";
+        let txt = monthAnchor.toLocaleDateString(loc, { month:"long", year:"numeric" });
+        let lab = document.getElementById("weekLabel");
+        if(lab) lab.innerText = txt.charAt(0).toUpperCase() + txt.slice(1);
+
+        let now = new Date();
+        let tm = document.getElementById("thisMonthBtn");
+        if(tm) tm.classList.toggle("active",
+            monthAnchor.getFullYear() === now.getFullYear() && monthAnchor.getMonth() === now.getMonth());
+
+        return;
+
+    }
 
     let start = parseDateKey(currentWeekKey);
     let end = parseDateKey(currentWeekKey);
@@ -5645,6 +5889,9 @@ function updateDayNote(day, value){
 
 function render(){
 
+applyPlannerView();
+
+if(plannerView === "month"){ renderMonth(); return; }
 
 const week =
 document.getElementById("week");
