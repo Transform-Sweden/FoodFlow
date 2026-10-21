@@ -1950,6 +1950,14 @@ Reorder the categories to match how your store is laid out.
 </p>
 
 <div id="categoryOrderList"></div>
+
+<label style="display:flex;align-items:flex-start;gap:10px;margin-top:18px;cursor:pointer;">
+<input type="checkbox" id="roundShoppingToggle" style="width:auto;margin:3px 0 0;" onchange="toggleShoppingRounding(this.checked)">
+<span>
+<strong data-i18n="round_shopping_label">Round up shopping amounts</strong><br>
+<span class="small" data-i18n="round_shopping_description">80 g becomes 100 g, 1.2 kg becomes 1.5 kg. The exact amount stays visible in gray. Recipes and the planner are not changed.</span>
+</span>
+</label>
 </div>
 </details>
 
@@ -3052,6 +3060,9 @@ const translations = {
         recipes_no_match: "No recipes match",
 
         planner_no_meals: "No meals planned yet",
+        need_exact: "need",
+        round_shopping_label: "Round up shopping amounts",
+        round_shopping_description: "80 g becomes 100 g, 1.2 kg becomes 1.5 kg. The exact amount stays visible in gray. Recipes and the planner are not changed.",
         view_week: "Week",
         view_month: "Month",
         nav_this_month: "📍 This Month",
@@ -3349,6 +3360,9 @@ const translations = {
         recipes_no_match: "Inga recept matchar",
 
         planner_no_meals: "Inga måltider planerade än",
+        need_exact: "behöver",
+        round_shopping_label: "Avrunda inköpsmängder uppåt",
+        round_shopping_description: "80 g blir 100 g, 1,2 kg blir 1,5 kg. Den exakta mängden visas i grått. Recept och planeraren ändras inte.",
         view_week: "Vecka",
         view_month: "Månad",
         nav_this_month: "📍 Denna månad",
@@ -6871,6 +6885,9 @@ renderCategoryOrderSettings();
 
 renderCustomIngredientTranslations();
 
+let roundToggle = document.getElementById("roundShoppingToggle");
+if(roundToggle) roundToggle.checked = shoppingRoundingOn();
+
 }
 
 
@@ -8730,6 +8747,35 @@ function toCombinableUnit(amount, unit){
 }
 
 
+// =======================
+// SHOPPING LIST: round amounts up to buyable quantities
+// (shopping list only - planner and recipes keep exact amounts)
+// =======================
+function shoppingRoundingOn(){
+    try{ return localStorage.getItem("foodflowRoundShopping") !== "0"; }
+    catch(e){ return true; }
+}
+
+function toggleShoppingRounding(on){
+    try{ localStorage.setItem("foodflowRoundShopping", on ? "1" : "0"); }catch(e){}
+    renderShoppingList();
+}
+
+const roundableCountUnits = new Set([
+    "", "st", "piece", "clove", "klyfta", "slice", "skiva", "can",
+    "package", "bag", "bottle", "jar", "box", "bunch", "head", "stick", "portion"
+]);
+
+// Rounds a combined base amount (g or ml) UP to a buyable step.
+function roundUpBase(amount){
+    let step;
+    if(amount < 50)        step = 10;
+    else if(amount < 500)  step = 50;
+    else if(amount < 1000) step = 100;
+    else                   step = 500;
+    return Math.ceil(amount / step - 1e-9) * step;
+}
+
 // Converts a combined base-unit amount back into a sensible display
 // unit — e.g. 1500 (grams) -> "1.5 kg", 250 (ml) -> "2.5 dl". Units
 // outside a known family are shown exactly as originally combined.
@@ -9138,10 +9184,38 @@ function generateShoppingList(){
             return;
         }
 
-        let simplified = simplifyUnit(items[key].amount, items[key].unit);
+        let exactSimplified = simplifyUnit(items[key].amount, items[key].unit);
+        let baseAmount = items[key].amount;
+        let unitKey = items[key].unit;
 
-        items[key].amount = simplified.amount;
-        items[key].unit = simplified.unit;
+        if(shoppingRoundingOn() && baseAmount > 0){
+
+            let rounded = null;
+
+            if(unitKey === "family:weight" || unitKey === "family:volume"){
+                rounded = roundUpBase(baseAmount);
+            }else if(roundableCountUnits.has((unitKey || "").toLowerCase())){
+                rounded = Math.ceil(baseAmount - 1e-9);
+            }
+
+            if(rounded !== null && Math.abs(rounded - baseAmount) > 1e-6){
+
+                let r = simplifyUnit(rounded, unitKey);
+
+                items[key].amount = r.amount;
+                items[key].unit = r.unit;
+                items[key].needText =
+                    formatAmount(exactSimplified.amount) +
+                    (exactSimplified.unit ? " " + exactSimplified.unit : "");
+
+                return;
+
+            }
+
+        }
+
+        items[key].amount = exactSimplified.amount;
+        items[key].unit = exactSimplified.unit;
 
     });
 
@@ -9259,6 +9333,7 @@ function renderShoppingItemRow(item){
                 ${hasSources ? `onclick="showIngredientSources('${safeKey}')"` : ""}
             >
                 ${amountText}${item.name}
+                ${item.needText ? `<span class="small" style="opacity:.55;">(${t("need_exact")} ${item.needText})</span>` : ""}
                 ${item.isExtra ? `<span class="small">(added by you)</span>` : ""}
                 ${hasSources ? `<span class="small" style="opacity:0.6;"> 📖</span>` : ""}
             </span>
