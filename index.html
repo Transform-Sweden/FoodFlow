@@ -41,6 +41,10 @@
 --soft-text:#256236;
 --soft-bg:#dcefdf;
 --soft-border:rgba(63,158,83,.35);
+--edit-bg:rgba(33,150,243,.12);
+--edit-text:#1565c0;
+--danger-bg:rgba(229,57,53,.11);
+--danger-text:#c62828;
 --radius:16px;
 --radius-sm:10px;
 --shadow-sm:0 2px 6px rgba(20,40,20,0.06);
@@ -65,6 +69,10 @@ body.dark {
 --soft-text:#9be0ad;
 --soft-bg:#25382a;
 --soft-border:rgba(79,184,104,.45);
+--edit-bg:rgba(33,150,243,.22);
+--edit-text:#8ec5fa;
+--danger-bg:rgba(229,57,53,.22);
+--danger-text:#ff8a84;
 --shadow-sm:0 2px 6px rgba(0,0,0,0.25);
 --shadow:0 6px 18px rgba(0,0,0,0.45), 0 1px 3px rgba(0,0,0,0.3);
 --shadow-lg:0 14px 34px rgba(0,0,0,0.55), 0 3px 8px rgba(0,0,0,0.35);
@@ -709,6 +717,20 @@ flex:1;
 }
 
 
+
+/* Shared calm button styles (Recipes + Shopping List, same as planner) */
+button.btn-sm-primary {
+font-size:13px; font-weight:500; padding:5px 14px; border-radius:999px;
+}
+button.btn-soft {
+background:var(--soft-bg); background-image:none;
+color:var(--soft-text); box-shadow:none;
+font-size:13px; font-weight:500; padding:5px 14px; border-radius:999px;
+}
+button.btn-soft:hover {
+background:color-mix(in srgb, var(--soft-bg) 75%, var(--primary));
+background-image:none; filter:none; box-shadow:none; transform:none;
+}
 
 /* MEAL PLANNER – calmer buttons
    Saturated green stays for the main action (Add), the active tab and
@@ -1604,6 +1626,39 @@ transition:transform .2s ease;
 
 .settings-section .section-body { padding:0 4px 16px; }
 
+
+/* =======================
+   FOODFLOW BUTTON SYSTEM (one design for the whole app)
+   - primary   : solid brand green (main action, active tab)
+   - secondary : flat soft green (default for every other button)
+   - edit      : soft blue     - danger : soft red
+   ======================= */
+button {
+background:var(--soft-bg); background-image:none; color:var(--soft-text);
+box-shadow:none; font-weight:500; font-size:14px; border-radius:12px;
+}
+button:hover {
+background:color-mix(in srgb, var(--soft-bg) 75%, var(--primary));
+background-image:none; filter:none; box-shadow:none; transform:none;
+}
+button:active { transform:scale(.97); box-shadow:none; filter:none; }
+
+button[data-primary], button.btn-sm-primary, #quickAddFab {
+background:var(--brand);
+background-image:linear-gradient(135deg, var(--brand), var(--primary-dark));
+color:#fff;
+}
+button[data-primary]:hover, button.btn-sm-primary:hover, #quickAddFab:hover {
+background:var(--brand);
+background-image:linear-gradient(135deg, var(--brand), var(--primary-dark));
+filter:brightness(1.07);
+}
+
+button.edit { background:var(--edit-bg); background-image:none; color:var(--edit-text); }
+button.edit:hover { background:color-mix(in srgb, var(--edit-bg) 70%, #2196f3); background-image:none; filter:none; }
+button.delete { background:var(--danger-bg); background-image:none; color:var(--danger-text); }
+button.delete:hover { background:color-mix(in srgb, var(--danger-bg) 70%, #e53935); background-image:none; filter:none; }
+
 </style>
 
 
@@ -1719,11 +1774,11 @@ transition:transform .2s ease;
 
 <h2 data-i18n="recipes_heading">📖 Recipes</h2>
 
-<button onclick="openRecipeModal()">
+<button class="btn-sm-primary" onclick="openRecipeModal()">
 <span data-i18n="add_recipe">➕ Add Recipe</span>
 </button>
 
-<button onclick="openPasteModal()">
+<button class="btn-soft" onclick="openPasteModal()">
 <span data-i18n="paste_from_web">📋 Paste from Web</span>
 </button>
 
@@ -1767,8 +1822,8 @@ transition:transform .2s ease;
 Automatically built from every recipe in your meal planner, scaled to the number of people you set for each meal.
 </p>
 
-<button onclick="openAddShoppingItem()"><span data-i18n="add_item">➕ Add Item</span></button>
-<button onclick="openShoppingMoreMenu()"><span data-i18n="more_actions">⋯ More</span></button>
+<button class="btn-sm-primary" onclick="openAddShoppingItem()"><span data-i18n="add_item">➕ Add Item</span></button>
+<button class="btn-soft" onclick="openShoppingMoreMenu()"><span data-i18n="more_actions">⋯ More</span></button>
 
 <div class="small" style="margin-top:12px;" data-i18n="shopping_for">
 🗓️ Shopping for:
@@ -1787,9 +1842,9 @@ Automatically built from every recipe in your meal planner, scaled to the number
 <div id="shoppingRangeSummary" class="small" style="margin-top:4px;"></div>
 
 <div class="week-nav-secondary" style="margin-top:8px;">
-<button class="wrap-label" onclick="setShoppingRangePreset('thisWeek')" style="font-size:13px;padding:8px 10px;" data-i18n="preset_this_week">This Week</button>
-<button class="wrap-label" onclick="setShoppingRangePreset('restOfWeek')" style="font-size:13px;padding:8px 10px;" data-i18n="preset_rest_of_week">📍 Rest of Week</button>
-<button class="wrap-label" onclick="setShoppingRangePreset('next7')" style="font-size:13px;padding:8px 10px;" data-i18n="preset_next_7">Next 7 Days</button>
+<button class="wrap-label btn-soft" onclick="setShoppingRangePreset('thisWeek')" data-i18n="preset_this_week">This Week</button>
+<button class="wrap-label btn-soft" onclick="setShoppingRangePreset('restOfWeek')" data-i18n="preset_rest_of_week">📍 Rest of Week</button>
+<button class="wrap-label btn-soft" onclick="setShoppingRangePreset('next7')" data-i18n="preset_next_7">Next 7 Days</button>
 </div>
 
 <input
@@ -8165,7 +8220,7 @@ ${recipe.name}
 👥 ${recipe.servings} servings &nbsp;·&nbsp; 🥕 ${recipe.ingredients.length} ingredients
 </div>
 
-<button onclick="openRecipeDetail(${index})">
+<button class="btn-soft" onclick="openRecipeDetail(${index})">
 
 📖 View Recipe
 
