@@ -38,9 +38,11 @@
 --primary-dark:#2f7d40;
 --brand:#37904a;
 --primary-light:#e7f5e9;
---soft-text:#256236;
---soft-bg:#dcefdf;
---soft-border:rgba(63,158,83,.35);
+--soft-text:var(--text);
+--soft-bg:var(--card);
+--soft-border:var(--primary);
+--neutral-border:#6b746e;
+--neutral-text:#353d38;
 --edit-bg:rgba(33,150,243,.12);
 --edit-text:#1565c0;
 --danger-bg:rgba(229,57,53,.11);
@@ -66,9 +68,11 @@ body.dark {
 --primary-dark:#3c9450;
 --brand:#46a55c;
 --primary-light:#1d2b20;
---soft-text:#9be0ad;
---soft-bg:#25382a;
---soft-border:rgba(79,184,104,.45);
+--soft-text:var(--text);
+--soft-bg:var(--card);
+--soft-border:var(--primary);
+--neutral-border:#a4aea8;
+--neutral-text:#dde3df;
 --edit-bg:rgba(33,150,243,.22);
 --edit-text:#8ec5fa;
 --danger-bg:rgba(229,57,53,.22);
@@ -792,7 +796,7 @@ font-size:13px; font-weight:500; padding:4px 16px; margin:0; border-radius:999px
 background:transparent; background-image:none; color:var(--text-soft);
 border:1px solid var(--soft-border); box-shadow:none;
 }
-.view-toggle button.active { background:var(--soft-bg); background-image:none; color:var(--soft-text); font-weight:600; }
+.view-toggle button.active { background:color-mix(in srgb, var(--primary) 16%, var(--card)); background-image:none; color:var(--text); font-weight:600; }
 .view-toggle button:hover { transform:none; }
 #weekNav.month-mode .wk-only { display:none; }
 #weekNav:not(.month-mode) .mo-only { display:none; }
@@ -1634,30 +1638,52 @@ transition:transform .2s ease;
    - edit      : soft blue     - danger : soft red
    ======================= */
 button {
-background:var(--soft-bg); background-image:none; color:var(--soft-text);
-box-shadow:none; font-weight:500; font-size:14px; border-radius:12px;
+background:var(--card); background-image:none; color:var(--text);
+border:1px solid var(--primary);
+box-shadow:none; font-weight:500; font-size:14px; border-radius:999px;
 }
 button:hover {
-background:color-mix(in srgb, var(--soft-bg) 75%, var(--primary));
-background-image:none; filter:none; box-shadow:none; transform:none;
+background:var(--primary-light); background-image:none;
+filter:none; box-shadow:none; transform:none;
 }
 button:active { transform:scale(.97); box-shadow:none; filter:none; }
+.action-list button { border-radius:12px; }
 
-button[data-primary], button.btn-sm-primary, #quickAddFab {
-background:var(--brand);
+/* buttons that have their own look: no extra frame */
+#navbar button, .menu-btn, #dayMenu button { border:none; }
+#navbar button { font-size:15px; }
+
+button[data-primary], button.btn-sm-primary, button.add-btn, #quickAddFab {
+background:var(--brand); border:1px solid transparent;
 background-image:linear-gradient(135deg, var(--brand), var(--primary-dark));
 color:#fff;
 }
-button[data-primary]:hover, button.btn-sm-primary:hover, #quickAddFab:hover {
+button[data-primary]:hover, button.btn-sm-primary:hover, button.add-btn:hover, #quickAddFab:hover {
 background:var(--brand);
 background-image:linear-gradient(135deg, var(--brand), var(--primary-dark));
 filter:brightness(1.07);
 }
 
-button.edit { background:var(--edit-bg); background-image:none; color:var(--edit-text); }
-button.edit:hover { background:color-mix(in srgb, var(--edit-bg) 70%, #2196f3); background-image:none; filter:none; }
-button.delete { background:var(--danger-bg); background-image:none; color:var(--danger-text); }
-button.delete:hover { background:color-mix(in srgb, var(--danger-bg) 70%, #e53935); background-image:none; filter:none; }
+/* neutral tier: Cancel / Close / dismiss buttons */
+button[data-i18n="cancel"], button[data-i18n="close"],
+button[onclick^="close"]:not([onclick*=";"]),
+button[onclick^="clearPendingLeftover"],
+button[onclick^="toggleShoppingSelectionMode"],
+button[onclick*="resolveCustomConfirm(false)"] {
+background:var(--card); border-color:var(--neutral-border); color:var(--neutral-text);
+}
+button[data-i18n="cancel"]:hover, button[data-i18n="close"]:hover,
+button[onclick^="close"]:not([onclick*=";"]):hover,
+button[onclick^="clearPendingLeftover"]:hover,
+button[onclick^="toggleShoppingSelectionMode"]:hover,
+button[onclick*="resolveCustomConfirm(false)"]:hover {
+background:rgba(120,120,120,.12);
+}
+
+button.edit { background:var(--card); border-color:#2196f3; color:var(--edit-text); }
+button.edit:hover { background:var(--edit-bg); }
+button.delete { background:var(--card); border-color:#e53935; color:var(--danger-text); }
+button.delete:hover { background:var(--danger-bg); }
 
 </style>
 
@@ -2762,16 +2788,16 @@ Recipe
 ☆ Add Favorite
 </button>
 
-<button class="edit" onclick="editRecipeFromDetail()">
-✏️ Edit
-</button>
-
 <button onclick="duplicateRecipeFromDetail()">
 📄 Duplicate
 </button>
 
 <button onclick="openPlannerRecipeFromDetail()">
 📅 Add to Planner
+</button>
+
+<button class="edit" onclick="editRecipeFromDetail()">
+✏️ Edit
 </button>
 
 <button class="delete" onclick="deleteRecipeFromDetail()">
