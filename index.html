@@ -37,6 +37,9 @@
 --primary:#3f9e53;
 --primary-dark:#2f7d40;
 --primary-light:#e7f5e9;
+--soft-text:#256236;
+--soft-bg:#dcefdf;
+--soft-border:rgba(63,158,83,.35);
 --radius:16px;
 --radius-sm:10px;
 --shadow-sm:0 2px 6px rgba(20,40,20,0.06);
@@ -57,6 +60,9 @@ body.dark {
 --primary:#4fb868;
 --primary-dark:#3c9450;
 --primary-light:#1d2b20;
+--soft-text:#9be0ad;
+--soft-bg:#25382a;
+--soft-border:rgba(79,184,104,.45);
 --shadow-sm:0 2px 6px rgba(0,0,0,0.25);
 --shadow:0 6px 18px rgba(0,0,0,0.45), 0 1px 3px rgba(0,0,0,0.3);
 --shadow-lg:0 14px 34px rgba(0,0,0,0.55), 0 3px 8px rgba(0,0,0,0.35);
@@ -702,22 +708,63 @@ flex:1;
 
 
 
-/* MEAL PLANNER – smaller Add / Copy Day / View buttons (only change) */
-#plannerPage .day > button,
-#plannerPage .meal button {
-font-size:13px; font-weight:500; padding:4px 11px;
-border-radius:999px; margin:2px 4px 2px 0;
+/* MEAL PLANNER – calmer buttons
+   Saturated green stays for the main action (Add), the active tab and
+   status. Secondary controls are flat, soft and have no gradient. */
+#plannerPage .day-actions { display:flex; align-items:center; gap:6px; margin:2px 0 4px; }
+#plannerPage .day-actions button { margin:0; }
+#plannerPage .add-btn {
+font-size:13px; font-weight:500; padding:4px 14px; border-radius:999px;
 }
-#plannerPage .meal button { margin:6px 0 0; }
+#plannerPage .more-btn {
+width:28px; height:26px; padding:0; border-radius:999px;
+font-size:16px; line-height:1; letter-spacing:1px;
+display:inline-flex; align-items:center; justify-content:center;
+}
+#plannerPage .more-btn,
+#plannerPage .week-nav-row button,
+#plannerPage .week-nav-secondary button {
+background:var(--soft-bg); background-image:none;
+color:var(--soft-text); box-shadow:none;
+}
+#plannerPage .more-btn { border:1px solid var(--soft-border); }
+#plannerPage .more-btn:hover,
+#plannerPage .week-nav-row button:hover,
+#plannerPage .week-nav-secondary button:hover {
+background:color-mix(in srgb, var(--soft-bg) 75%, var(--primary));
+background-image:none; filter:none; box-shadow:none; transform:none;
+}
+#plannerPage .week-nav-secondary button.active {
+background:var(--primary); color:#fff;
+}
+#plannerPage .week-nav-secondary button { font-size:14px; padding:6px 14px; font-weight:500; }
+
+/* clickable meal cards (replaces the View button) */
+#plannerPage .meal[data-open] { cursor:pointer; }
+#plannerPage .meal[data-open]:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
+
+/* small menu behind the ⋯ button */
+#dayMenu {
+position:absolute; z-index:1500; min-width:190px; padding:6px;
+background:var(--card); color:var(--text);
+border:1px solid rgba(120,120,120,.25); border-radius:12px;
+box-shadow:var(--shadow-lg);
+}
+#dayMenu button {
+display:block; width:100%; margin:0; padding:9px 12px; text-align:left;
+background:transparent; background-image:none; box-shadow:none;
+color:var(--text); font-size:14px; font-weight:500; border-radius:8px; transform:none;
+}
+#dayMenu button:hover, #dayMenu button:focus-visible { background:rgba(120,120,120,.12); filter:none; transform:none; }
 
 /* MEAL PLANNER – month view */
 .view-toggle { display:flex; justify-content:center; gap:6px; margin:10px 0 16px; }
 .view-toggle button {
 font-size:13px; font-weight:500; padding:4px 16px; margin:0; border-radius:999px;
-background:var(--card); background-image:none; color:var(--primary-dark);
-border:1px solid var(--primary); box-shadow:none;
+background:transparent; background-image:none; color:var(--text-soft);
+border:1px solid var(--soft-border); box-shadow:none;
 }
-.view-toggle button.active { background:var(--primary); background-image:none; color:#fff; }
+.view-toggle button.active { background:var(--soft-bg); background-image:none; color:var(--soft-text); font-weight:600; }
 .view-toggle button:hover { transform:none; }
 #weekNav.month-mode .wk-only { display:none; }
 #weekNav:not(.month-mode) .mo-only { display:none; }
@@ -3063,6 +3110,7 @@ const translations = {
         need_exact: "need",
         round_shopping_label: "Round up shopping amounts",
         round_shopping_description: "80 g becomes 100 g, 1.2 kg becomes 1.5 kg. The exact amount stays visible in gray. Recipes and the planner are not changed.",
+        day_menu_label: "Day options",
         view_week: "Week",
         view_month: "Month",
         nav_this_month: "📍 This Month",
@@ -3363,6 +3411,7 @@ const translations = {
         need_exact: "behöver",
         round_shopping_label: "Avrunda inköpsmängder uppåt",
         round_shopping_description: "80 g blir 100 g, 1,2 kg blir 1,5 kg. Den exakta mängden visas i grått. Recept och planeraren ändras inte.",
+        day_menu_label: "Dagens alternativ",
         view_week: "Vecka",
         view_month: "Månad",
         nav_this_month: "📍 Denna månad",
@@ -5901,6 +5950,46 @@ function updateDayNote(day, value){
 }
 
 
+// Small menu behind the ⋯ button on each day
+function closeDayMenu(){
+    let m = document.getElementById("dayMenu");
+    if(m) m.remove();
+}
+
+function openDayMenu(btn, day){
+
+    closeDayMenu();
+
+    let menu = document.createElement("div");
+    menu.id = "dayMenu";
+    menu.setAttribute("role", "menu");
+
+    let item = document.createElement("button");
+    item.setAttribute("role", "menuitem");
+    item.textContent = t("planner_copy_day");
+    item.onclick = () => { closeDayMenu(); openCopyDayModal(day); };
+    menu.appendChild(item);
+
+    document.body.appendChild(menu);
+
+    let r = btn.getBoundingClientRect();
+    let w = menu.offsetWidth;
+    menu.style.top = (window.scrollY + r.bottom + 4) + "px";
+    menu.style.left = Math.max(8, Math.min(window.scrollX + r.left, window.scrollX + document.documentElement.clientWidth - w - 8)) + "px";
+
+    setTimeout(() => {
+        const away = (e) => {
+            if(!menu.contains(e.target)){ closeDayMenu(); document.removeEventListener("click", away, true); }
+        };
+        document.addEventListener("click", away, true);
+    }, 0);
+
+    item.focus();
+
+}
+
+document.addEventListener("keydown", (e)=>{ if(e.key === "Escape") closeDayMenu(); });
+
 function render(){
 
 applyPlannerView();
@@ -5952,13 +6041,15 @@ card.innerHTML = `
     "
 >
 
-<button onclick="openModal('${day}')">
+<div class="day-actions">
+<button class="add-btn" onclick="openModal('${day}')">
 ${t("planner_add")}
 </button>
 
-<button onclick="openCopyDayModal('${day}')">
-${t("planner_copy_day")}
+<button class="more-btn" aria-haspopup="menu" aria-label="${t("day_menu_label")}" title="${t("day_menu_label")}" onclick="openDayMenu(this,'${day}')">
+⋯
 </button>
+</div>
 
 `;
 
@@ -6011,13 +6102,22 @@ if(meals[day] && meals[day].length > 0){
         }
         </div>
 
-        <button onclick="openMealDetail('${day}',${originalIndex})">
-
-        🔍 View
-
-        </button>
-
         `;
+
+        // The whole card opens the meal (no separate View button)
+        box.setAttribute("data-open", "1");
+        box.setAttribute("role", "button");
+        box.setAttribute("tabindex", "0");
+        box.addEventListener("click", (e)=>{
+            if(pickedUpMeal || e.target.closest("button")) return;
+            openMealDetail(day, originalIndex);
+        });
+        box.addEventListener("keydown", (e)=>{
+            if((e.key === "Enter" || e.key === " ") && !pickedUpMeal){
+                e.preventDefault();
+                openMealDetail(day, originalIndex);
+            }
+        });
 
 
         card.appendChild(box);
