@@ -10625,6 +10625,26 @@ function parsePastedRecipe(){
 // =======================
 
 
+function recipesOutOfDate(){
+
+    try{
+
+        let stored = JSON.parse(localStorage.getItem("foodflowRecipes") || "[]");
+
+        if(!Array.isArray(stored)) return false;
+        if(stored.length !== recipes.length) return true;
+
+        return stored.some((r, i) => !recipes[i] || r.name !== recipes[i].name);
+
+    }catch(e){
+
+        return false;
+
+    }
+
+}
+
+
 function showPage(page){
 
 localStorage.setItem(
@@ -10672,6 +10692,20 @@ if(page==="recipes"){
 
 document.getElementById("recipesPage")
 .style.display="block";
+
+// Safety net: if the saved recipes no longer match what this page has
+// in memory (e.g. a synced change landed in storage but the page has
+// not refreshed yet), reload once so the list is always complete.
+if(recipesOutOfDate()){
+    try{
+        let last = Number(sessionStorage.getItem("ff_recipe_reload") || 0);
+        if(Date.now() - last > 15000){
+            sessionStorage.setItem("ff_recipe_reload", String(Date.now()));
+            location.reload();
+            return;
+        }
+    }catch(e){}
+}
 
 }
 
