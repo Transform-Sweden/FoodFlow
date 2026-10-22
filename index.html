@@ -36,6 +36,7 @@
 --text-soft:#5a6660;
 --primary:#3f9e53;
 --primary-dark:#2f7d40;
+--brand:#37904a;
 --primary-light:#e7f5e9;
 --soft-text:#256236;
 --soft-bg:#dcefdf;
@@ -59,6 +60,7 @@ body.dark {
 --text-soft:#a7b0ab;
 --primary:#4fb868;
 --primary-dark:#3c9450;
+--brand:#46a55c;
 --primary-light:#1d2b20;
 --soft-text:#9be0ad;
 --soft-bg:#25382a;
@@ -213,7 +215,7 @@ transform:translateY(-1px);
 
 #navbar button.nav-active {
 
-background:var(--primary);
+background:var(--brand);
 
 color:white;
 
@@ -223,7 +225,7 @@ box-shadow:var(--shadow-sm);
 
 #navbar button.nav-active:hover {
 
-background:var(--primary);
+background:var(--brand);
 
 color:white;
 
@@ -242,7 +244,7 @@ letter-spacing:-0.02em;
 
 margin-bottom:5px;
 
-background:linear-gradient(135deg, var(--primary-dark), var(--primary));
+background:linear-gradient(var(--brand), var(--brand));
 
 -webkit-background-clip:text;
 
@@ -260,9 +262,9 @@ button {
 
 border:none;
 
-background:var(--primary);
+background:var(--brand);
 
-background-image:linear-gradient(135deg, var(--primary), var(--primary-dark));
+background-image:linear-gradient(135deg, var(--brand), var(--primary-dark));
 
 color:white;
 
@@ -735,13 +737,17 @@ background:color-mix(in srgb, var(--soft-bg) 75%, var(--primary));
 background-image:none; filter:none; box-shadow:none; transform:none;
 }
 #plannerPage .week-nav-secondary button.active {
-background:var(--primary); color:#fff;
+background:var(--brand); color:#fff;
 }
 #plannerPage .week-nav-secondary button { font-size:14px; padding:6px 14px; font-weight:500; }
 
 /* clickable meal cards (replaces the View button) */
 #plannerPage .meal[data-open] { cursor:pointer; }
 #plannerPage .meal[data-open]:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
+
+.day-note-input.is-hidden { display:none; }
+#dayMenu button.danger { color:#d64545; }
+#dayMenu hr { border:none; border-top:1px solid rgba(120,120,120,.25); margin:6px 4px; }
 
 /* small menu behind the ⋯ button */
 #dayMenu {
@@ -2162,6 +2168,30 @@ data-i18n-placeholder="category_emoji_placeholder"
 
 <!-- COPY DAY WINDOW -->
 
+<div class="modal" role="dialog" aria-modal="true" id="moveDayModal">
+
+<div class="modal-box">
+
+<h2 data-i18n="move_day_title">↔️ Move Day</h2>
+
+<p class="small">
+<span data-i18n="move_day_prefix">Move all meals from</span> <strong id="moveDaySourceLabel"></strong> <span data-i18n="move_day_suffix">to:</span>
+</p>
+
+<div id="moveDayTargets"></div>
+
+<p class="small" data-i18n="move_day_note">The meals are added to whatever is already planned there, and removed from the original day.</p>
+
+<br>
+
+<button data-primary onclick="confirmMoveDay()" data-i18n="move_day_button">Move</button>
+
+<button onclick="closeMoveDayModal()" data-i18n="cancel">Cancel</button>
+
+</div>
+
+</div>
+
 <div class="modal" role="dialog" aria-modal="true" id="copyDayModal">
 
 
@@ -3110,6 +3140,28 @@ const translations = {
         need_exact: "need",
         round_shopping_label: "Round up shopping amounts",
         round_shopping_description: "80 g becomes 100 g, 1.2 kg becomes 1.5 kg. The exact amount stays visible in gray. Recipes and the planner are not changed.",
+        day_menu_note_add: "Add note",
+        day_menu_note_edit: "Edit note",
+        day_menu_eating_out: "🍽️ Eating out",
+        eating_out_note: "🍽️ Eating out",
+        eating_out_already: "Already marked as eating out",
+        day_menu_move: "↔️ Move day",
+        day_menu_shop: "🛒 Shopping list for this day",
+        day_menu_clear: "🧹 Clear day",
+        clear_day_title: "Clear day",
+        clear_day_message: "Remove all meals from {day}?",
+        clear_day_nothing: "No meals to clear",
+        clear_day_cleared: "{day} cleared",
+        move_day_title: "↔️ Move Day",
+        move_day_prefix: "Move all meals from",
+        move_day_suffix: "to:",
+        move_day_note: "The meals are added to whatever is already planned there, and removed from the original day.",
+        move_day_button: "Move",
+        move_day_next_week: "Next week",
+        move_day_prev_week: "Previous week",
+        move_day_pick: "Pick where to move the meals",
+        move_day_nothing: "No meals on {day} to move",
+        move_day_done: "Moved to {target}",
         day_menu_label: "Day options",
         view_week: "Week",
         view_month: "Month",
@@ -3411,6 +3463,28 @@ const translations = {
         need_exact: "behöver",
         round_shopping_label: "Avrunda inköpsmängder uppåt",
         round_shopping_description: "80 g blir 100 g, 1,2 kg blir 1,5 kg. Den exakta mängden visas i grått. Recept och planeraren ändras inte.",
+        day_menu_note_add: "Lägg till anteckning",
+        day_menu_note_edit: "Redigera anteckning",
+        day_menu_eating_out: "🍽️ Äter ute",
+        eating_out_note: "🍽️ Äter ute",
+        eating_out_already: "Redan markerad som äter ute",
+        day_menu_move: "↔️ Flytta dag",
+        day_menu_shop: "🛒 Inköpslista för den här dagen",
+        day_menu_clear: "🧹 Rensa dag",
+        clear_day_title: "Rensa dag",
+        clear_day_message: "Ta bort alla måltider från {day}?",
+        clear_day_nothing: "Inga måltider att rensa",
+        clear_day_cleared: "{day} rensad",
+        move_day_title: "↔️ Flytta dag",
+        move_day_prefix: "Flytta alla måltider från",
+        move_day_suffix: "till:",
+        move_day_note: "Måltiderna läggs till det som redan är planerat där och tas bort från ursprungsdagen.",
+        move_day_button: "Flytta",
+        move_day_next_week: "Nästa vecka",
+        move_day_prev_week: "Förra veckan",
+        move_day_pick: "Välj vart måltiderna ska flyttas",
+        move_day_nothing: "Inga måltider på {day} att flytta",
+        move_day_done: "Flyttad till {target}",
         day_menu_label: "Dagens alternativ",
         view_week: "Vecka",
         view_month: "Månad",
@@ -5964,11 +6038,31 @@ function openDayMenu(btn, day){
     menu.id = "dayMenu";
     menu.setAttribute("role", "menu");
 
-    let item = document.createElement("button");
-    item.setAttribute("role", "menuitem");
-    item.textContent = t("planner_copy_day");
-    item.onclick = () => { closeDayMenu(); openCopyDayModal(day); };
-    menu.appendChild(item);
+    let firstItem = null;
+
+    const item = (label, fn, danger) => {
+        let b = document.createElement("button");
+        b.setAttribute("role", "menuitem");
+        if(danger) b.className = "danger";
+        b.textContent = label;
+        b.onclick = () => { closeDayMenu(); fn(); };
+        menu.appendChild(b);
+        if(!firstItem) firstItem = b;
+    };
+
+    let hasNote = !!(dayNotes[dayNoteKey(day)] || "");
+
+    item("📝 " + t(hasNote ? "day_menu_note_edit" : "day_menu_note_add"), () => {
+        let card = btn.closest(".day");
+        let input = card && card.querySelector(".day-note-input");
+        if(input){ input.classList.remove("is-hidden"); input.focus(); }
+    });
+    item(t("day_menu_eating_out"), () => markDayEatingOut(day));
+    item(t("planner_copy_day"), () => openCopyDayModal(day));
+    item(t("day_menu_move"), () => openMoveDayModal(day));
+    item(t("day_menu_shop"), () => shopForDay(day));
+    menu.appendChild(document.createElement("hr"));
+    item(t("day_menu_clear"), () => clearDay(day), true);
 
     document.body.appendChild(menu);
 
@@ -5984,7 +6078,7 @@ function openDayMenu(btn, day){
         document.addEventListener("click", away, true);
     }, 0);
 
-    item.focus();
+    if(firstItem) firstItem.focus();
 
 }
 
@@ -6022,11 +6116,12 @@ card.innerHTML = `
 <h2>${translateDayName(day)}</h2>
 
 <input
-    class="day-note-input"
+    class="day-note-input${(dayNotes[dayNoteKey(day)] || "") ? "" : " is-hidden"}"
     type="text"
     placeholder="${t("day_note_placeholder")}"
     value="${(dayNotes[dayNoteKey(day)] || "").replace(/"/g, "&quot;")}"
     onchange="updateDayNote('${day}', this.value)"
+    onblur="if(!this.value.trim()) this.classList.add('is-hidden')"
     style="
         width:100%;
         box-sizing:border-box;
@@ -6792,6 +6887,186 @@ showToast(`${t("toast_removed")} "${removedMeal.name}"`, {
     }
 });
 
+
+}
+
+
+// =======================
+// DAY MENU ACTIONS
+// =======================
+
+function markDayEatingOut(day){
+
+    let key = dayNoteKey(day);
+    let label = t("eating_out_note");
+    let current = (dayNotes[key] || "").trim();
+
+    if(current.includes(label)){
+        showToast(t("eating_out_already"));
+        return;
+    }
+
+    dayNotes[key] = current ? current + " · " + label : label;
+    saveDayNotes();
+    render();
+
+}
+
+
+async function clearDay(day){
+
+    if(!meals[day] || meals[day].length === 0){
+        showToast(t("clear_day_nothing"));
+        return;
+    }
+
+    let dayLabel = translateDayName(day);
+
+    let ok = await customConfirm(
+        t("clear_day_message").replace("{day}", dayLabel),
+        t("clear_day_title")
+    );
+
+    if(!ok) return;
+
+    let removed = meals[day];
+    meals[day] = [];
+
+    saveData();
+    render();
+    renderShoppingList();
+
+    showToast(t("clear_day_cleared").replace("{day}", dayLabel), {
+        actionLabel: "Undo",
+        onAction: () => {
+            meals[day] = (meals[day] || []).concat(removed);
+            saveData();
+            render();
+            renderShoppingList();
+        }
+    });
+
+}
+
+
+function shopForDay(day){
+
+    let dateKey = addDaysToKey(currentWeekKey, days.indexOf(day));
+
+    shoppingRangeStart = dateKey;
+    shoppingRangeEnd = dateKey;
+
+    saveShoppingState();
+    showPage("shopping");
+
+}
+
+
+// ---- Move day ----
+let moveDaySource = null;
+
+function openMoveDayModal(day){
+
+    if(!meals[day] || meals[day].length === 0){
+        showToast(t("move_day_nothing").replace("{day}", translateDayName(day)), { type:"error" });
+        return;
+    }
+
+    moveDaySource = day;
+
+    document.getElementById("moveDaySourceLabel").innerText = translateDayName(day);
+
+    const option = (value, label) => `
+        <label style="display:flex;align-items:center;gap:8px;font-weight:normal;">
+            <input type="radio" name="moveDayTarget" class="moveDayTarget" value="${value}" style="width:auto;margin:0;">
+            ${label}
+        </label>`;
+
+    let html = days.filter(d => d !== day)
+        .map(d => option(d + "|0", translateDayName(d))).join("");
+
+    html += `<hr style="margin:8px 0;">`;
+    html += option(day + "|1", t("move_day_next_week") + " · " + translateDayName(day));
+    html += option(day + "|-1", t("move_day_prev_week") + " · " + translateDayName(day));
+
+    document.getElementById("moveDayTargets").innerHTML = html;
+
+    document.getElementById("moveDayModal").style.display = "flex";
+
+}
+
+
+function closeMoveDayModal(){
+
+    document.getElementById("moveDayModal").style.display = "none";
+
+}
+
+
+function confirmMoveDay(){
+
+    let picked = document.querySelector(".moveDayTarget:checked");
+
+    if(!picked){
+        showToast(t("move_day_pick"), { type:"error" });
+        return;
+    }
+
+    let [targetDay, offsetStr] = picked.value.split("|");
+    let offset = Number(offsetStr);
+
+    let sourceMeals = meals[moveDaySource] || [];
+
+    if(sourceMeals.length === 0){
+        closeMoveDayModal();
+        return;
+    }
+
+    let targetWeekKey = offset === 0 ? currentWeekKey : addDaysToKey(currentWeekKey, 7 * offset);
+    let targetWeek = ensureWeek(targetWeekKey);
+
+    if(!targetWeek[targetDay]){
+        targetWeek[targetDay] = [];
+    }
+
+    // Keep leftover links pointing at the meals that just moved
+    let movedIds = new Set(sourceMeals.map(m => m.id).filter(Boolean));
+
+    Object.values(weeks).forEach(week=>{
+        days.forEach(d=>{
+            (week[d] || []).forEach(m=>{
+                let ref = m.usingLeftoversFrom;
+                if(ref && !ref.external && movedIds.has(ref.mealId) &&
+                   ref.weekKey === currentWeekKey && ref.day === moveDaySource){
+                    ref.weekKey = targetWeekKey;
+                    ref.day = targetDay;
+                }
+            });
+        });
+    });
+
+    sourceMeals.forEach(m => targetWeek[targetDay].push(m));
+    meals[moveDaySource] = [];
+
+    // The day's note travels with its meals
+    let fromKey = dayNoteKey(moveDaySource);
+    let toKey = `${targetWeekKey}_${targetDay}`;
+    if(dayNotes[fromKey]){
+        dayNotes[toKey] = dayNotes[toKey] ? dayNotes[toKey] + " · " + dayNotes[fromKey] : dayNotes[fromKey];
+        delete dayNotes[fromKey];
+        saveDayNotes();
+    }
+
+    saveData();
+    closeMoveDayModal();
+    render();
+    renderShoppingList();
+
+    let targetLabel = translateDayName(targetDay) +
+        (offset === 1 ? " (" + t("move_day_next_week").toLowerCase() + ")" :
+         offset === -1 ? " (" + t("move_day_prev_week").toLowerCase() + ")" : "");
+
+    showToast(t("move_day_done").replace("{target}", targetLabel));
 
 }
 
