@@ -700,13 +700,21 @@ min-width:44px;
 
 padding:0;
 
-font-size:20px;
+margin:0;
+
+font-size:22px;
 
 line-height:1;
 
 border-radius:50%;
 
 flex-shrink:0;
+
+display:inline-flex;
+
+align-items:center;
+
+justify-content:center;
 
 }
 
@@ -768,8 +776,8 @@ background:var(--brand); color:#fff;
 #plannerPage .week-nav-secondary button { font-size:14px; padding:6px 14px; font-weight:500; }
 
 /* clickable meal cards (replaces the View button) */
-#plannerPage .meal[data-open] { cursor:pointer; }
-#plannerPage .meal[data-open]:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
+#plannerPage .meal[data-open], #recipeList .meal[data-open] { cursor:pointer; }
+#plannerPage .meal[data-open]:focus-visible, #recipeList .meal[data-open]:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
 
 .day-note-input.is-hidden { display:none; }
 #dayMenu button.danger { color:#d64545; }
@@ -2329,12 +2337,12 @@ Meal
 
 <div class="action-list" style="margin-top:15px;">
 
-<button id="mealDetailOpenRecipeBtn" onclick="openRecipeFromMealDetail()">
-📖 Open Recipe
-</button>
-
 <button class="edit" onclick="editMealFromDetail()">
 ✏️ Edit
+</button>
+
+<button id="mealDetailOpenRecipeBtn" onclick="openRecipeFromMealDetail()">
+📖 Open Recipe
 </button>
 
 <button class="delete" onclick="deleteMealFromDetail()">
@@ -2784,6 +2792,10 @@ Recipe
 
 <div class="action-list" style="margin-top:15px;">
 
+<button class="edit" onclick="editRecipeFromDetail()">
+✏️ Edit
+</button>
+
 <button id="recipeDetailFavoriteBtn" onclick="toggleFavoriteFromDetail()">
 ☆ Add Favorite
 </button>
@@ -2794,10 +2806,6 @@ Recipe
 
 <button onclick="openPlannerRecipeFromDetail()">
 📅 Add to Planner
-</button>
-
-<button class="edit" onclick="editRecipeFromDetail()">
-✏️ Edit
 </button>
 
 <button class="delete" onclick="deleteRecipeFromDetail()">
@@ -8246,14 +8254,22 @@ ${recipe.name}
 👥 ${recipe.servings} servings &nbsp;·&nbsp; 🥕 ${recipe.ingredients.length} ingredients
 </div>
 
-<button class="btn-soft" onclick="openRecipeDetail(${index})">
-
-📖 View Recipe
-
-</button>
-
 `;
 
+// The whole card opens the recipe (no separate View button)
+card.setAttribute("data-open", "1");
+card.setAttribute("role", "button");
+card.setAttribute("tabindex", "0");
+card.addEventListener("click", (e)=>{
+    if(e.target.closest("button")) return;
+    openRecipeDetail(index);
+});
+card.addEventListener("keydown", (e)=>{
+    if(e.key === "Enter" || e.key === " "){
+        e.preventDefault();
+        openRecipeDetail(index);
+    }
+});
 
 return card;
 
