@@ -718,6 +718,25 @@ justify-content:center;
 
 }
 
+/* The + and − are drawn with CSS (not text), so they are exactly centered
+   in the circle on every device and font. */
+.stepper button {
+font-size:0;
+background-repeat:no-repeat;
+background-position:center;
+}
+.stepper button[onclick*="-1)"] {
+background-image:linear-gradient(currentColor, currentColor);
+background-size:14px 2.4px;
+}
+.stepper button:not([onclick*="-1)"]) {
+background-image:linear-gradient(currentColor, currentColor), linear-gradient(currentColor, currentColor);
+background-size:14px 2.4px, 2.4px 14px;
+}
+.stepper button:hover { background-position:center; background-repeat:no-repeat; }
+.stepper button[onclick*="-1)"]:hover { background-image:linear-gradient(currentColor, currentColor); }
+.stepper button:not([onclick*="-1)"]):hover { background-image:linear-gradient(currentColor, currentColor), linear-gradient(currentColor, currentColor); }
+
 .stepper input {
 
 text-align:center;
