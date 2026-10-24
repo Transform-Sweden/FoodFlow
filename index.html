@@ -41,6 +41,7 @@
 --soft-text:var(--text);
 --soft-bg:var(--card);
 --soft-border:var(--primary);
+--field-border:#c9d1cc;
 --neutral-border:#6b746e;
 --neutral-text:#353d38;
 --edit-bg:rgba(33,150,243,.12);
@@ -71,6 +72,7 @@ body.dark {
 --soft-text:var(--text);
 --soft-bg:var(--card);
 --soft-border:var(--primary);
+--field-border:#3d4842;
 --neutral-border:#a4aea8;
 --neutral-text:#dde3df;
 --edit-bg:rgba(33,150,243,.22);
@@ -550,7 +552,7 @@ overflow-y:auto;
 
 margin-top:10px;
 
-border:1px solid #ccc;
+border:1px solid var(--field-border);
 border-radius:12px;
 
 padding:6px;
@@ -672,7 +674,7 @@ margin:8px 0;
 
 border-radius:12px;
 
-border:1px solid #ccc;
+border:1px solid var(--field-border);
 
 font-size:16px;
 
@@ -801,6 +803,10 @@ background:var(--brand); color:#fff;
 .day-note-input.is-hidden { display:none; }
 #dayMenu button.danger { color:#d64545; }
 #dayMenu hr { border:none; border-top:1px solid rgba(120,120,120,.25); margin:6px 4px; }
+
+/* Recipe cards: only as tall as their content */
+#recipeList .meal-name-clamp { min-height:0; margin:0; font-size:1.05em; }
+#recipeList .meal { padding:14px 16px; }
 
 /* small menu behind the ⋯ button */
 #dayMenu {
@@ -1147,7 +1153,7 @@ margin-bottom:4px;
 
 padding:8px 0;
 
-border-bottom:1px solid #ccc;
+border-bottom:1px solid var(--field-border);
 
 font-size:15px;
 
@@ -1203,7 +1209,7 @@ margin-bottom:8px;
 
 padding-bottom:6px;
 
-border-bottom:1px solid #ccc;
+border-bottom:1px solid var(--field-border);
 
 }
 
@@ -1712,6 +1718,38 @@ button.edit:hover { background:var(--edit-bg); }
 button.delete { background:var(--card); border-color:#e53935; color:var(--danger-text); }
 button.delete:hover { background:var(--danger-bg); }
 
+
+/* =======================
+   FORM FIELDS (same design everywhere)
+   ======================= */
+:root { color-scheme:light; }
+body.dark { color-scheme:dark; }
+
+input:not([type="checkbox"]):not([type="radio"]),
+select, textarea {
+background-color:var(--card); color:var(--text);
+border:1px solid var(--field-border); border-radius:12px;
+font-family:inherit;
+transition:border-color .15s var(--ease), box-shadow .15s var(--ease);
+}
+input::placeholder, textarea::placeholder { color:var(--text-soft); opacity:.75; }
+input:not([type="checkbox"]):not([type="radio"]):focus,
+select:focus, textarea:focus,
+input:not([type="checkbox"]):not([type="radio"]):focus-visible,
+select:focus-visible, textarea:focus-visible {
+outline:none; border-color:var(--primary);
+box-shadow:0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+select {
+appearance:none; -webkit-appearance:none;
+padding-right:38px;
+background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238a948e' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
+background-repeat:no-repeat; background-position:right 14px center; background-size:14px;
+}
+input[type="checkbox"], input[type="radio"] { accent-color:var(--brand); }
+input[type="checkbox"] { width:18px; height:18px; }
+input[type="radio"] { width:18px; height:18px; }
+
 </style>
 
 
@@ -2216,35 +2254,35 @@ Choose an emoji:
 <div id="emojiPicker">
 
 
-<button onclick="selectEmoji('🍕')" aria-label="Pizza emoji">
+<button onclick="selectEmoji('🍕')" data-i18n-aria-label="aria_emoji_pizza" aria-label="Pizza emoji">
 🍕
 </button>
 
-<button onclick="selectEmoji('🍰')" aria-label="Cake emoji">
+<button onclick="selectEmoji('🍰')" data-i18n-aria-label="aria_emoji_cake" aria-label="Cake emoji">
 🍰
 </button>
 
-<button onclick="selectEmoji('🥪')" aria-label="Sandwich emoji">
+<button onclick="selectEmoji('🥪')" data-i18n-aria-label="aria_emoji_sandwich" aria-label="Sandwich emoji">
 🥪
 </button>
 
-<button onclick="selectEmoji('🍎')" aria-label="Apple emoji">
+<button onclick="selectEmoji('🍎')" data-i18n-aria-label="aria_emoji_apple" aria-label="Apple emoji">
 🍎
 </button>
 
-<button onclick="selectEmoji('🥤')" aria-label="Drink emoji">
+<button onclick="selectEmoji('🥤')" data-i18n-aria-label="aria_emoji_drink" aria-label="Drink emoji">
 🥤
 </button>
 
-<button onclick="selectEmoji('🌙')" aria-label="Moon emoji">
+<button onclick="selectEmoji('🌙')" data-i18n-aria-label="aria_emoji_moon" aria-label="Moon emoji">
 🌙
 </button>
 
-<button onclick="selectEmoji('💪')" aria-label="Muscle emoji">
+<button onclick="selectEmoji('💪')" data-i18n-aria-label="aria_emoji_muscle" aria-label="Muscle emoji">
 💪
 </button>
 
-<button onclick="selectEmoji('🍲')" aria-label="Stew emoji">
+<button onclick="selectEmoji('🍲')" data-i18n-aria-label="aria_emoji_stew" aria-label="Stew emoji">
 🍲
 </button>
 
@@ -2544,7 +2582,7 @@ Copy a recipe's title, portions, and ingredient list from pretty much any websit
 id="pasteText"
 rows="12"
 placeholder="Paste the recipe text here, e.g.&#10;&#10;Köttbullar&#10;4 portioner&#10;500 g nötfärs&#10;1 gul lök&#10;1 dl ströbröd&#10;1 ägg" data-i18n-placeholder="ph_paste"
-style="width:100%;padding:12px;border-radius:12px;border:1px solid #ccc;font-size:15px;font-family:inherit;"
+style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--field-border);font-size:15px;font-family:inherit;"
 ></textarea>
 
 
@@ -2750,7 +2788,7 @@ id="recipeInstructions"
 rows="8"
 placeholder="1. Chop the onions...&#10;2. Fry until golden...&#10;3. Add the rest and simmer for 20 minutes..."
 data-i18n-placeholder="recipe_instructions_placeholder"
-style="width:100%;padding:12px;border-radius:12px;border:1px solid #ccc;font-size:15px;font-family:inherit;"
+style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--field-border);font-size:15px;font-family:inherit;"
 ></textarea>
 
 
@@ -2851,13 +2889,13 @@ Close
 
 <select id="plannerRecipeDay">
 
-<option>Monday</option>
-<option>Tuesday</option>
-<option>Wednesday</option>
-<option>Thursday</option>
-<option>Friday</option>
-<option>Saturday</option>
-<option>Sunday</option>
+<option value="Monday" data-day="Monday">Monday</option>
+<option value="Tuesday" data-day="Tuesday">Tuesday</option>
+<option value="Wednesday" data-day="Wednesday">Wednesday</option>
+<option value="Thursday" data-day="Thursday">Thursday</option>
+<option value="Friday" data-day="Friday">Friday</option>
+<option value="Saturday" data-day="Saturday">Saturday</option>
+<option value="Sunday" data-day="Sunday">Sunday</option>
 
 </select>
 
@@ -3332,6 +3370,20 @@ const translations = {
         autoplan_no_recipes: "Add some recipes first",
         autoplan_nothing_empty: "There are no empty days this week",
         autoplan_done: "Added {n} meals",
+        shop_cat_produce: "Produce",
+        shop_cat_dairy: "Dairy & Eggs",
+        shop_cat_meat: "Meat & Fish",
+        shop_cat_pantry: "Pantry",
+        shop_cat_herbs: "Herbs & Spices",
+        shop_cat_other: "Other",
+        aria_emoji_pizza: "Pizza emoji",
+        aria_emoji_cake: "Cake emoji",
+        aria_emoji_sandwich: "Sandwich emoji",
+        aria_emoji_apple: "Apple emoji",
+        aria_emoji_drink: "Drink emoji",
+        aria_emoji_moon: "Moon emoji",
+        aria_emoji_muscle: "Muscle emoji",
+        aria_emoji_stew: "Stew emoji",
         day_menu_label: "Day options",
         view_week: "Week",
         view_month: "Month",
@@ -3706,6 +3758,20 @@ const translations = {
         autoplan_no_recipes: "Lägg till några recept först",
         autoplan_nothing_empty: "Det finns inga tomma dagar den här veckan",
         autoplan_done: "{n} måltider tillagda",
+        shop_cat_produce: "Frukt & grönt",
+        shop_cat_dairy: "Mejeri & ägg",
+        shop_cat_meat: "Kött & fisk",
+        shop_cat_pantry: "Skafferi",
+        shop_cat_herbs: "Örter & kryddor",
+        shop_cat_other: "Övrigt",
+        aria_emoji_pizza: "Pizza-emoji",
+        aria_emoji_cake: "Tårta-emoji",
+        aria_emoji_sandwich: "Smörgås-emoji",
+        aria_emoji_apple: "Äpple-emoji",
+        aria_emoji_drink: "Dryck-emoji",
+        aria_emoji_moon: "Måne-emoji",
+        aria_emoji_muscle: "Muskel-emoji",
+        aria_emoji_stew: "Gryta-emoji",
         day_menu_label: "Dagens alternativ",
         view_week: "Vecka",
         view_month: "Månad",
@@ -3945,6 +4011,10 @@ function applyTranslations(){
 
         el.textContent = t(el.getAttribute("data-i18n"));
 
+    });
+
+    document.querySelectorAll("option[data-day]").forEach(el=>{
+        el.textContent = translateDayName(el.getAttribute("data-day"));
     });
 
     document.querySelectorAll("[data-i18n-placeholder]").forEach(el=>{
@@ -8586,10 +8656,9 @@ ${recipe.name}
 
 </h3>
 
-<div style="display:flex; flex-wrap:wrap; gap:4px; margin:4px 0; min-height:22px;">
-    ${
+${
     (recipe.tags && recipe.tags.length > 0)
-    ? recipe.tags.map(tag => `
+    ? `<div style="display:flex; flex-wrap:wrap; gap:4px; margin:6px 0 4px;">` + recipe.tags.map(tag => `
         <span style="
             padding:2px 8px;
             border-radius:999px;
@@ -8598,12 +8667,11 @@ ${recipe.name}
             border:1px solid var(--primary);
             opacity:0.85;
         ">${tag}</span>
-    `).join("")
+    `).join("") + `</div>`
     : ""
     }
-</div>
 
-<div class="small">
+<div class="small" style="margin-top:6px;">
 👥 ${t("servings_count").replace("{n}", recipe.servings)} &nbsp;·&nbsp; 🥕 ${ingredientsCountText(recipe.ingredients.length)}
 </div>
 
@@ -9483,20 +9551,20 @@ function renderCategoryOrderSettings(){
             border-radius:8px;
             background:var(--bg);
         ">
-            <span>${categoryIcons[cat] || "🛒"} ${cat}</span>
+            <span>${categoryIcons[cat] || "🛒"} ${categoryLabel(cat)}</span>
 
             <span style="display:flex; gap:4px;">
                 <button
                     onclick="moveCategoryOrder(${index}, -1)"
                     ${index === 0 ? "disabled" : ""}
-                    aria-label="${t("aria_move_category_up")}: ${cat}"
+                    aria-label="${t("aria_move_category_up")}: ${categoryLabel(cat)}"
                     style="padding:2px 10px;"
                 >▲</button>
 
                 <button
                     onclick="moveCategoryOrder(${index}, 1)"
                     ${index === categoryOrder.length - 1 ? "disabled" : ""}
-                    aria-label="${t("aria_move_category_down")}: ${cat}"
+                    aria-label="${t("aria_move_category_down")}: ${categoryLabel(cat)}"
                     style="padding:2px 10px;"
                 >▼</button>
             </span>
@@ -9504,6 +9572,21 @@ function renderCategoryOrderSettings(){
 
     `).join("");
 
+}
+
+// Shown names for the shopping-list sections (the English names stay the
+// internal keys, so saved data and sorting keep working in both languages).
+const categoryLabelKeys = {
+    "Produce":"shop_cat_produce",
+    "Dairy & Eggs":"shop_cat_dairy",
+    "Meat & Fish":"shop_cat_meat",
+    "Pantry":"shop_cat_pantry",
+    "Herbs & Spices":"shop_cat_herbs",
+    "Other":"shop_cat_other"
+};
+
+function categoryLabel(cat){
+    return categoryLabelKeys[cat] ? t(categoryLabelKeys[cat]) : cat;
 }
 
 const categoryIcons = {
@@ -9683,7 +9766,7 @@ function populateCustomTranslationCategorySelect(){
         `<option value="">${categoryIcons["Other"] || "🛒"} ${t("category_auto_other")}</option>` +
         categoryOrder
             .filter(cat => cat !== "Other")
-            .map(cat => `<option value="${cat}">${categoryIcons[cat] || "🛒"} ${cat}</option>`)
+            .map(cat => `<option value="${cat}">${categoryIcons[cat] || "🛒"} ${categoryLabel(cat)}</option>`)
             .join("");
 
     select.value = current;
@@ -9801,7 +9884,7 @@ function renderCustomIngredientTranslations(){
 
         let category = customIngredientCategories[target];
         let categoryLabel = category
-            ? ` · ${categoryIcons[category] || "🛒"} ${category}`
+            ? ` · ${categoryIcons[category] || "🛒"} ${categoryLabel(category)}`
             : "";
 
         return `
@@ -10418,7 +10501,7 @@ function renderShoppingList(){
             .filter(cat => groups[cat] && groups[cat].length > 0)
             .map(cat => `
                 <h3 style="margin:20px 0 8px;">
-                    ${categoryIcons[cat] || ""} ${cat}
+                    ${categoryIcons[cat] || ""} ${categoryLabel(cat)}
                 </h3>
                 ${groups[cat].map(renderShoppingItemRow).join("")}
             `)
@@ -10863,7 +10946,7 @@ function buildShoppingListText(){
         .filter(cat => groups[cat] && groups[cat].length > 0)
         .forEach(cat=>{
 
-            lines.push(`${categoryIcons[cat] || ""} ${cat}`);
+            lines.push(`${categoryIcons[cat] || ""} ${categoryLabel(cat)}`);
 
             groups[cat].forEach(item=>{
 
@@ -10969,7 +11052,7 @@ function printShoppingList(){
                 }).join("");
 
                 return `
-                    <h3>${categoryIcons[cat] || ""} ${cat}</h3>
+                    <h3>${categoryIcons[cat] || ""} ${categoryLabel(cat)}</h3>
                     ${rows}
                 `;
 
