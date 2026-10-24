@@ -1991,8 +1991,14 @@ data-i18n-placeholder="sync_code_placeholder" placeholder="XXXX-XXXX-XXXX">
 
 <div id="syncOnBlock" style="display:none;">
 <div style="font-size:20px;font-weight:600;letter-spacing:1px;margin:6px 0;" id="syncCodeDisplay"></div>
+<button onclick="ffSyncShare()">
+<span data-i18n="sync_share">🔗 Share invite link</span>
+</button>
 <button onclick="ffSyncCopy()">
 <span data-i18n="sync_copy">📋 Copy code</span>
+</button>
+<button onclick="ffSyncChangeCode()">
+<span data-i18n="sync_change">🔄 Change code</span>
 </button>
 <button onclick="ffSyncRestore()">
 <span data-i18n="sync_restore">♻️ Restore data from before sync</span>
@@ -2356,17 +2362,11 @@ Meal
 
 <div class="action-list" style="margin-top:15px;">
 
-<button class="edit" onclick="editMealFromDetail()">
-✏️ Edit
-</button>
+<button class="edit" onclick="editMealFromDetail()" data-i18n="btn_edit">✏️ Edit</button>
 
-<button id="mealDetailOpenRecipeBtn" onclick="openRecipeFromMealDetail()">
-📖 Open Recipe
-</button>
+<button id="mealDetailOpenRecipeBtn" onclick="openRecipeFromMealDetail()" data-i18n="btn_open_recipe">📖 Open Recipe</button>
 
-<button class="delete" onclick="deleteMealFromDetail()">
-🗑 Delete
-</button>
+<button class="delete" onclick="deleteMealFromDetail()" data-i18n="btn_delete">🗑 Delete</button>
 
 </div>
 
@@ -2479,7 +2479,7 @@ or enter manually:
 
 <input
 id="mealName"
-placeholder="e.g. Spaghetti Bolognese"
+placeholder="e.g. Spaghetti Bolognese" data-i18n-placeholder="ph_meal_name"
 >
 
 
@@ -2543,7 +2543,7 @@ Copy a recipe's title, portions, and ingredient list from pretty much any websit
 <textarea
 id="pasteText"
 rows="12"
-placeholder="Paste the recipe text here, e.g.&#10;&#10;Köttbullar&#10;4 portioner&#10;500 g nötfärs&#10;1 gul lök&#10;1 dl ströbröd&#10;1 ägg"
+placeholder="Paste the recipe text here, e.g.&#10;&#10;Köttbullar&#10;4 portioner&#10;500 g nötfärs&#10;1 gul lök&#10;1 dl ströbröd&#10;1 ägg" data-i18n-placeholder="ph_paste"
 style="width:100%;padding:12px;border-radius:12px;border:1px solid #ccc;font-size:15px;font-family:inherit;"
 ></textarea>
 
@@ -2613,7 +2613,7 @@ Edit Item
 
 <input
 id="shoppingItemName"
-placeholder="e.g. Tomatoes"
+placeholder="e.g. Tomatoes" data-i18n-placeholder="ph_item_name"
 >
 
 
@@ -2626,7 +2626,7 @@ placeholder="e.g. Tomatoes"
 id="shoppingItemAmount"
 type="number"
 step="any"
-placeholder="Leave blank for none"
+placeholder="Leave blank for none" data-i18n-placeholder="ph_item_amount"
 >
 
 
@@ -2637,7 +2637,7 @@ placeholder="Leave blank for none"
 
 <input
 id="shoppingItemUnit"
-placeholder="e.g. g, dl, st"
+placeholder="e.g. g, dl, st" data-i18n-placeholder="ph_item_unit"
 >
 
 
@@ -2699,7 +2699,7 @@ Add Recipe
 
 <input
 id="recipeName"
-placeholder="Example: Spaghetti Bolognese"
+placeholder="Example: Spaghetti Bolognese" data-i18n-placeholder="ph_recipe_name"
 >
 
 
@@ -2710,7 +2710,7 @@ placeholder="Example: Spaghetti Bolognese"
 
 <input
 id="recipeTags"
-placeholder="e.g. quick, vegetarian, dessert"
+placeholder="e.g. quick, vegetarian, dessert" data-i18n-placeholder="ph_recipe_tags"
 >
 
 
@@ -2811,25 +2811,15 @@ Recipe
 
 <div class="action-list" style="margin-top:15px;">
 
-<button class="edit" onclick="editRecipeFromDetail()">
-✏️ Edit
-</button>
+<button class="edit" onclick="editRecipeFromDetail()" data-i18n="btn_edit">✏️ Edit</button>
 
-<button id="recipeDetailFavoriteBtn" onclick="toggleFavoriteFromDetail()">
-☆ Add Favorite
-</button>
+<button id="recipeDetailFavoriteBtn" onclick="toggleFavoriteFromDetail()" data-i18n="fav_add">☆ Add Favorite</button>
 
-<button onclick="duplicateRecipeFromDetail()">
-📄 Duplicate
-</button>
+<button onclick="duplicateRecipeFromDetail()" data-i18n="btn_duplicate">📄 Duplicate</button>
 
-<button onclick="openPlannerRecipeFromDetail()">
-📅 Add to Planner
-</button>
+<button onclick="openPlannerRecipeFromDetail()" data-i18n="btn_add_to_planner">📅 Add to Planner</button>
 
-<button class="delete" onclick="deleteRecipeFromDetail()">
-🗑 Delete
-</button>
+<button class="delete" onclick="deleteRecipeFromDetail()" data-i18n="btn_delete">🗑 Delete</button>
 
 </div>
 
@@ -2933,14 +2923,14 @@ Close
 
 <div class="modal-box">
 
-<h2 id="customConfirmTitle">Are you sure?</h2>
+<h2 id="customConfirmTitle" data-i18n="confirm_title_default">Are you sure?</h2>
 
 <p id="customConfirmMessage" class="small"></p>
 
 <br>
 
-<button onclick="resolveCustomConfirm(true)">Yes, continue</button>
-<button onclick="resolveCustomConfirm(false)">Cancel</button>
+<button onclick="resolveCustomConfirm(true)" data-i18n="confirm_yes">Yes, continue</button>
+<button onclick="resolveCustomConfirm(false)" data-i18n="cancel">Cancel</button>
 
 </div>
 
@@ -2970,6 +2960,26 @@ Close
 
 <!-- WEEK ACTIONS MENU -->
 
+<div class="modal" role="dialog" aria-modal="true" id="autoPlanModal">
+
+<div class="modal-box">
+
+<h2 data-i18n="autoplan_title">✨ Fill empty days</h2>
+
+<p class="small" id="autoPlanIntro"></p>
+
+<div id="autoPlanList"></div>
+
+<br>
+
+<button onclick="shuffleAutoPlan()" data-i18n="autoplan_shuffle">🔀 Shuffle</button>
+<button data-primary onclick="confirmAutoPlan()" data-i18n="autoplan_apply">Add to planner</button>
+<button onclick="closeAutoPlan()" data-i18n="cancel">Cancel</button>
+
+</div>
+
+</div>
+
 <div class="modal" role="dialog" aria-modal="true" id="weekActionsMenu">
 
 <div class="modal-box">
@@ -2978,6 +2988,7 @@ Close
 
 <div class="action-list">
 
+<button onclick="closeWeekActionsMenu(); openAutoPlan();"><span data-i18n="autoplan_button">✨ Fill empty days</span></button>
 <button onclick="closeWeekActionsMenu(); openRenameWeekModal();"><span data-i18n="nav_full_name_week">🏷️ Name This Week</span></button>
 <button onclick="closeWeekActionsMenu(); openCopyWeekModal();"><span data-i18n="nav_full_copy_forward">📆 Copy Week To...</span></button>
 <button onclick="closeWeekActionsMenu(); openSaveTemplateModal();"><span data-i18n="nav_full_save_template">💾 Save as Template</span></button>
@@ -3012,7 +3023,7 @@ Give this week a name of your own — useful for a rotating schedule, e.g. "Week
 
 <input
     id="renameWeekNameInput"
-    placeholder="e.g. Week 1"
+    placeholder="e.g. Week 1" data-i18n-placeholder="ph_week_name"
 >
 
 <br>
@@ -3270,6 +3281,57 @@ const translations = {
         move_day_pick: "Pick where to move the meals",
         move_day_nothing: "No meals on {day} to move",
         move_day_done: "Moved to {target}",
+        btn_edit: "✏️ Edit",
+        btn_delete: "🗑 Delete",
+        btn_open_recipe: "📖 Open Recipe",
+        btn_duplicate: "📄 Duplicate",
+        btn_add_to_planner: "📅 Add to Planner",
+        btn_view_recipe: "📖 View Recipe",
+        btn_select: "✅ Select",
+        fav_add: "☆ Add Favorite",
+        fav_remove: "⭐ Remove Favorite",
+        undo: "Undo",
+        confirm_yes: "Yes, continue",
+        confirm_title_default: "Are you sure?",
+        people_count: "{n} people",
+        servings_count: "{n} servings",
+        ingredients_count: "{n} ingredients",
+        ingredient_one: "1 ingredient",
+        ingredients_heading: "Ingredients",
+        shopping_not_included: "Not included: {list} — these were typed in manually without a linked recipe, so there are no ingredients to pull from.",
+        selected_count: "{n} selected",
+        sel_check: "✅ Check",
+        sel_cancel: "✖ Cancel",
+        ph_paste: "Paste the recipe text here, e.g.\n\nKöttbullar\n4 portioner\n500 g nötfärs\n1 gul lök\n1 dl ströbröd\n1 ägg",
+        ph_meal_name: "e.g. Spaghetti Bolognese",
+        ph_recipe_name: "Example: Spaghetti Bolognese",
+        ph_recipe_tags: "e.g. quick, vegetarian, dessert",
+        ph_item_name: "e.g. Tomatoes",
+        ph_item_amount: "Leave blank for none",
+        ph_item_unit: "e.g. g, dl, st",
+        ph_week_name: "e.g. Week 1",
+        ph_ingredient: "Ingredient",
+        ph_amount: "Amount",
+        ph_unit: "Unit",
+        remove_ingredient: "Remove ingredient",
+        sync_share: "🔗 Share invite link",
+        sync_share_text: "Join my FoodFlow household:",
+        sync_link_copied: "Invite link copied",
+        sync_change: "🔄 Change code",
+        sync_change_title: "Change household code",
+        sync_change_message: "This moves your household to a new code and copies your data over. Share the new code with the people who should stay. Anyone still using the old code will no longer see new changes. Continue?",
+        sync_code_changed: "New code created. Share it with your household.",
+        sync_invite_title: "Join household?",
+        sync_invite_message: "You were invited to household {code}. It will be added as a new planner on this device and your current planner stays untouched.",
+        autoplan_button: "✨ Fill empty days",
+        autoplan_title: "✨ Fill empty days",
+        autoplan_intro: "A dinner suggestion for each empty day, picked from your favorite recipes. Untick any you don't want.",
+        autoplan_intro_all: "You have no favorite recipes yet, so these are picked from all your recipes. Untick any you don't want.",
+        autoplan_shuffle: "🔀 Shuffle",
+        autoplan_apply: "Add to planner",
+        autoplan_no_recipes: "Add some recipes first",
+        autoplan_nothing_empty: "There are no empty days this week",
+        autoplan_done: "Added {n} meals",
         day_menu_label: "Day options",
         view_week: "Week",
         view_month: "Month",
@@ -3593,6 +3655,57 @@ const translations = {
         move_day_pick: "Välj vart måltiderna ska flyttas",
         move_day_nothing: "Inga måltider på {day} att flytta",
         move_day_done: "Flyttad till {target}",
+        btn_edit: "✏️ Redigera",
+        btn_delete: "🗑 Ta bort",
+        btn_open_recipe: "📖 Öppna recept",
+        btn_duplicate: "📄 Duplicera",
+        btn_add_to_planner: "📅 Lägg till i planeringen",
+        btn_view_recipe: "📖 Visa recept",
+        btn_select: "✅ Välj",
+        fav_add: "☆ Lägg till favorit",
+        fav_remove: "⭐ Ta bort favorit",
+        undo: "Ångra",
+        confirm_yes: "Ja, fortsätt",
+        confirm_title_default: "Är du säker?",
+        people_count: "{n} personer",
+        servings_count: "{n} portioner",
+        ingredients_count: "{n} ingredienser",
+        ingredient_one: "1 ingrediens",
+        ingredients_heading: "Ingredienser",
+        shopping_not_included: "Ingår inte: {list} — dessa skrevs in manuellt utan kopplat recept, så det finns inga ingredienser att hämta.",
+        selected_count: "{n} valda",
+        sel_check: "✅ Markera",
+        sel_cancel: "✖ Avbryt",
+        ph_paste: "Klistra in receptets text här, t.ex.\n\nKöttbullar\n4 portioner\n500 g nötfärs\n1 gul lök\n1 dl ströbröd\n1 ägg",
+        ph_meal_name: "t.ex. Spaghetti Bolognese",
+        ph_recipe_name: "Exempel: Spaghetti Bolognese",
+        ph_recipe_tags: "t.ex. snabbt, vegetariskt, dessert",
+        ph_item_name: "t.ex. Tomater",
+        ph_item_amount: "Lämna tomt för ingen",
+        ph_item_unit: "t.ex. g, dl, st",
+        ph_week_name: "t.ex. Vecka 1",
+        ph_ingredient: "Ingrediens",
+        ph_amount: "Mängd",
+        ph_unit: "Enhet",
+        remove_ingredient: "Ta bort ingrediens",
+        sync_share: "🔗 Dela inbjudningslänk",
+        sync_share_text: "Gå med i mitt FoodFlow-hushåll:",
+        sync_link_copied: "Inbjudningslänk kopierad",
+        sync_change: "🔄 Byt kod",
+        sync_change_title: "Byt hushållskod",
+        sync_change_message: "Det här flyttar ditt hushåll till en ny kod och kopierar över din data. Dela den nya koden med de som ska vara kvar. Den som fortfarande använder den gamla koden ser inga nya ändringar. Fortsätta?",
+        sync_code_changed: "Ny kod skapad. Dela den med ditt hushåll.",
+        sync_invite_title: "Gå med i hushåll?",
+        sync_invite_message: "Du har blivit inbjuden till hushållet {code}. Det läggs till som en ny planering på den här enheten och din nuvarande planering påverkas inte.",
+        autoplan_button: "✨ Fyll tomma dagar",
+        autoplan_title: "✨ Fyll tomma dagar",
+        autoplan_intro: "Ett middagsförslag för varje tom dag, valt bland dina favoritrecept. Avmarkera de du inte vill ha.",
+        autoplan_intro_all: "Du har inga favoritrecept ännu, så förslagen väljs bland alla dina recept. Avmarkera de du inte vill ha.",
+        autoplan_shuffle: "🔀 Blanda",
+        autoplan_apply: "Lägg till i planeraren",
+        autoplan_no_recipes: "Lägg till några recept först",
+        autoplan_nothing_empty: "Det finns inga tomma dagar den här veckan",
+        autoplan_done: "{n} måltider tillagda",
         day_menu_label: "Dagens alternativ",
         view_week: "Vecka",
         view_month: "Månad",
@@ -3912,7 +4025,7 @@ let customConfirmResolver = null;
 function customConfirm(message, title){
 
     document.getElementById("customConfirmTitle").innerText =
-        title || "Are you sure?";
+        title || t("confirm_title_default");
 
     document.getElementById("customConfirmMessage").innerText = message;
 
@@ -5640,6 +5753,80 @@ async function confirmCopyWeek(){
 
 let weekTemplates = loadWeekTemplates();
 
+// =======================
+// RECIPE IDS
+// Every recipe has a permanent id. Meals point at the id (not at the
+// recipe's position in the list), so deleting, duplicating or re-sorting
+// recipes can never make a meal open the wrong recipe.
+// =======================
+function newRecipeId(){
+    return "r_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+// Same recipe -> same id on every device, so devices that upgrade at
+// different times still agree and household sync doesn't duplicate recipes.
+function legacyRecipeId(r){
+    let str = (r.name || "") + "|" + (r.servings || "") + "|" + JSON.stringify(r.ingredients || []);
+    let h = 5381;
+    for(let i = 0; i < str.length; i++){ h = ((h << 5) + h + str.charCodeAt(i)) | 0; }
+    return "r_" + (h >>> 0).toString(36);
+}
+
+function recipeIdAt(index){
+    let r = recipes[index];
+    return r && r.id ? r.id : null;
+}
+
+// Accepts an id (new), a number (old saved data) or nothing.
+// Returns the recipe's position in the list, or -1.
+function recipeIndexFor(ref){
+    if(ref === null || ref === undefined || ref === "") return -1;
+    if(typeof ref === "number") return recipes[ref] ? ref : -1;
+    return recipes.findIndex(r => r.id === ref);
+}
+
+function migrateRecipeIds(){
+
+    let recipesChanged = false;
+    let used = new Set(recipes.filter(r => r.id).map(r => r.id));
+
+    recipes.forEach(r=>{
+        if(r.id) return;
+        let id = legacyRecipeId(r);
+        let n = 1;
+        while(used.has(id)){ n++; id = legacyRecipeId(r) + "_" + n; }
+        r.id = id;
+        used.add(id);
+        recipesChanged = true;
+    });
+
+    const fixMeals = (mealsByDay) => {
+        let changed = false;
+        days.forEach(day=>{
+            (mealsByDay && mealsByDay[day] || []).forEach(m=>{
+                if(typeof m.recipe === "number" && recipes[m.recipe] && recipes[m.recipe].id){
+                    m.recipe = recipes[m.recipe].id;
+                    changed = true;
+                }
+            });
+        });
+        return changed;
+    };
+
+    let weeksChanged = false;
+    Object.values(weeks).forEach(w => { if(fixMeals(w)) weeksChanged = true; });
+
+    let templatesChanged = false;
+    weekTemplates.forEach(tpl => { if(fixMeals(tpl.days)) templatesChanged = true; });
+
+    if(recipesChanged) localStorage.setItem("foodflowRecipes", JSON.stringify(recipes));
+    if(weeksChanged) localStorage.setItem("foodflowWeeks", JSON.stringify(weeks));
+    if(templatesChanged) localStorage.setItem("foodflowWeekTemplates", JSON.stringify(weekTemplates));
+
+}
+
+migrateRecipeIds();
+
 // Custom names for individual weeks (e.g. a rotating "Week 1" / "Week 2" /
 // "Week 3" schedule) — keyed by weekKey, separate from templates, since
 // a name just labels a specific calendar week rather than a reusable plan.
@@ -6294,7 +6481,7 @@ if(meals[day] && meals[day].length > 0){
 
 
         <div class="small">
-        👥 ${meal.people} people
+        👥 ${t("people_count").replace("{n}", meal.people)}
         </div>
 
         <div class="small" style="min-height:1.3em; line-height:1.3em; opacity:0.85; white-space:nowrap;">
@@ -6411,9 +6598,9 @@ if(meal.usingLeftoversFrom){
     <span class="small">📦 ${t("leftover_portions_label")}</span>
     </label>
     <div class="stepper">
-    <button type="button" onclick="adjustMealLeftoverPortions(-1)" data-i18n-aria-label="aria_decrease_servings" aria-label="Decrease">−</button>
+    <button type="button" onclick="adjustMealLeftoverPortions(-1)" data-i18n-aria-label="aria_decrease_servings" aria-label="${t("aria_decrease_servings")}">−</button>
     <input id="mealLeftoverPortionsInput" type="number" min="0" value="${meal.leftoverPortions || 0}">
-    <button type="button" onclick="adjustMealLeftoverPortions(1)" data-i18n-aria-label="aria_increase_servings" aria-label="Increase">+</button>
+    <button type="button" onclick="adjustMealLeftoverPortions(1)" data-i18n-aria-label="aria_increase_servings" aria-label="${t("aria_increase_servings")}">+</button>
     </div>
     <button data-primary onclick="saveMealLeftoverPortions()">
     ${t("save_leftovers")}
@@ -6425,7 +6612,7 @@ if(meal.usingLeftoversFrom){
 document.getElementById("mealDetailContent").innerHTML = `
 
 <div class="small">
-👥 ${meal.people} people
+👥 ${t("people_count").replace("{n}", meal.people)}
 </div>
 
 ${leftoverSectionHtml}
@@ -6434,7 +6621,7 @@ ${leftoverSectionHtml}
 
 let openRecipeBtn = document.getElementById("mealDetailOpenRecipeBtn");
 
-if(meal.recipe !== null && meal.recipe !== undefined && recipes[meal.recipe]){
+if(recipeIndexFor(meal.recipe) >= 0){
     openRecipeBtn.style.display = "block";
 } else {
     openRecipeBtn.style.display = "none";
@@ -6563,9 +6750,9 @@ document.getElementById("mealType").value = sourceMeal.type;
 document.getElementById("mealName").value = sourceMeal.name;
 document.getElementById("people").value = sourceMeal.people;
 
-if(sourceMeal.recipe !== null && sourceMeal.recipe !== undefined){
+if(recipeIndexFor(sourceMeal.recipe) >= 0){
     updateRecipeSelector();
-    document.getElementById("recipeSelect").value = sourceMeal.recipe;
+    document.getElementById("recipeSelect").value = recipeIndexFor(sourceMeal.recipe);
 }
 
 document.getElementById("useLeftoversBtn").style.display = "none";
@@ -6625,8 +6812,8 @@ let meal = meals[mealDetailDay][mealDetailIndex];
 
 closeMealDetail();
 
-if(meal.recipe !== null && meal.recipe !== undefined){
-    viewMealRecipe(meal.recipe, meal.people);
+if(recipeIndexFor(meal.recipe) >= 0){
+    viewMealRecipe(recipeIndexFor(meal.recipe), meal.people);
 }
 
 }
@@ -6744,10 +6931,9 @@ updateRecipeSelector();
 
 document.getElementById("recipeSelect")
 .value =
-meal.recipe !== null &&
-meal.recipe !== undefined
+recipeIndexFor(meal.recipe) >= 0
 ?
-meal.recipe
+recipeIndexFor(meal.recipe)
 :
 "";
 
@@ -6829,7 +7015,7 @@ document.getElementById("people").value,
 
 recipe:
 selectedRecipeIndex !== ""
-? Number(selectedRecipeIndex)
+? (recipeIdAt(Number(selectedRecipeIndex)) ?? null)
 : null,
 
 
@@ -6948,7 +7134,7 @@ render();
 renderShoppingList();
 
 showToast(t("clear_week_cleared"), {
-    actionLabel: "Undo",
+    actionLabel: t("undo"),
     onAction: () => {
 
         days.forEach(day=>{
@@ -6980,7 +7166,7 @@ render();
 
 
 showToast(`${t("toast_removed")} "${removedMeal.name}"`, {
-    actionLabel: "Undo",
+    actionLabel: t("undo"),
     onAction: () => {
 
         if(!meals[day]){
@@ -7045,7 +7231,7 @@ async function clearDay(day){
     renderShoppingList();
 
     showToast(t("clear_day_cleared").replace("{day}", dayLabel), {
-        actionLabel: "Undo",
+        actionLabel: t("undo"),
         onAction: () => {
             meals[day] = (meals[day] || []).concat(removed);
             saveData();
@@ -7175,6 +7361,148 @@ function confirmMoveDay(){
          offset === -1 ? " (" + t("move_day_prev_week").toLowerCase() + ")" : "");
 
     showToast(t("move_day_done").replace("{target}", targetLabel));
+
+}
+
+
+// =======================
+// FILL EMPTY DAYS (auto-plan from favorites)
+// =======================
+
+let autoPlanPool = [];
+let autoPlanUsingAll = false;
+let autoPlanProposal = [];   // [{ day, recipeId, include }]
+
+function autoPlanMealType(){
+
+    let found = mealCategories.find(c => /dinner|middag/i.test(c));
+
+    return found || mealCategories[mealCategories.length - 1] || "🍝 Dinner";
+
+}
+
+function openAutoPlan(){
+
+    if(recipes.length === 0){
+        showToast(t("autoplan_no_recipes"), { type:"error" });
+        return;
+    }
+
+    let emptyDays = days.filter(d => !meals[d] || meals[d].length === 0);
+
+    if(emptyDays.length === 0){
+        showToast(t("autoplan_nothing_empty"));
+        return;
+    }
+
+    autoPlanPool = recipes.filter(r => r.favorite);
+    autoPlanUsingAll = autoPlanPool.length === 0;
+
+    if(autoPlanUsingAll){
+        autoPlanPool = recipes.slice();
+    }
+
+    shuffleAutoPlan();
+
+    document.getElementById("autoPlanModal").style.display = "flex";
+
+}
+
+function closeAutoPlan(){
+
+    document.getElementById("autoPlanModal").style.display = "none";
+
+}
+
+function shuffleAutoPlan(){
+
+    let emptyDays = days.filter(d => !meals[d] || meals[d].length === 0);
+
+    // Prefer recipes that are not already planned somewhere this week
+    let usedIds = new Set();
+    days.forEach(d => (meals[d] || []).forEach(m => { if(m.recipe) usedIds.add(m.recipe); }));
+
+    const shuffled = arr => {
+        let a = arr.slice();
+        for(let i = a.length - 1; i > 0; i--){
+            let j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+    };
+
+    let fresh = shuffled(autoPlanPool.filter(r => !usedIds.has(r.id)));
+    let seen = shuffled(autoPlanPool.filter(r => usedIds.has(r.id)));
+    let order = fresh.concat(seen);
+
+    autoPlanProposal = emptyDays.map((day, i) => ({
+        day,
+        recipeId: order[i % order.length].id,
+        include: true
+    }));
+
+    renderAutoPlan();
+
+}
+
+function renderAutoPlan(){
+
+    document.getElementById("autoPlanIntro").innerText =
+        t(autoPlanUsingAll ? "autoplan_intro_all" : "autoplan_intro");
+
+    document.getElementById("autoPlanList").innerHTML = autoPlanProposal.map((row, i) => {
+
+        let r = recipes[recipeIndexFor(row.recipeId)];
+        let name = r ? r.name : "?";
+
+        return `
+        <label style="display:flex;align-items:center;gap:10px;font-weight:normal;padding:6px 0;">
+            <input type="checkbox" style="width:auto;margin:0;" ${row.include ? "checked" : ""}
+                   onchange="autoPlanProposal[${i}].include = this.checked">
+            <span style="flex:1;"><strong>${translateDayName(row.day)}</strong> — ${name.replace(/</g,"&lt;")}</span>
+        </label>`;
+
+    }).join("");
+
+}
+
+function confirmAutoPlan(){
+
+    let type = autoPlanMealType();
+    let added = 0;
+
+    autoPlanProposal.forEach(row=>{
+
+        if(!row.include) return;
+
+        let r = recipes[recipeIndexFor(row.recipeId)];
+        if(!r) return;
+
+        if(!meals[row.day]) meals[row.day] = [];
+
+        meals[row.day].push({
+            id: "m" + Date.now().toString(36) + Math.random().toString(36).slice(2,8),
+            type,
+            name: r.name,
+            people: String(r.servings || 4),
+            recipe: r.id,
+            leftoverPortions: 0,
+            usingLeftoversFrom: null
+        });
+
+        added++;
+
+    });
+
+    closeAutoPlan();
+
+    if(added === 0) return;
+
+    saveData();
+    render();
+    renderShoppingList();
+
+    showToast(t("autoplan_done").replace("{n}", added));
 
 }
 
@@ -7762,6 +8090,8 @@ function saveRecipe(){
 
 let recipe = {
 
+id: (selectedRecipe !== null && recipes[selectedRecipe] && recipes[selectedRecipe].id) ? recipes[selectedRecipe].id : newRecipeId(),
+
 name: document.getElementById("recipeName").value,
 
 servings: Number(
@@ -7910,12 +8240,12 @@ ${recipe.name}
 <br>
 
 <button onclick="viewMealRecipe(${index})">
-📖 View Recipe
+${t("btn_view_recipe")}
 </button>
 
 
 <button onclick="selectMealRecipe(${index})">
-✅ Select
+${t("btn_select")}
 </button>
 
 `;
@@ -8038,7 +8368,7 @@ canScale
 <hr>
 
 <strong>
-Ingredients
+${t("ingredients_heading")}
 </strong>
 
 <ul>
@@ -8094,6 +8424,10 @@ document.getElementById("viewRecipeModal")
 
 }    
   
+
+function ingredientsCountText(n){
+    return n === 1 ? t("ingredient_one") : t("ingredients_count").replace("{n}", n);
+}
 
 function renderRecipes(){
 
@@ -8270,7 +8604,7 @@ ${recipe.name}
 </div>
 
 <div class="small">
-👥 ${recipe.servings} servings &nbsp;·&nbsp; 🥕 ${recipe.ingredients.length} ingredients
+👥 ${t("servings_count").replace("{n}", recipe.servings)} &nbsp;·&nbsp; 🥕 ${ingredientsCountText(recipe.ingredients.length)}
 </div>
 
 `;
@@ -8331,17 +8665,17 @@ document.getElementById("recipeDetailTags").innerHTML =
 document.getElementById("recipeDetailContent").innerHTML = `
 
 <div class="small">
-👥 ${recipe.servings} servings
+👥 ${t("servings_count").replace("{n}", recipe.servings)}
 </div>
 
 <div class="small">
-🥕 ${recipe.ingredients.length} ingredients
+🥕 ${ingredientsCountText(recipe.ingredients.length)}
 </div>
 
 <hr>
 
 <strong>
-Ingredients
+${t("ingredients_heading")}
 </strong>
 
 <ul>
@@ -8369,7 +8703,7 @@ recipe.instructions
 `;
 
 document.getElementById("recipeDetailFavoriteBtn").innerText =
-    recipe.favorite ? "⭐ Remove Favorite" : "☆ Add Favorite";
+    recipe.favorite ? t("fav_remove") : t("fav_add");
 
 document.getElementById("recipeDetailModal").style.display = "flex";
 
@@ -8449,6 +8783,7 @@ let original = recipes[index];
 
 let copy = {
     ...original,
+    id: newRecipeId(),
     name: `${original.name} (copy)`,
     favorite: false,
     expanded: false
@@ -8482,7 +8817,7 @@ JSON.stringify(recipes)
 renderRecipes();
 
 showToast(`${t("toast_removed")} "${removedRecipe.name}"`, {
-    actionLabel: "Undo",
+    actionLabel: t("undo"),
     onAction: () => {
 
         recipes.push(removedRecipe);
@@ -8619,7 +8954,7 @@ name:recipe.name,
 
 people:people,
 
-recipe:plannerRecipeIndex
+recipe:recipeIdAt(plannerRecipeIndex)
 
 });
 
@@ -8685,7 +9020,7 @@ function addIngredientRow(name="", amount="", unit=""){
     row.innerHTML = `
         <input
             class="ingredientName"
-            placeholder="Ingredient"
+            placeholder="${t("ph_ingredient")}"
             value="${name}"
             style="flex:2;"
         >
@@ -8693,14 +9028,14 @@ function addIngredientRow(name="", amount="", unit=""){
         <input
             class="ingredientAmount"
             type="number"
-            placeholder="Amount"
+            placeholder="${t("ph_amount")}"
             value="${amount}"
             style="width:80px;"
         >
 
         <input
             class="ingredientUnit"
-            placeholder="Unit"
+            placeholder="${t("ph_unit")}"
             value="${unit}"
             style="width:70px;"
         >
@@ -8708,7 +9043,7 @@ function addIngredientRow(name="", amount="", unit=""){
         <button
             type="button"
             class="delete"
-            title="Remove ingredient"
+            title="${t("remove_ingredient")}"
             onclick="this.parentElement.remove()"
             style="flex-shrink:0;padding:8px 12px;margin:0;"
         >
@@ -9573,14 +9908,12 @@ function generateShoppingList(){
 
         weekMeals.forEach(meal=>{
 
-            let hasRecipe =
-                meal.recipe !== null &&
-                meal.recipe !== undefined &&
-                recipes[meal.recipe];
+            let mealRecipeIndex = recipeIndexFor(meal.recipe);
+            let hasRecipe = mealRecipeIndex >= 0;
 
             if(hasRecipe){
 
-                let recipe = recipes[meal.recipe];
+                let recipe = recipes[mealRecipeIndex];
 
                 // How the recipe was written vs. how many people
                 // this specific planner meal is feeding.
@@ -9644,7 +9977,7 @@ function generateShoppingList(){
 
                     // Record this recipe as a source, whether the item
                     // is brand new or combining into an existing one.
-                    items[key].sourcesByIndex[meal.recipe] = recipe.name;
+                    items[key].sourcesByIndex[mealRecipeIndex] = recipe.name;
 
                 });
 
@@ -10106,7 +10439,7 @@ function renderShoppingList(){
 
         notes.innerHTML = `
             <p class="small">
-            ℹ️ Not included: ${manualMeals.join(", ")} — these were typed in manually without a linked recipe, so there are no ingredients to pull from.
+            ℹ️ ${t("shopping_not_included").replace("{list}", manualMeals.join(", "))}
             </p>
         `;
 
@@ -10199,10 +10532,10 @@ function renderShoppingSelectionBar(){
     bar.style.display = "flex";
 
     bar.innerHTML = `
-        <span class="small">${shoppingSelectedKeys.size} selected</span>
-        <button onclick="bulkCheckSelected()" style="font-size:13px;padding:6px 10px;">✅ Check</button>
-        <button class="delete" onclick="bulkDeleteSelected()" style="font-size:13px;padding:6px 10px;">🗑 Delete</button>
-        <button onclick="toggleShoppingSelectionMode()" style="font-size:13px;padding:6px 10px;">✖ Cancel</button>
+        <span class="small">${t("selected_count").replace("{n}", shoppingSelectedKeys.size)}</span>
+        <button onclick="bulkCheckSelected()" style="font-size:13px;padding:6px 10px;">${t("sel_check")}</button>
+        <button class="delete" onclick="bulkDeleteSelected()" style="font-size:13px;padding:6px 10px;">${t("btn_delete")}</button>
+        <button onclick="toggleShoppingSelectionMode()" style="font-size:13px;padding:6px 10px;">${t("sel_cancel")}</button>
     `;
 
 }
@@ -10416,7 +10749,7 @@ function deleteShoppingItem(key){
         renderShoppingList();
 
         showToast(`${t("toast_removed")} "${item.name}"`, {
-            actionLabel: "Undo",
+            actionLabel: t("undo"),
             onAction: () => {
 
                 if(removedExtra){
@@ -10445,7 +10778,7 @@ function deleteShoppingItem(key){
         renderShoppingList();
 
         showToast(`${t("toast_removed")} "${item.name}"`, {
-            actionLabel: "Undo",
+            actionLabel: t("undo"),
             onAction: () => {
 
                 delete shoppingRemoved[key];
@@ -11885,6 +12218,57 @@ window.ffSyncCopy = async function(){
     try{ await navigator.clipboard.writeText(fmt(code)); toast(tr("sync_copied")); }
     catch(e){ prompt("", fmt(code)); }
 };
+
+window.ffSyncShare = async function(){
+    if(!code) return;
+    const url = location.origin + location.pathname + "?join=" + code;
+    if(navigator.share){
+        try{ await navigator.share({ title: "FoodFlow", text: tr("sync_share_text"), url }); return; }
+        catch(e){ if(e && e.name === "AbortError") return; }
+    }
+    try{ await navigator.clipboard.writeText(url); toast(tr("sync_link_copied")); }
+    catch(e){ prompt("", url); }
+};
+
+// Moves this household to a brand-new code (e.g. if the code got shared by mistake).
+// Everyone who should stay needs the new code; the old copy of the data is left
+// untouched, so nobody's data is wiped from their device.
+window.ffSyncChangeCode = async function(){
+    if(!code) return;
+    const ok = await customConfirm(tr("sync_change_message"), tr("sync_change_title"));
+    if(!ok) return;
+    try{
+        await ensureReady();
+        const c = newCode();
+        await setDoc(doc(db, "households", c, "docs", "meta"), { created: serverTimestamp() });
+        if(unsub){ unsub(); unsub = null; }
+        clearTimeout(pushTimer);
+        code = c; ls.set(CODE_KEY, c); base = {}; saveBase(); updateActiveWsCode();
+        setStatus("connecting");
+        ready = true;
+        attach(); await pushLocal();
+        toast(tr("sync_code_changed"));
+    }catch(err){
+        console.warn(err); toast(tr("sync_status_error"), { type: "error" });
+    }
+};
+
+// Opening an invite link (?join=CODE) offers to join that household
+try{
+    const u = new URL(location.href);
+    const j = u.searchParams.get("join");
+    if(j){
+        u.searchParams.delete("join");
+        history.replaceState(null, "", u.pathname + u.search + u.hash);
+        const c = normalize(j);
+        if(c.length === 12){
+            setTimeout(async () => {
+                const ok = await customConfirm(tr("sync_invite_message").replace("{code}", fmt(c)), tr("sync_invite_title"));
+                if(ok){ document.getElementById("syncJoinCode").value = fmt(c); window.ffSyncJoin(); }
+            }, 700);
+        }
+    }
+}catch(e){}
 
 // restore scroll after a sync-triggered reload
 try{
