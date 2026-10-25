@@ -2845,9 +2845,11 @@ Recipe
 
 <div id="viewRecipeContent"></div>
 
-<br>
+<div class="action-list" style="margin-top:15px;">
+<button class="edit" onclick="editRecipeFromView()" data-i18n="btn_edit">✏️ Edit</button>
+</div>
 
-<button onclick="closeViewRecipe()">
+<button onclick="closeViewRecipe()" style="margin-top:10px;">
 <span data-i18n="close">Close</span>
 </button>
 
@@ -8497,6 +8499,20 @@ function escapeHtml(text){
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
+
+}
+
+// "Edit" inside the recipe popup opened from the planner: jump straight into the recipe editor
+function editRecipeFromView(){
+
+if(!viewRecipeState) return;
+
+let idx = viewRecipeState.index;
+
+if(!recipes[idx]) return;
+
+closeViewRecipe();
+editRecipe(idx);
 
 }
 
