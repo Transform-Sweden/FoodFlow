@@ -1,75 +1,12547 @@
-// FoodFlow service worker — lets the app open (and keep working) even
-// with no signal, once it's been loaded at least once. This has nothing
-// to do with your data: your meals, recipes and shopping list all still
-// live in the browser's local storage exactly as before. This file only
-// caches the app's own page so it can open offline instead of failing.
-//
-// Strategy: try the network first (so you always get the latest version
-// when you're online), and only fall back to the cached copy if that
-// fails — e.g. no signal, or airplane mode.
+<!DOCTYPE html>
+<html lang="en">
 
-const CACHE_NAME = "foodflow-cache-v2";
+<head>
 
-self.addEventListener("install", () => {
-    self.skipWaiting();
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="theme-color" content="#4caf50">
+
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="FoodFlow">
+
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%234caf50' rx='20'/%3E%3Ctext x='50' y='68' font-size='55' text-anchor='middle'%3E%F0%9F%8D%83%3C/text%3E%3C/svg%3E">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%234caf50' rx='20'/%3E%3Ctext x='50' y='68' font-size='55' text-anchor='middle'%3E%F0%9F%8D%83%3C/text%3E%3C/svg%3E">
+
+<title>🍃 FoodFlow</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+
+<style>
+
+
+:root {
+
+--bg:#f3f6f3;
+--card:#ffffff;
+--text:#1d231f;
+--text-soft:#5a6660;
+--primary:#3f9e53;
+--primary-dark:#2f7d40;
+--brand:#37904a;
+--primary-light:#e7f5e9;
+--soft-text:var(--text);
+--soft-bg:var(--card);
+--soft-border:var(--primary);
+--field-border:#c9d1cc;
+--neutral-border:#6b746e;
+--neutral-text:#353d38;
+--edit-bg:rgba(33,150,243,.12);
+--edit-text:#1565c0;
+--danger-bg:rgba(229,57,53,.11);
+--danger-text:#c62828;
+--radius:16px;
+--radius-sm:10px;
+--shadow-sm:0 2px 6px rgba(20,40,20,0.06);
+--shadow:0 6px 18px rgba(20,40,20,0.09), 0 1px 3px rgba(20,40,20,0.06);
+--shadow-lg:0 14px 34px rgba(20,40,20,0.14), 0 3px 8px rgba(20,40,20,0.08);
+--ease:cubic-bezier(.22,1,.36,1);
+
+}
+
+
+
+body.dark {
+
+--bg:#13171a;
+--card:#1d2226;
+--text:#eef1ee;
+--text-soft:#a7b0ab;
+--primary:#4fb868;
+--primary-dark:#3c9450;
+--brand:#46a55c;
+--primary-light:#1d2b20;
+--soft-text:var(--text);
+--soft-bg:var(--card);
+--soft-border:var(--primary);
+--field-border:#3d4842;
+--neutral-border:#a4aea8;
+--neutral-text:#dde3df;
+--edit-bg:rgba(33,150,243,.22);
+--edit-text:#8ec5fa;
+--danger-bg:rgba(229,57,53,.22);
+--danger-text:#ff8a84;
+--shadow-sm:0 2px 6px rgba(0,0,0,0.25);
+--shadow:0 6px 18px rgba(0,0,0,0.45), 0 1px 3px rgba(0,0,0,0.3);
+--shadow-lg:0 14px 34px rgba(0,0,0,0.55), 0 3px 8px rgba(0,0,0,0.35);
+
+}
+
+
+
+* {
+
+box-sizing:border-box;
+
+}
+
+
+/* Clear outline when navigating by keyboard (Tab), but not when
+clicking with a mouse — keeps things visually clean either way. */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+
+outline:3px solid var(--primary);
+
+outline-offset:2px;
+
+}
+
+
+
+html {
+
+scrollbar-gutter:stable;
+
+}
+
+
+
+body {
+
+margin:0;
+
+font-family:
+"Plus Jakarta Sans",
+"Segoe UI",
+Arial,
+sans-serif;
+
+background:var(--bg);
+
+color:var(--text);
+
+transition:background .3s var(--ease), color .3s var(--ease);
+
+-webkit-font-smoothing:antialiased;
+
+}
+
+
+/* Thin, theme-matched scrollbar (WebKit/Chromium — degrades
+gracefully to the default elsewhere). */
+::-webkit-scrollbar {
+width:10px;
+height:10px;
+}
+
+::-webkit-scrollbar-track {
+background:transparent;
+}
+
+::-webkit-scrollbar-thumb {
+background:rgba(120,130,120,.35);
+border-radius:10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+background:rgba(120,130,120,.55);
+}
+
+
+
+header {
+
+text-align:center;
+
+padding:34px 20px 24px;
+
+}
+
+#navbar {
+
+text-align:center;
+
+padding:10px;
+
+display:flex;
+
+justify-content:center;
+
+gap:6px;
+
+}
+
+
+/* Sticky on desktop so switching pages doesn't require scrolling
+back to the top of a long recipe or shopping list. */
+@media(min-width:601px){
+
+#navbar {
+
+position:sticky;
+
+top:0;
+
+z-index:400;
+
+background:var(--bg);
+
+}
+
+}
+
+
+#navbar button {
+
+background:transparent;
+
+color:var(--text-soft);
+
+box-shadow:none;
+
+font-weight:600;
+
+transition:background .2s var(--ease), color .2s var(--ease), transform .15s var(--ease);
+
+}
+
+#navbar button:hover {
+
+background:var(--primary-light);
+
+color:var(--primary-dark);
+
+transform:translateY(-1px);
+
+}
+
+#navbar button.nav-active {
+
+background:var(--brand);
+
+color:white;
+
+box-shadow:var(--shadow-sm);
+
+}
+
+#navbar button.nav-active:hover {
+
+background:var(--brand);
+
+color:white;
+
+transform:none;
+
+}
+
+
+h1 {
+
+font-size:40px;
+
+font-weight:800;
+
+letter-spacing:-0.02em;
+
+margin-bottom:5px;
+
+background:linear-gradient(var(--brand), var(--brand));
+
+-webkit-background-clip:text;
+
+background-clip:text;
+
+color:transparent;
+
+display:inline-block;
+
+}
+
+
+
+button {
+
+border:none;
+
+background:var(--brand);
+
+background-image:linear-gradient(135deg, var(--brand), var(--primary-dark));
+
+color:white;
+
+padding:10px 15px;
+
+border-radius:14px;
+
+cursor:pointer;
+
+font-size:15px;
+
+font-family:inherit;
+
+font-weight:600;
+
+margin:4px;
+
+box-shadow:var(--shadow-sm);
+
+transition:transform .15s var(--ease), box-shadow .15s var(--ease), filter .15s var(--ease);
+
+}
+
+button:hover {
+
+filter:brightness(1.06);
+
+box-shadow:var(--shadow);
+
+transform:translateY(-1px);
+
+}
+
+button:active {
+
+transform:translateY(0) scale(.97);
+
+box-shadow:var(--shadow-sm);
+
+filter:brightness(.98);
+
+}
+
+button:disabled {
+
+opacity:.55;
+
+cursor:not-allowed;
+
+transform:none;
+
+filter:none;
+
+}
+
+
+
+
+
+.container {
+
+max-width:1200px;
+
+margin:auto;
+
+padding:20px;
+
+}
+
+
+
+/* WEEK */
+
+
+.week {
+
+display:grid;
+
+grid-template-columns:
+repeat(7,minmax(0,1fr));
+
+gap:15px;
+
+}
+
+
+
+.day {
+
+background:var(--card);
+
+border-radius:var(--radius);
+
+padding:18px;
+
+box-shadow:var(--shadow-sm);
+
+min-height:250px;
+
+min-width:0;
+
+overflow-wrap:break-word;
+
+transition:outline .15s ease, background .15s ease, box-shadow .25s var(--ease), transform .25s var(--ease);
+
+}
+
+@media(hover:hover) and (min-width:901px){
+
+.day:hover {
+
+box-shadow:var(--shadow-lg);
+
+transform:translateY(-2px);
+
+}
+
+}
+
+/* Mobile long-press-to-move: the meal currently picked up */
+.meal-picked-up {
+
+transform:scale(1.03);
+
+box-shadow:0 6px 18px rgba(0,0,0,.3);
+
+opacity:.9;
+
+}
+
+/* Mobile long-press-to-move: valid days to tap and drop into */
+.drop-target-highlight {
+
+outline:2px dashed var(--primary);
+
+outline-offset:-2px;
+
+}
+
+
+
+.day h2 {
+
+text-align:center;
+
+margin-top:0;
+
+white-space:nowrap;
+
+font-weight:700;
+
+letter-spacing:-0.01em;
+
+}
+
+
+
+/* MEALS */
+
+
+.meal {
+
+background:
+rgba(120,120,120,.09);
+
+border-radius:var(--radius-sm);
+
+padding:12px;
+
+margin-top:10px;
+
+transition:background .2s var(--ease), box-shadow .2s var(--ease), transform .15s var(--ease);
+
+}
+
+@media(hover:hover){
+
+.meal:hover {
+
+background:rgba(120,120,120,.16);
+
+}
+
+}
+
+#mealRecipeList{
+
+max-height:260px;
+
+overflow-y:auto;
+
+margin-top:10px;
+
+padding-right:5px;
+
+}
+
+.meal-title {
+
+font-weight:bold;
+
+/* Always one line, so every meal card has the same height. A long
+category name (e.g. "Breakfast") is shortened with "..." instead of
+pushing its emoji onto a separate row. */
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis;
+font-size:0.95em;
+
+}
+
+
+/* Keeps a meal name to a tidy 2 lines, with "..." if it's longer
+than that. Reserves the full 2-line height even for a short name
+(min-height), so every meal card is the same height regardless of
+how long its name is — only the "View" popup shows the name in full. */
+.meal-name-clamp {
+
+display:-webkit-box;
+
+-webkit-line-clamp:2;
+
+-webkit-box-orient:vertical;
+
+overflow:hidden;
+
+word-break:break-word;
+
+line-height:1.3em;
+
+min-height:2.6em;
+
+}
+
+
+
+.small {
+
+font-size:14px;
+
+opacity:.8;
+
+}
+
+
+
+.edit {
+
+background:#2196f3;
+
+margin-top:8px;
+
+}
+
+
+
+.delete {
+
+background:#e53935;
+
+margin-top:8px;
+
+}
+
+/* Recipe search results */
+
+#mealRecipeList{
+
+max-height:220px;      /* about 3 recipe cards */
+overflow-y:auto;
+
+margin-top:10px;
+
+border:1px solid var(--field-border);
+border-radius:12px;
+
+padding:6px;
+
+background:var(--bg);
+
+}
+
+/* MODAL */
+
+
+.modal {
+
+display:none;
+
+position:fixed;
+
+inset:0;
+
+background:
+rgba(10,15,10,.55);
+
+align-items:center;
+
+justify-content:center;
+
+z-index:1000;
+
+animation:modalBackdropIn .15s ease;
+
+}
+
+
+
+.modal-box {
+
+background:var(--card);
+
+padding:25px;
+
+border-radius:var(--radius);
+
+width:90%;
+
+max-width:400px;
+
+max-height:90vh;
+
+overflow-y:auto;
+
+box-shadow:var(--shadow-lg);
+
+animation:modalPopIn .2s var(--ease);
+
+}
+
+@keyframes modalPopIn {
+
+from { opacity:0; transform:scale(.96) translateY(6px); }
+
+to { opacity:1; transform:scale(1) translateY(0); }
+
+}
+
+@keyframes modalBackdropIn {
+
+from { opacity:0; }
+
+to { opacity:1; }
+
+}
+
+
+/* On phones, modals slide up as a bottom sheet instead of a small
+centered box — easier to reach and read one-handed. */
+@media(max-width:600px){
+
+.modal {
+
+align-items:flex-end;
+
+}
+
+.modal-box {
+
+width:100%;
+
+max-width:none;
+
+max-height:85vh;
+
+border-radius:20px 20px 0 0;
+
+padding:20px 20px calc(20px + env(safe-area-inset-bottom));
+
+animation:sheetSlideUp .2s ease;
+
+}
+
+@keyframes sheetSlideUp {
+
+from { transform:translateY(100%); }
+
+to { transform:translateY(0); }
+
+}
+
+}
+
+
+
+input,select {
+
+width:100%;
+
+padding:12px;
+
+margin:8px 0;
+
+border-radius:12px;
+
+border:1px solid var(--field-border);
+
+font-size:16px;
+
+}
+
+.stepper {
+
+display:flex;
+
+align-items:center;
+
+gap:10px;
+
+margin:8px 0;
+
+}
+
+.stepper button {
+
+width:44px;
+
+height:44px;
+
+min-width:44px;
+
+padding:0;
+
+margin:0;
+
+font-size:22px;
+
+line-height:1;
+
+border-radius:50%;
+
+flex-shrink:0;
+
+display:inline-flex;
+
+align-items:center;
+
+justify-content:center;
+
+}
+
+/* The + and − are drawn with CSS (not text), so they are exactly centered
+   in the circle on every device and font. */
+.stepper button {
+font-size:0;
+background-repeat:no-repeat;
+background-position:center;
+}
+.stepper button[onclick*="-1)"] {
+background-image:linear-gradient(currentColor, currentColor);
+background-size:14px 2.4px;
+}
+.stepper button:not([onclick*="-1)"]) {
+background-image:linear-gradient(currentColor, currentColor), linear-gradient(currentColor, currentColor);
+background-size:14px 2.4px, 2.4px 14px;
+}
+.stepper button:hover { background-position:center; background-repeat:no-repeat; }
+.stepper button[onclick*="-1)"]:hover { background-image:linear-gradient(currentColor, currentColor); }
+.stepper button:not([onclick*="-1)"]):hover { background-image:linear-gradient(currentColor, currentColor), linear-gradient(currentColor, currentColor); }
+
+.stepper input {
+
+text-align:center;
+
+margin:0;
+
+flex:1;
+
+}
+
+
+
+/* Shared calm button styles (Recipes + Shopping List, same as planner) */
+button.btn-sm-primary {
+font-size:13px; font-weight:500; padding:5px 14px; border-radius:999px;
+}
+button.btn-soft {
+background:var(--soft-bg); background-image:none;
+color:var(--soft-text); box-shadow:none;
+font-size:13px; font-weight:500; padding:5px 14px; border-radius:999px;
+}
+button.btn-soft:hover {
+background:color-mix(in srgb, var(--soft-bg) 75%, var(--primary));
+background-image:none; filter:none; box-shadow:none; transform:none;
+}
+
+/* MEAL PLANNER – calmer buttons
+   Saturated green stays for the main action (Add), the active tab and
+   status. Secondary controls are flat, soft and have no gradient. */
+#plannerPage .day-actions { display:flex; align-items:center; gap:6px; margin:2px 0 4px; }
+#plannerPage .day-actions button { margin:0; }
+#plannerPage .add-btn {
+font-size:13px; font-weight:500; padding:4px 14px; border-radius:999px;
+}
+#plannerPage .more-btn {
+width:28px; height:26px; padding:0; border-radius:999px;
+font-size:16px; line-height:1; letter-spacing:1px;
+display:inline-flex; align-items:center; justify-content:center;
+}
+#plannerPage .more-btn,
+#plannerPage .week-nav-row button,
+#plannerPage .week-nav-secondary button {
+background:var(--soft-bg); background-image:none;
+color:var(--soft-text); box-shadow:none;
+}
+#plannerPage .more-btn { border:1px solid var(--soft-border); }
+#plannerPage .more-btn:hover,
+#plannerPage .week-nav-row button:hover,
+#plannerPage .week-nav-secondary button:hover {
+background:color-mix(in srgb, var(--soft-bg) 75%, var(--primary));
+background-image:none; filter:none; box-shadow:none; transform:none;
+}
+#plannerPage .week-nav-secondary button.active {
+background:var(--brand); color:#fff;
+}
+#plannerPage .week-nav-secondary button { font-size:14px; padding:6px 14px; font-weight:500; }
+
+/* clickable meal cards (replaces the View button) */
+#plannerPage .meal[data-open], #recipeList .meal[data-open] { cursor:pointer; }
+#plannerPage .meal[data-open]:focus-visible, #recipeList .meal[data-open]:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
+
+.day-note-input.is-hidden { display:none; }
+#dayMenu button.danger { color:#d64545; }
+#dayMenu hr { border:none; border-top:1px solid rgba(120,120,120,.25); margin:6px 4px; }
+
+/* Recipe cards: only as tall as their content */
+#recipeList .meal-name-clamp { min-height:0; margin:0; font-size:1.05em; }
+#recipeList .meal { padding:14px 16px; }
+
+/* small menu behind the ⋯ button */
+#dayMenu {
+position:absolute; z-index:1500; min-width:190px; padding:6px;
+background:var(--card); color:var(--text);
+border:1px solid rgba(120,120,120,.25); border-radius:12px;
+box-shadow:var(--shadow-lg);
+}
+#dayMenu button {
+display:block; width:100%; margin:0; padding:9px 12px; text-align:left;
+background:transparent; background-image:none; box-shadow:none;
+color:var(--text); font-size:14px; font-weight:500; border-radius:8px; transform:none;
+}
+#dayMenu button:hover, #dayMenu button:focus-visible { background:rgba(120,120,120,.12); filter:none; transform:none; }
+
+/* Planner meal cards: type as a small colored label, name as the headline,
+   people / leftovers as chips, and a chevron showing the card opens */
+#plannerPage .meal { padding:11px 14px 11px 12px; }
+#plannerPage .meal .meal-title { font-size:.72em; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--accent, var(--text-soft)); margin-bottom:3px; }
+#plannerPage .meal .meal-name-clamp { min-height:2.6em; font-size:1.05em; font-weight:700; line-height:1.3em; }
+#plannerPage .meal .meal-foot { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:8px; }
+#plannerPage .meal .meal-chip { font-size:12.5px; line-height:1; padding:4px 9px; border-radius:999px; background:var(--card); border:1px solid rgba(120,120,120,.22); color:var(--text); white-space:nowrap; }
+#plannerPage .meal .meal-chevron { margin-left:auto; font-size:22px; line-height:1; color:var(--text-soft); opacity:.55; padding-left:6px; }
+@media(min-width:700px){ #plannerPage .meal { padding:10px 9px 10px 10px; } #plannerPage .meal .meal-chevron { display:none; } #plannerPage .meal .meal-chip-lbl { display:none; } #plannerPage .meal .meal-foot { gap:4px; flex-wrap:nowrap; } #plannerPage .meal .meal-chip { padding:4px 7px; font-size:12px; } #plannerPage .meal .meal-name-clamp { font-size:1em; overflow-wrap:anywhere; word-break:normal; } }
+@media(hover:hover){ #plannerPage .meal:hover .meal-chevron { color:var(--brand); opacity:1; } }
+
+/* MEAL PLANNER – month view */
+.view-toggle { display:flex; justify-content:center; gap:6px; margin:10px 0 16px; }
+.view-toggle button {
+font-size:13px; font-weight:500; padding:4px 16px; margin:0; border-radius:999px;
+background:transparent; background-image:none; color:var(--text-soft);
+border:1px solid var(--soft-border); box-shadow:none;
+}
+.view-toggle button.active { background:color-mix(in srgb, var(--primary) 16%, var(--card)); background-image:none; color:var(--text); font-weight:600; }
+.view-toggle button:hover { transform:none; }
+#weekNav.month-mode .wk-only { display:none; }
+#weekNav:not(.month-mode) .mo-only { display:none; }
+
+.month { display:none; }
+.month-head, .month-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; }
+.month-head { margin-bottom:6px; }
+.month-head div { text-align:center; font-size:12px; font-weight:600; opacity:.65; text-transform:uppercase; letter-spacing:.04em; }
+.mcell {
+background:var(--card); border-radius:var(--radius-sm); box-shadow:var(--shadow-sm);
+padding:6px; min-height:104px; min-width:0; cursor:pointer;
+display:flex; flex-direction:column; gap:3px;
+transition:background .15s ease, box-shadow .2s var(--ease);
+}
+.mcell:hover { box-shadow:var(--shadow); }
+.mcell.out { opacity:.45; }
+.mcell.today { outline:2px solid var(--primary); outline-offset:-2px; }
+.mnum { font-size:12px; font-weight:600; opacity:.75; }
+.mcell.today .mnum { color:var(--primary-dark); opacity:1; }
+.mchip {
+font-size:11.5px; line-height:1.25; padding:2px 6px; border-radius:6px;
+background:rgba(120,120,120,.10); border-left:3px solid var(--accent);
+white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.mchip:hover { background:rgba(120,120,120,.2); }
+.mmore { font-size:11px; opacity:.65; padding-left:4px; }
+.mdots { display:none; flex-wrap:wrap; gap:3px; }
+.mdot { width:7px; height:7px; border-radius:50%; }
+@media(max-width:700px){
+.month-grid, .month-head { gap:3px; }
+.mcell { min-height:56px; padding:4px; }
+.mchips { display:none; }
+.mdots { display:flex; }
+.month-head div { font-size:10px; }
+}
+
+/* WEEK NAVIGATION */
+
+#weekNav {
+
+margin-bottom:15px;
+
+}
+
+.week-nav-row {
+
+display:grid;
+
+grid-template-columns:auto 1fr auto;
+
+align-items:center;
+
+gap:12px;
+
+}
+
+.week-nav-center {
+
+text-align:center;
+
+min-width:0;
+
+overflow:hidden;
+
+}
+
+#weekLabel {
+
+font-weight:bold;
+
+font-size:18px;
+
+white-space:nowrap;
+
+overflow:hidden;
+
+text-overflow:ellipsis;
+
+}
+
+.week-nav-secondary {
+
+display:flex;
+
+justify-content:center;
+
+gap:10px;
+
+margin-top:10px;
+
+flex-wrap:wrap;
+
+}
+
+.action-list {
+
+display:flex;
+
+flex-direction:column;
+
+gap:8px;
+
+margin:15px 0;
+
+}
+
+.action-list button {
+
+width:100%;
+
+text-align:left;
+
+margin:0;
+
+}
+
+.shopping-range-row {
+
+display:flex;
+
+align-items:center;
+
+gap:8px;
+
+flex-wrap:wrap;
+
+margin-top:6px;
+
+}
+
+.shopping-range-row input {
+
+width:auto;
+
+flex:1;
+
+min-width:130px;
+
+margin:0;
+
+}
+
+.nav-short {
+
+display:none;
+
+}
+
+
+/* MOBILE */
+
+
+@media(max-width:900px){
+
+
+.week {
+
+grid-template-columns:1fr;
+
+}
+
+
+}
+
+
+@media(max-width:600px){
+
+.week-nav-row {
+
+gap:8px;
+
+}
+
+.week-nav-row button {
+
+padding:10px 14px;
+
+font-size:16px;
+
+width:44px;
+
+height:44px;
+
+display:flex;
+
+align-items:center;
+
+justify-content:center;
+
+}
+
+.nav-full {
+
+display:none;
+
+}
+
+.nav-short {
+
+display:inline;
+
+}
+
+.week-nav-center {
+
+min-width:0;
+
+}
+
+#weekLabel {
+
+font-size:14px;
+
+}
+
+.week-nav-secondary {
+
+gap:8px;
+
+margin-top:8px;
+
+}
+
+.week-nav-secondary button {
+
+flex:1;
+
+font-size:12px;
+
+padding:8px 6px;
+
+white-space:nowrap;
+
+min-width:0;
+
+}
+
+.week-nav-secondary button.wrap-label {
+
+white-space:normal;
+
+line-height:1.2;
+
+word-break:break-word;
+
+}
+
+}
+
+
+/* WIDE SCREENS: give recipes more breathing room */
+
+@media(min-width:1000px){
+
+#recipeList {
+
+display:grid;
+
+grid-template-columns:repeat(2,1fr);
+
+gap:15px;
+align-items:start;
+
+}
+
+#recipeList .meal {
+
+margin-top:0;
+
+}
+
+}
+
+
+/* PRINT (shopping list only) */
+
+#printArea {
+
+display:none;
+
+}
+
+
+@page {
+
+margin:12mm;
+
+}
+
+@media print {
+
+/* Fully remove everything except the print content from the page
+flow — using visibility alone leaves invisible elements still
+taking up vertical space, which is what was causing the extra
+blank page at the end. */
+body > *:not(#printArea) {
+
+display:none !important;
+
+}
+
+#printArea {
+
+display:block;
+
+color:#000;
+
+background:#fff;
+
+}
+
+#printArea h1 {
+
+font-size:24px;
+
+margin-bottom:4px;
+
+}
+
+#printArea .print-item {
+
+padding:8px 0;
+
+border-bottom:1px solid var(--field-border);
+
+font-size:15px;
+
+}
+
+#printArea .print-checked {
+
+text-decoration:line-through;
+
+opacity:.6;
+
+}
+
+#printArea .print-planner-subtitle {
+
+margin-top:0;
+
+margin-bottom:18px;
+
+color:#555;
+
+}
+
+#printArea .print-planner-grid {
+
+display:grid;
+
+grid-template-columns:repeat(2,1fr);
+
+gap:14px;
+
+}
+
+#printArea .print-planner-day {
+
+border:1px solid #999;
+
+border-radius:10px;
+
+padding:12px 14px;
+
+break-inside:avoid;
+
+}
+
+#printArea .print-planner-day-name {
+
+font-size:18px;
+
+font-weight:bold;
+
+margin-bottom:8px;
+
+padding-bottom:6px;
+
+border-bottom:1px solid var(--field-border);
+
+}
+
+#printArea .print-planner-meal {
+
+margin-bottom:10px;
+
+}
+
+#printArea .print-planner-meal-type {
+
+font-size:11px;
+
+text-transform:uppercase;
+
+letter-spacing:.03em;
+
+color:#666;
+
+}
+
+#printArea .print-planner-meal-name {
+
+font-size:15px;
+
+font-weight:600;
+
+}
+
+#printArea .print-planner-meal-people {
+
+font-size:12px;
+
+color:#777;
+
+}
+
+#printArea .print-planner-note {
+
+font-size:12px;
+font-style:italic;
+color:#555;
+margin-bottom:6px;
+
+}
+
+#printArea .print-planner-empty {
+
+font-size:13px;
+
+color:#999;
+
+font-style:italic;
+
+}
+
+}
+
+
+
+/* TOASTS */
+
+#toastContainer {
+
+position:fixed;
+
+bottom:20px;
+
+left:50%;
+
+transform:translateX(-50%);
+
+display:flex;
+
+flex-direction:column;
+
+gap:10px;
+
+z-index:2000;
+
+width:90%;
+
+max-width:400px;
+
+align-items:center;
+
+}
+
+.toast {
+
+background:var(--card);
+
+color:var(--text);
+
+box-shadow:var(--shadow-lg);
+
+border-radius:var(--radius-sm);
+
+padding:14px 16px;
+
+display:flex;
+
+align-items:center;
+
+gap:12px;
+
+width:100%;
+
+box-sizing:border-box;
+
+animation:toastIn .25s ease;
+
+border-left:5px solid var(--primary);
+
+}
+
+.toast.error {
+
+border-left-color:#e53935;
+
+}
+
+.toast span.msg {
+
+flex:1;
+
+font-size:14px;
+
+}
+
+.toast button {
+
+background:transparent;
+
+color:var(--primary);
+
+border:1px solid var(--primary);
+
+padding:6px 12px;
+
+font-size:13px;
+
+margin:0;
+
+}
+
+@keyframes toastIn {
+
+from { opacity:0; transform:translateY(20px); }
+to { opacity:1; transform:translateY(0); }
+
+}
+
+@keyframes fadeInExpand {
+
+from { opacity:0; transform:translateY(-6px); }
+to { opacity:1; transform:translateY(0); }
+
+}
+
+.expand-content {
+
+animation:fadeInExpand .2s ease;
+
+}
+
+
+/* MEAL TYPE / CATEGORY COLOR ACCENTS */
+
+.meal {
+
+border-left:5px solid var(--accent, transparent);
+
+}
+
+
+/* SHOPPING LIST PROGRESS */
+
+#shoppingProgressWrap {
+
+background:rgba(120,120,120,.15);
+
+border-radius:20px;
+
+height:10px;
+
+overflow:hidden;
+
+margin:12px 0;
+
+}
+
+#shoppingProgressBar {
+
+height:100%;
+
+background:var(--primary);
+
+transition:width .3s ease;
+
+}
+
+
+/* Small satisfying "pop" when checking an item off the shopping list */
+#shoppingList input[type="checkbox"]{
+
+transition:transform .15s ease;
+
+}
+
+#shoppingList input[type="checkbox"]:checked{
+
+animation:checkPop .3s ease;
+
+}
+
+@keyframes checkPop{
+
+0% { transform:scale(1); }
+
+45% { transform:scale(1.35); }
+
+100% { transform:scale(1); }
+
+}
+
+#shoppingList .meal span{
+
+transition:opacity .25s ease;
+
+}
+
+
+/* BIGGER TOUCH TARGETS ON PHONES/TABLETS */
+
+@media(pointer:coarse){
+
+button {
+
+padding:12px 16px;
+
+min-height:44px;
+
+}
+
+button.edit,
+button.delete {
+
+padding:10px 14px !important;
+
+min-width:44px;
+
+min-height:40px;
+
+}
+
+}
+
+
+/* STACK INGREDIENT ROWS ON NARROW SCREENS */
+
+@media(max-width:480px){
+
+.ingredient-row {
+
+flex-direction:column !important;
+
+gap:6px !important;
+
+}
+
+.ingredient-row input {
+
+width:100% !important;
+
+}
+
+}
+
+
+/* STICKY BOTTOM NAV ON PHONES */
+
+@media(max-width:600px){
+
+#navbar {
+
+position:fixed;
+
+bottom:0;
+
+left:0;
+
+right:0;
+
+background:var(--card);
+
+box-shadow:0 -4px 12px rgba(0,0,0,.15);
+
+padding:8px;
+
+z-index:500;
+
+display:flex;
+
+justify-content:space-around;
+
+/* Forces its own compositing layer, which stops iOS Safari from
+letting a fixed-position bar visibly lag/drift during an active
+scroll gesture instead of staying pinned to the viewport. */
+-webkit-transform:translateZ(0);
+transform:translateZ(0);
+will-change:transform;
+
+}
+
+#navbar button {
+
+flex:1;
+
+margin:2px;
+
+font-size:14px;
+
+padding:12px 7px;
+
+min-height:46px;
+
+box-shadow:none;
+
+}
+
+body {
+
+padding-bottom:78px;
+
+}
+
+}
+
+
+/* FLOATING QUICK-ADD BUTTON (phones, planner page only) */
+
+#quickAddFab {
+
+display:none;
+
+position:fixed;
+
+right:20px;
+
+bottom:20px;
+
+width:56px;
+
+height:56px;
+
+border-radius:50%;
+
+font-size:26px;
+
+padding:0;
+
+box-shadow:var(--shadow-lg);
+
+z-index:600;
+
+transition:transform .2s var(--ease), box-shadow .2s var(--ease);
+
+}
+
+#quickAddFab:active {
+
+transform:scale(.92);
+
+}
+
+@media(max-width:600px){
+
+#quickAddFab.show-fab {
+
+display:flex;
+
+align-items:center;
+
+justify-content:center;
+
+bottom:90px;
+
+}
+
+}
+
+
+
+/* SETTINGS MENU (collapsible sections) + hamburger button */
+
+header { position:relative; }
+
+.menu-btn {
+position:absolute;
+top:63px;   /* vertically centered on the FoodFlow title */
+/* lines up with the left edge of the page content, also on wide screens */
+left:max(12px, calc((100% - 1200px) / 2 + 12px));
+width:44px;
+height:44px;
+padding:0;
+margin:0;
+display:flex;
+align-items:center;
+justify-content:center;
+background:transparent;
+background-image:none;
+box-shadow:none;
+color:var(--text);
+border-radius:12px;
+}
+
+/* planner switcher: top right corner, mirroring the menu button */
+#wsLabel {
+position:absolute; top:63px; right:max(12px, calc((100% - 1200px) / 2 + 12px));
+height:44px; margin:0; padding:0 8px; box-sizing:border-box;
+display:flex; align-items:center; gap:2px;
+max-width:60px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
+font-size:12.5px; line-height:1; color:var(--text-soft); border-radius:12px;
+}
+#wsLabel:hover, #wsLabel:focus-visible { background:rgba(120,120,120,.16); color:var(--text); }
+#wsLabel .ws-name { display:none; }
+@media(min-width:700px){ #wsLabel { max-width:200px; font-size:13.5px; } #wsLabel .ws-name { display:inline; overflow:hidden; text-overflow:ellipsis; } }
+.menu-btn:hover { background:rgba(120,120,120,.16); background-image:none; box-shadow:none; filter:none; }
+.menu-btn:active { background:rgba(120,120,120,.26); }
+
+.menu-btn svg { width:26px; height:26px; display:block; }
+
+.settings-section {
+border-bottom:1px solid rgba(120,120,120,.25);
+}
+
+.settings-section > summary {
+list-style:none;
+cursor:pointer;
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:14px 4px;
+user-select:none;
+}
+
+.settings-section > summary::-webkit-details-marker { display:none; }
+
+.settings-section > summary h3 {
+margin:0;
+font-size:1.05em;
+}
+
+.settings-section > summary::after {
+content:"▾";
+opacity:.6;
+transition:transform .2s ease;
+}
+
+.settings-section[open] > summary::after { transform:rotate(180deg); }
+
+.settings-section .section-body { padding:0 4px 16px; }
+
+
+/* =======================
+   FOODFLOW BUTTON SYSTEM (one design for the whole app)
+   - primary   : solid brand green (main action, active tab)
+   - secondary : flat soft green (default for every other button)
+   - edit      : soft blue     - danger : soft red
+   ======================= */
+button {
+background:var(--card); background-image:none; color:var(--text);
+border:1px solid var(--primary);
+box-shadow:none; font-weight:500; font-size:14px; border-radius:999px;
+}
+button:hover {
+background:var(--primary-light); background-image:none;
+filter:none; box-shadow:none; transform:none;
+}
+button:active { transform:scale(.97); box-shadow:none; filter:none; }
+.action-list button { border-radius:12px; }
+
+/* buttons that have their own look: no extra frame */
+#navbar button, .menu-btn, #dayMenu button { border:none; }
+#navbar button { font-size:15px; }
+
+button[data-primary], button.btn-sm-primary, button.add-btn, #quickAddFab {
+background:var(--brand); border:1px solid transparent;
+background-image:linear-gradient(135deg, var(--brand), var(--primary-dark));
+color:#fff;
+}
+button[data-primary]:hover, button.btn-sm-primary:hover, button.add-btn:hover, #quickAddFab:hover {
+background:var(--brand);
+background-image:linear-gradient(135deg, var(--brand), var(--primary-dark));
+filter:brightness(1.07);
+}
+
+/* neutral tier: Cancel / Close / dismiss buttons */
+button[data-i18n="cancel"], button[data-i18n="close"],
+button[onclick^="close"]:not([onclick*=";"]),
+button[onclick^="clearPendingLeftover"],
+button[onclick^="toggleShoppingSelectionMode"],
+button[onclick*="resolveCustomConfirm(false)"] {
+background:var(--card); border-color:var(--neutral-border); color:var(--neutral-text);
+}
+button[data-i18n="cancel"]:hover, button[data-i18n="close"]:hover,
+button[onclick^="close"]:not([onclick*=";"]):hover,
+button[onclick^="clearPendingLeftover"]:hover,
+button[onclick^="toggleShoppingSelectionMode"]:hover,
+button[onclick*="resolveCustomConfirm(false)"]:hover {
+background:rgba(120,120,120,.12);
+}
+
+button.edit { background:var(--card); border-color:#2196f3; color:var(--edit-text); }
+button.edit:hover { background:var(--edit-bg); }
+button.delete { background:var(--card); border-color:#e53935; color:var(--danger-text); }
+button.delete:hover { background:var(--danger-bg); }
+
+
+/* =======================
+   FORM FIELDS (same design everywhere)
+   ======================= */
+:root { color-scheme:light; }
+body.dark { color-scheme:dark; }
+
+input:not([type="checkbox"]):not([type="radio"]),
+select, textarea {
+background-color:var(--card); color:var(--text);
+border:1px solid var(--field-border); border-radius:12px;
+font-family:inherit;
+transition:border-color .15s var(--ease), box-shadow .15s var(--ease);
+}
+input::placeholder, textarea::placeholder { color:var(--text-soft); opacity:.75; }
+input:not([type="checkbox"]):not([type="radio"]):focus,
+select:focus, textarea:focus,
+input:not([type="checkbox"]):not([type="radio"]):focus-visible,
+select:focus-visible, textarea:focus-visible {
+outline:none; border-color:var(--primary);
+box-shadow:0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+select {
+appearance:none; -webkit-appearance:none;
+padding-right:38px;
+background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238a948e' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
+background-repeat:no-repeat; background-position:right 14px center; background-size:14px;
+}
+input[type="checkbox"], input[type="radio"] { accent-color:var(--brand); }
+input[type="checkbox"] { width:18px; height:18px; }
+input[type="radio"] { width:18px; height:18px; }
+
+</style>
+
+
+
+</head>
+
+
+<body>
+
+
+<header>
+
+
+<h1>🍃 FoodFlow</h1>
+
+<p data-i18n="app_tagline">Plan • Shop • Cook</p>
+
+<p id="wsLabel" class="small" role="button" tabindex="0" style="display:none;cursor:pointer;" onclick="ffWsMenu(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();ffWsMenu(this)}"></p>
+
+
+
+
+<button class="menu-btn" onclick="openSettings()" data-i18n-aria-label="settings_button" aria-label="Settings">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+</button>
+
+
+</header>
+
+<nav id="navbar">
+
+<button id="navBtnPlanner" onclick="showPage('planner')">
+<span data-i18n="nav_planner">🏠 Meal Planner</span>
+</button>
+
+
+<button id="navBtnRecipes" onclick="showPage('recipes')">
+<span data-i18n="nav_recipes">📖 Recipes</span>
+</button>
+
+
+<button id="navBtnShopping" onclick="showPage('shopping')">
+<span data-i18n="nav_shopping">🛒 Shopping List</span>
+</button>
+
+</nav>
+
+
+
+<div id="plannerPage">
+
+<div class="container">
+
+<div id="weekNav">
+
+<div class="week-nav-row">
+
+<button onclick="goToPreviousWeek()" data-i18n-aria-label="aria_previous_week" aria-label="Previous week">
+<span class="nav-full" data-i18n="nav_full_previous">◀︎ Previous</span>
+<span class="nav-short" data-i18n="nav_short_previous">◀︎</span>
+</button>
+
+<div class="week-nav-center">
+<div id="weekLabel"></div>
+</div>
+
+<button onclick="goToNextWeek()" data-i18n-aria-label="aria_next_week" aria-label="Next week">
+<span class="nav-full" data-i18n="nav_full_next">Next ▶︎</span>
+<span class="nav-short" data-i18n="nav_short_next">▶︎</span>
+</button>
+
+</div>
+
+<div class="week-nav-secondary">
+
+<button onclick="goToThisWeek()" class="week-nav-today wk-only" id="thisWeekBtn">
+<span class="nav-full" data-i18n="nav_full_today">📍 This Week</span>
+<span class="nav-short" data-i18n="nav_short_today">📍 Today</span>
+</button>
+
+<button onclick="goToThisWeek()" class="mo-only" id="thisMonthBtn" data-i18n="nav_this_month">📍 This Month</button>
+
+<button onclick="openWeekActionsMenu()" class="wk-only">
+<span class="nav-full" data-i18n="nav_full_week_actions">📆 Week Actions</span>
+<span class="nav-short" data-i18n="nav_short_week_actions">📆 Actions</span>
+</button>
+
+<button onclick="printMealPlanner()" class="wk-only">
+<span class="nav-full" data-i18n="print_planner_full">🖨️ Print / Save as PDF</span>
+<span class="nav-short" data-i18n="print_planner_short">🖨️ Print</span>
+</button>
+
+</div>
+
+</div>
+
+<div class="view-toggle" id="viewToggle">
+<button type="button" id="viewWeekBtn" onclick="setPlannerView('week')" data-i18n="view_week">Week</button>
+<button type="button" id="viewMonthBtn" onclick="setPlannerView('month')" data-i18n="view_month">Month</button>
+</div>
+
+<div class="week" id="week"></div>
+
+<div class="month" id="month"></div>
+
+</div>
+
+</div>
+
+<div id="recipesPage" style="display:none;">
+
+<div class="container">
+
+<h2 data-i18n="recipes_heading">📖 Recipes</h2>
+
+<button class="btn-sm-primary" onclick="openRecipeModal()">
+<span data-i18n="add_recipe">➕ Add Recipe</span>
+</button>
+
+<button class="btn-soft" onclick="openPasteModal()">
+<span data-i18n="paste_from_web">📋 Paste from Web</span>
+</button>
+
+<input
+    id="recipeSearchPage"
+    placeholder="🔍 Search recipes..."
+    data-i18n-placeholder="recipe_search_placeholder"
+    oninput="renderRecipes()"
+>
+
+<label style="display:block; margin-top:8px;">
+<span class="small" data-i18n="recipe_sort_label">Sort / group by</span>
+</label>
+
+<select id="recipeSortSelect" onchange="changeRecipeSortMode(this.value)">
+    <option value="recent" data-i18n="recipe_sort_recent">Recently Added</option>
+    <option value="alpha" data-i18n="recipe_sort_alpha">A–Z</option>
+    <option value="tag" data-i18n="recipe_sort_tag">Grouped by Tag</option>
+</select>
+
+<div id="recipeTagFilterBar" style="display:none; flex-wrap:wrap; gap:6px; margin:8px 0;">
+</div>
+
+<div id="recipeList">
+</div>
+
+
+</div>
+
+</div>
+
+
+
+<div id="shoppingPage" style="display:none;">
+
+<div class="container">
+
+<h2 data-i18n="shopping_heading">🛒 Shopping List</h2>
+
+<p class="small" data-i18n="shopping_description">
+Automatically built from every recipe in your meal planner, scaled to the number of people you set for each meal.
+</p>
+
+<button class="btn-sm-primary" onclick="openAddShoppingItem()"><span data-i18n="add_item">➕ Add Item</span></button>
+<button class="btn-soft" onclick="openShoppingMoreMenu()"><span data-i18n="more_actions">⋯ More</span></button>
+
+<div class="small" style="margin-top:12px;" data-i18n="shopping_for">
+🗓️ Shopping for:
+</div>
+
+<div class="shopping-range-row">
+
+<input type="date" id="shoppingRangeStartInput" onchange="onShoppingRangeChange()">
+
+<span class="small" data-i18n="range_to">to</span>
+
+<input type="date" id="shoppingRangeEndInput" onchange="onShoppingRangeChange()">
+
+</div>
+
+<div id="shoppingRangeSummary" class="small" style="margin-top:4px;"></div>
+
+<div class="week-nav-secondary" style="margin-top:8px;">
+<button class="wrap-label btn-soft" onclick="setShoppingRangePreset('thisWeek')" data-i18n="preset_this_week">This Week</button>
+<button class="wrap-label btn-soft" onclick="setShoppingRangePreset('restOfWeek')" data-i18n="preset_rest_of_week">📍 Rest of Week</button>
+<button class="wrap-label btn-soft" onclick="setShoppingRangePreset('next7')" data-i18n="preset_next_7">Next 7 Days</button>
+</div>
+
+<input
+id="shoppingSearch"
+placeholder="🔍 Search shopping list..."
+data-i18n-placeholder="shopping_search_placeholder"
+oninput="renderShoppingList()"
+>
+
+<div id="shoppingProgressText" class="small" style="margin-top:10px;"></div>
+
+<div id="shoppingSelectionBar" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0;padding:10px;background:rgba(120,120,120,.12);border-radius:14px;"></div>
+
+<div id="shoppingProgressWrap">
+<div id="shoppingProgressBar" style="width:0%;"></div>
+</div>
+
+<div id="shoppingList"></div>
+
+<div id="shoppingNotes"></div>
+
+</div>
+
+</div>    
+
+
+
+<!-- SETTINGS WINDOW -->
+
+
+<div class="modal" role="dialog" aria-modal="true" id="settingsModal">
+
+
+<div class="modal-box">
+
+
+<h2 id="settingsTitle" data-i18n="settings_title">
+
+⚙️ Settings
+
+</h2>
+
+
+
+<details class="settings-section">
+<summary><h3 data-i18n="ws_title">
+📅 My Planners
+</h3></summary>
+<div class="section-body">
+<p class="small" data-i18n="ws_description">
+Keep several separate planners on this device – for example a private one and one for each household – and switch between them.
+</p>
+
+<div id="wsList"></div>
+
+<div style="margin:8px 0 18px;">
+<input type="text" id="wsNewName" autocomplete="off" data-i18n-placeholder="ws_new_placeholder" placeholder="Name of new planner">
+<button onclick="ffWsNew()">
+<span data-i18n="ws_new">➕ New planner</span>
+</button>
+</div>
+</div>
+</details>
+
+<details class="settings-section">
+<summary><h3 data-i18n="sync_title">
+👨‍👩‍👧 Household Sync
+</h3></summary>
+<div class="section-body">
+<p class="small" data-i18n="sync_description">
+Share your planner, recipes and shopping list with your household. Everyone sees changes live.
+</p>
+
+<div id="syncStatus" class="small" style="margin:6px 0;"></div>
+
+<div id="syncOffBlock">
+<button onclick="ffSyncRestore()">
+<span data-i18n="sync_restore">♻️ Restore data from before sync</span>
+</button>
+<button onclick="ffSyncCreate()">
+<span data-i18n="sync_create">➕ Create household</span>
+</button>
+<div style="margin-top:8px;">
+<input type="text" id="syncJoinCode" autocomplete="off" autocapitalize="characters" spellcheck="false"
+data-i18n-placeholder="sync_code_placeholder" placeholder="XXXX-XXXX-XXXX">
+<button onclick="ffSyncJoin()">
+<span data-i18n="sync_join">🔗 Join with code</span>
+</button>
+</div>
+</div>
+
+<div id="syncOnBlock" style="display:none;">
+<div style="font-size:20px;font-weight:600;letter-spacing:1px;margin:6px 0;" id="syncCodeDisplay"></div>
+<button onclick="ffSyncShare()">
+<span data-i18n="sync_share">🔗 Share invite link</span>
+</button>
+<button onclick="ffSyncCopy()">
+<span data-i18n="sync_copy">📋 Copy code</span>
+</button>
+<button onclick="ffSyncChangeCode()">
+<span data-i18n="sync_change">🔄 Change code</span>
+</button>
+<button onclick="ffSyncRestore()">
+<span data-i18n="sync_restore">♻️ Restore data from before sync</span>
+</button>
+<button class="delete" onclick="ffSyncLeave()">
+<span data-i18n="sync_leave">🚪 Leave household</span>
+</button>
+</div>
+</div>
+</details>
+
+<details class="settings-section">
+<summary><h3 data-i18n="settings_language">
+🌍 Language
+</h3></summary>
+<div class="section-body">
+<button onclick="changeLanguage('en')">
+
+🇬🇧 English
+
+</button>
+    
+
+<button onclick="changeLanguage('sv')">
+
+🇸🇪 Svenska
+
+</button>
+</div>
+</details>
+
+<details class="settings-section">
+<summary><h3 data-i18n="settings_theme">
+🎨 Theme
+</h3></summary>
+<div class="section-body">
+<button onclick="setTheme('auto')">
+
+<span data-i18n="theme_auto">🌗 Auto (match device)</span>
+
+</button>
+
+
+<button onclick="setTheme('light')">
+
+<span data-i18n="theme_light">☀️ Light</span>
+
+</button>
+
+
+<button onclick="setTheme('dark')">
+
+<span data-i18n="theme_dark">🌙 Dark</span>
+
+</button>
+</div>
+</details>
+
+<details class="settings-section">
+<summary><h3 data-i18n="settings_categories">
+📂 Categories
+</h3></summary>
+<div class="section-body">
+<button onclick="openCategoryManager()">
+
+<span data-i18n="manage_categories">Manage Categories</span>
+
+</button>
+</div>
+</details>
+
+<details class="settings-section">
+<summary><h3 data-i18n="settings_custom_translations">
+🔤 Custom Ingredient Translations
+</h3></summary>
+<div class="section-body">
+<p class="small" data-i18n="custom_translations_description">
+Add your own word so it always combines on the shopping list, no matter which language it's written in.
+</p>
+
+<div id="customTranslationList"></div>
+
+<input
+    id="customTranslationAlias"
+    placeholder="e.g. kycklingfilé"
+    data-i18n-placeholder="custom_translation_alias_placeholder"
+>
+
+<input
+    id="customTranslationTarget"
+    placeholder="e.g. chicken breast"
+    data-i18n-placeholder="custom_translation_target_placeholder"
+>
+
+<label style="display:block; margin-top:4px;">
+<span class="small" data-i18n="custom_translation_category_label">Shopping list section (optional)</span>
+</label>
+
+<select id="customTranslationCategory">
+<option value="">🛒 Other (default)</option>
+</select>
+
+<button onclick="addCustomIngredientTranslation()">
+<span data-i18n="add_translation">➕ Add Translation</span>
+</button>
+</div>
+</details>
+
+<details class="settings-section">
+<summary><h3 data-i18n="settings_shopping_categories">
+🛒 Shopping List Order
+</h3></summary>
+<div class="section-body">
+<p class="small" data-i18n="shopping_category_order_description">
+Reorder the categories to match how your store is laid out.
+</p>
+
+<div id="categoryOrderList"></div>
+
+<label style="display:flex;align-items:flex-start;gap:10px;margin-top:18px;cursor:pointer;">
+<input type="checkbox" id="roundShoppingToggle" style="width:auto;margin:3px 0 0;" onchange="toggleShoppingRounding(this.checked)">
+<span>
+<strong data-i18n="round_shopping_label">Round up shopping amounts</strong><br>
+<span class="small" data-i18n="round_shopping_description">80 g becomes 100 g, 1.2 kg becomes 1.5 kg. The exact amount stays visible in gray. Recipes and the planner are not changed.</span>
+</span>
+</label>
+</div>
+</details>
+
+<details class="settings-section">
+<summary><h3 data-i18n="settings_backup">
+💾 Backup
+</h3></summary>
+<div class="section-body">
+<p class="small" data-i18n="backup_description">
+Your data lives only in this browser. Export it now and then to keep a safe copy, or to move it to another device.
+</p>
+
+<button onclick="exportData()">
+<span data-i18n="export_data">⬇️ Export Data</span>
+</button>
+
+<button onclick="triggerImport()">
+<span data-i18n="import_data">⬆️ Import Data</span>
+</button>
+
+<input
+type="file"
+id="importFileInput"
+accept="application/json"
+style="display:none;"
+onchange="importData(event)"
+>
+</div>
+</details>
+
+<br>
+
+
+<button onclick="closeSettings()">
+
+<span data-i18n="close">Close</span>
+
+</button>
+
+
+
+</div>
+
+
+</div>
+
+    <!-- CATEGORY WINDOW -->
+
+
+<div class="modal" role="dialog" aria-modal="true" id="categoryModal">
+
+
+<div class="modal-box">
+
+
+<h2 data-i18n="category_title">
+
+📂 Categories
+
+</h2>
+
+
+<p class="small" data-i18n="category_current">
+Your current categories:
+</p>
+
+<div id="categoryListDisplay"></div>
+
+
+<p data-i18n="category_add">
+Add your own meal categories
+</p>
+
+
+
+<input 
+id="categoryName"
+placeholder="Category name"
+data-i18n-placeholder="category_name_placeholder"
+>
+
+
+
+<p data-i18n="category_emoji_choose">
+Choose an emoji:
+</p>
+
+
+<div id="emojiPicker">
+
+
+<button onclick="selectEmoji('🍕')" data-i18n-aria-label="aria_emoji_pizza" aria-label="Pizza emoji">
+🍕
+</button>
+
+<button onclick="selectEmoji('🍰')" data-i18n-aria-label="aria_emoji_cake" aria-label="Cake emoji">
+🍰
+</button>
+
+<button onclick="selectEmoji('🥪')" data-i18n-aria-label="aria_emoji_sandwich" aria-label="Sandwich emoji">
+🥪
+</button>
+
+<button onclick="selectEmoji('🍎')" data-i18n-aria-label="aria_emoji_apple" aria-label="Apple emoji">
+🍎
+</button>
+
+<button onclick="selectEmoji('🥤')" data-i18n-aria-label="aria_emoji_drink" aria-label="Drink emoji">
+🥤
+</button>
+
+<button onclick="selectEmoji('🌙')" data-i18n-aria-label="aria_emoji_moon" aria-label="Moon emoji">
+🌙
+</button>
+
+<button onclick="selectEmoji('💪')" data-i18n-aria-label="aria_emoji_muscle" aria-label="Muscle emoji">
+💪
+</button>
+
+<button onclick="selectEmoji('🍲')" data-i18n-aria-label="aria_emoji_stew" aria-label="Stew emoji">
+🍲
+</button>
+
+</div>
+
+
+<input 
+id="categoryEmoji"
+placeholder="Or type your own emoji"
+data-i18n-placeholder="category_emoji_placeholder"
+>
+
+
+
+
+<button data-primary onclick="saveCategory()">
+
+<span data-i18n="save">Save</span>
+
+</button>
+
+
+
+<button onclick="closeCategoryManager()">
+
+<span data-i18n="close">Close</span>
+
+</button>
+
+
+</div>
+
+
+</div>
+
+<!-- COPY DAY WINDOW -->
+
+<div class="modal" role="dialog" aria-modal="true" id="moveDayModal">
+
+<div class="modal-box">
+
+<h2 data-i18n="move_day_title">↔️ Move Day</h2>
+
+<p class="small">
+<span data-i18n="move_day_prefix">Move all meals from</span> <strong id="moveDaySourceLabel"></strong> <span data-i18n="move_day_suffix">to:</span>
+</p>
+
+<div id="moveDayTargets"></div>
+
+<p class="small" data-i18n="move_day_note">The meals are added to whatever is already planned there, and removed from the original day.</p>
+
+<br>
+
+<button data-primary onclick="confirmMoveDay()" data-i18n="move_day_button">Move</button>
+
+<button onclick="closeMoveDayModal()" data-i18n="cancel">Cancel</button>
+
+</div>
+
+</div>
+
+<div class="modal" role="dialog" aria-modal="true" id="copyDayModal">
+
+
+<div class="modal-box">
+
+
+<h2 data-i18n="copy_day_title">
+📋 Copy Day
+</h2>
+
+
+<p class="small">
+<span data-i18n="copy_day_prefix">Copy all meals from</span> <strong id="copyDaySourceLabel"></strong> <span data-i18n="copy_day_suffix">into:</span>
+</p>
+
+
+<div id="copyDayTargets"></div>
+
+
+<p class="small" data-i18n="copy_day_note">
+This adds to whatever's already planned on those days — it won't remove anything.
+</p>
+
+
+<br>
+
+
+<button data-primary onclick="copyDayToTargets()" data-i18n="copy">
+Copy
+</button>
+
+
+<button onclick="closeCopyDayModal()" data-i18n="cancel">
+Cancel
+</button>
+
+
+</div>
+
+
+</div>
+
+<!-- MEAL DETAIL POPUP (from planner "View" button) -->
+
+<div class="modal" role="dialog" aria-modal="true" id="mealDetailModal">
+
+<div class="modal-box">
+
+<h2 id="mealDetailTitle">
+Meal
+</h2>
+
+<div id="mealDetailContent"></div>
+
+<div class="action-list" style="margin-top:15px;">
+
+<button class="edit" onclick="editMealFromDetail()" data-i18n="btn_edit">✏️ Edit</button>
+
+<button id="mealDetailOpenRecipeBtn" onclick="openRecipeFromMealDetail()" data-i18n="btn_open_recipe">📖 Open Recipe</button>
+
+<button class="delete" onclick="deleteMealFromDetail()" data-i18n="btn_delete">🗑 Delete</button>
+
+</div>
+
+<button data-i18n="close" onclick="closeMealDetail()" style="margin-top:10px;">
+Close
+</button>
+
+</div>
+
+</div>
+
+<!-- USE LEFTOVERS PICKER -->
+
+<div class="modal" role="dialog" aria-modal="true" id="leftoverPickerModal">
+
+<div class="modal-box">
+
+<h2 data-i18n="leftover_picker_title">
+🔁 Use Leftovers
+</h2>
+
+<div id="leftoverPickerList"></div>
+
+<button data-i18n="close" onclick="closeLeftoverPicker()" style="margin-top:10px;">
+Close
+</button>
+
+</div>
+
+</div>
+
+<!-- ADD MEAL WINDOW -->
+
+
+<div class="modal" role="dialog" aria-modal="true" id="modal">
+
+
+<div class="modal-box">
+
+
+<h2 id="modalTitle">
+
+Add Meal
+
+</h2>
+
+
+<div id="useLeftoversWrap">
+
+<button type="button" id="useLeftoversBtn" onclick="openLeftoverPicker()">
+🔁 <span data-i18n="use_leftovers_button">Use Leftovers</span>
+</button>
+
+<div id="useLeftoversStatus" class="small" style="display:none; margin-top:6px;"></div>
+
+</div>
+
+
+<label>
+
+<span data-i18n="meal_type_label">Meal Type</span>
+
+</label>
+
+
+<select id="mealType" onchange="handleMealTypeSelectChange(this)">
+
+
+<option>🍳 Breakfast</option>
+
+<option>☕ Fika</option>
+
+<option>🥗 Lunch</option>
+
+<option>🍝 Dinner</option>
+
+
+</select>
+
+
+
+<label>
+<span data-i18n="choose_recipe_label">📖 Choose Recipe</span>
+</label>
+
+<input
+id="recipeSearch"
+placeholder="🔍 Search recipes..."
+data-i18n-placeholder="meal_search_placeholder"
+oninput="searchRecipesForMeal()"
+>
+
+<div id="mealRecipeList"></div>
+
+<input type="hidden" id="recipeSelect">
+
+
+
+<p data-i18n="or_enter_manually">
+or enter manually:
+</p>
+
+
+<label>
+
+<span data-i18n="meal_label">Meal</span>
+
+</label>
+
+
+<input
+id="mealName"
+placeholder="e.g. Spaghetti Bolognese" data-i18n-placeholder="ph_meal_name"
+>
+
+
+
+<label>
+
+<span data-i18n="people_label">People</span>
+
+</label>
+
+
+<div class="stepper">
+<button type="button" onclick="adjustStepper('people',-1)" data-i18n-aria-label="aria_decrease_servings" aria-label="Decrease servings">−</button>
+<input id="people" type="number" value="4" min="1" onblur="clampStepperInput('people')">
+<button type="button" onclick="adjustStepper('people',1)" data-i18n-aria-label="aria_increase_servings" aria-label="Increase servings">+</button>
+</div>
+
+
+
+<br>
+
+
+<button data-primary onclick="saveMeal()">
+
+<span data-i18n="save">Save</span>
+
+</button>
+
+
+<button onclick="closeModal()">
+
+<span data-i18n="cancel">Cancel</span>
+
+</button>
+
+
+</div>
+
+
+</div>
+
+
+<!-- PASTE RECIPE FROM WEB WINDOW -->
+
+<div class="modal" role="dialog" aria-modal="true" id="pasteModal">
+
+
+<div class="modal-box">
+
+
+<h2 data-i18n="paste_recipe_title">
+📋 Paste Recipe
+</h2>
+
+
+<p class="small" data-i18n="paste_recipe_description">
+Copy a recipe's title, portions, and ingredient list from pretty much any website and paste it below. This works best when it's just the ingredients — not the cooking steps.
+</p>
+
+
+<textarea
+id="pasteText"
+rows="12"
+placeholder="Paste the recipe text here, e.g.&#10;&#10;Köttbullar&#10;4 portioner&#10;500 g nötfärs&#10;1 gul lök&#10;1 dl ströbröd&#10;1 ägg" data-i18n-placeholder="ph_paste"
+style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--field-border);font-size:15px;font-family:inherit;"
+></textarea>
+
+
+<br><br>
+
+
+<button data-primary onclick="parsePastedRecipe()" data-i18n="parse_recipe">
+✅ Parse Recipe
+</button>
+
+
+<button onclick="closePasteModal()" data-i18n="cancel">
+Cancel
+</button>
+
+
+</div>
+
+
+</div>
+
+<!-- SHOPPING LIST MORE ACTIONS MENU -->
+
+<div class="modal" role="dialog" aria-modal="true" id="shoppingMoreMenu">
+
+<div class="modal-box">
+
+<h2 data-i18n="more_menu_title">🛒 More Actions</h2>
+
+<div class="action-list">
+
+<button data-i18n="action_refresh" onclick="closeShoppingMoreMenu(); renderShoppingList();">🔄 Refresh</button>
+<button data-i18n="action_select_multiple" onclick="closeShoppingMoreMenu(); toggleShoppingSelectionMode();">☑️ Select Multiple</button>
+<button data-i18n="action_clear_checked" onclick="closeShoppingMoreMenu(); clearCheckedItems();">🧹 Clear Checked</button>
+<button data-i18n="action_undo_edits" onclick="closeShoppingMoreMenu(); resetShoppingEdits();">↩️ Undo My Edits</button>
+<button data-i18n="action_share" onclick="closeShoppingMoreMenu(); shareShoppingList();">📤 Share</button>
+<button data-i18n="action_print" onclick="closeShoppingMoreMenu(); printShoppingList();">🖨️ Print / Save as PDF</button>
+
+</div>
+
+<br>
+
+<button data-i18n="close" onclick="closeShoppingMoreMenu()">Close</button>
+
+</div>
+
+</div>
+
+<!-- EDIT / ADD SHOPPING ITEM WINDOW -->
+
+<div class="modal" role="dialog" aria-modal="true" id="shoppingItemModal">
+
+
+<div class="modal-box">
+
+
+<h2 id="shoppingItemModalTitle">
+Edit Item
+</h2>
+
+
+<label>
+<span data-i18n="item_label">Item</span>
+</label>
+
+
+<input
+id="shoppingItemName"
+placeholder="e.g. Tomatoes" data-i18n-placeholder="ph_item_name"
+>
+
+
+<label>
+<span data-i18n="amount_label">Amount</span>
+</label>
+
+
+<input
+id="shoppingItemAmount"
+type="number"
+step="any"
+placeholder="Leave blank for none" data-i18n-placeholder="ph_item_amount"
+>
+
+
+<label>
+<span data-i18n="unit_label">Unit</span>
+</label>
+
+
+<input
+id="shoppingItemUnit"
+placeholder="e.g. g, dl, st" data-i18n-placeholder="ph_item_unit"
+>
+
+
+<br>
+
+
+<button data-primary onclick="saveShoppingItem()">
+<span data-i18n="save">Save</span>
+</button>
+
+
+<button onclick="closeShoppingItemModal()">
+<span data-i18n="cancel">Cancel</span>
+</button>
+
+
+</div>
+
+
+</div>
+
+<!-- WHICH RECIPE(S) AN INGREDIENT COMES FROM -->
+
+<div class="modal" role="dialog" aria-modal="true" id="ingredientSourcesModal">
+
+<div class="modal-box">
+
+<h2 id="ingredientSourcesTitle" data-i18n="ingredient_sources_title">
+📖 Where this comes from
+</h2>
+
+<div id="ingredientSourcesList"></div>
+
+<button data-i18n="close" onclick="closeIngredientSources()" style="margin-top:10px;">
+Close
+</button>
+
+</div>
+
+</div>
+
+<!-- ADD RECIPE WINDOW -->
+
+<div class="modal" role="dialog" aria-modal="true" id="recipeModal">
+
+
+<div class="modal-box">
+
+
+<h2>
+Add Recipe
+</h2>
+
+
+<label>
+<span data-i18n="recipe_name_label">Recipe Name</span>
+</label>
+
+
+<input
+id="recipeName"
+placeholder="Example: Spaghetti Bolognese" data-i18n-placeholder="ph_recipe_name"
+>
+
+
+<label>
+<span data-i18n="recipe_tags_label">Tags (comma separated)</span>
+</label>
+
+
+<input
+id="recipeTags"
+placeholder="e.g. quick, vegetarian, dessert" data-i18n-placeholder="ph_recipe_tags"
+>
+
+
+
+
+<label>
+<span data-i18n="recipe_servings_label">Servings</span>
+</label>
+
+
+<div class="stepper">
+<button type="button" onclick="adjustStepper('recipePeople',-1)" data-i18n-aria-label="aria_decrease_servings" aria-label="Decrease servings">−</button>
+<input id="recipePeople" type="number" value="4" min="1" onblur="clampStepperInput('recipePeople')">
+<button type="button" onclick="adjustStepper('recipePeople',1)" data-i18n-aria-label="aria_increase_servings" aria-label="Increase servings">+</button>
+</div>
+
+
+
+<label>
+<span data-i18n="recipe_ingredients_label">Ingredients</span>
+</label>
+
+<div id="ingredientList"></div>
+
+<button type="button" onclick="addIngredientRow()">
+<span data-i18n="add_ingredient">➕ Add Ingredient</span>
+</button>
+
+
+
+<label style="display:block; margin-top:10px;">
+<span data-i18n="recipe_instructions_label">📝 Instructions / Steps (optional)</span>
+</label>
+
+<textarea
+id="recipeInstructions"
+rows="8"
+placeholder="1. Chop the onions...&#10;2. Fry until golden...&#10;3. Add the rest and simmer for 20 minutes..."
+data-i18n-placeholder="recipe_instructions_placeholder"
+style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--field-border);font-size:15px;font-family:inherit;"
+></textarea>
+
+
+
+<br>
+
+
+<button data-primary onclick="saveRecipe()">
+<span data-i18n="save">Save</span>
+</button>
+
+
+<button onclick="closeRecipeModal()">
+<span data-i18n="cancel">Cancel</span>
+</button>
+
+
+</div>
+
+
+</div>    
+
+<!-- VIEW RECIPE WINDOW -->
+
+<div class="modal" role="dialog" aria-modal="true" id="viewRecipeModal">
+
+<div class="modal-box">
+
+<h2 id="viewRecipeTitle">
+Recipe
+</h2>
+
+<div id="viewRecipeContent"></div>
+
+<div class="action-list" style="margin-top:15px;">
+<button class="edit" onclick="editRecipeFromView()" data-i18n="btn_edit">✏️ Edit</button>
+</div>
+
+<button onclick="closeViewRecipe()" style="margin-top:10px;">
+<span data-i18n="close">Close</span>
+</button>
+
+</div>
+
+</div>
+
+<!-- RECIPE DETAIL POPUP (from Recipes page "View Recipe") -->
+
+<div class="modal" role="dialog" aria-modal="true" id="recipeDetailModal">
+
+<div class="modal-box">
+
+<h2 id="recipeDetailTitle">
+Recipe
+</h2>
+
+<div id="recipeDetailTags"></div>
+
+<div id="recipeDetailContent"></div>
+
+<div class="action-list" style="margin-top:15px;">
+
+<button class="edit" onclick="editRecipeFromDetail()" data-i18n="btn_edit">✏️ Edit</button>
+
+<button id="recipeDetailFavoriteBtn" onclick="toggleFavoriteFromDetail()" data-i18n="fav_add">☆ Add Favorite</button>
+
+<button onclick="duplicateRecipeFromDetail()" data-i18n="btn_duplicate">📄 Duplicate</button>
+
+<button onclick="openPlannerRecipeFromDetail()" data-i18n="btn_add_to_planner">📅 Add to Planner</button>
+
+<button class="delete" onclick="deleteRecipeFromDetail()" data-i18n="btn_delete">🗑 Delete</button>
+
+</div>
+
+<button data-i18n="close" onclick="closeRecipeDetail()" style="margin-top:10px;">
+Close
+</button>
+
+</div>
+
+</div>
+
+<!-- ADD RECIPE TO PLANNER WINDOW -->
+
+<div class="modal" role="dialog" aria-modal="true" id="plannerRecipeModal">
+
+
+<div class="modal-box">
+
+
+<h2 data-i18n="planner_recipe_title">
+📅 Add Recipe to Planner
+</h2>
+
+
+<label>
+<span data-i18n="day_label">Day</span>
+</label>
+
+
+<select id="plannerRecipeDay">
+
+<option value="Monday" data-day="Monday">Monday</option>
+<option value="Tuesday" data-day="Tuesday">Tuesday</option>
+<option value="Wednesday" data-day="Wednesday">Wednesday</option>
+<option value="Thursday" data-day="Thursday">Thursday</option>
+<option value="Friday" data-day="Friday">Friday</option>
+<option value="Saturday" data-day="Saturday">Saturday</option>
+<option value="Sunday" data-day="Sunday">Sunday</option>
+
+</select>
+
+
+<label>
+<span data-i18n="meal_type_label">Meal Type</span>
+</label>
+
+
+<select id="plannerRecipeType" onchange="handleMealTypeSelectChange(this)">
+
+<option>🍳 Breakfast</option>
+
+<option>☕ Fika</option>
+
+<option>🥗 Lunch</option>
+
+<option>🍝 Dinner</option>
+
+</select>
+
+
+<label>
+<span data-i18n="people_label">People</span>
+</label>
+
+
+<div class="stepper">
+<button type="button" onclick="adjustStepper('plannerRecipePeople',-1)" data-i18n-aria-label="aria_decrease_servings" aria-label="Decrease servings">−</button>
+<input id="plannerRecipePeople" type="number" value="4" min="1" onblur="clampStepperInput('plannerRecipePeople')">
+<button type="button" onclick="adjustStepper('plannerRecipePeople',1)" data-i18n-aria-label="aria_increase_servings" aria-label="Increase servings">+</button>
+</div>
+
+
+<br>
+
+
+<button data-primary onclick="addRecipeToPlanner()">
+
+<span data-i18n="add">Add</span>
+
+</button>
+
+
+<button onclick="closePlannerRecipeModal()">
+
+<span data-i18n="cancel">Cancel</span>
+
+</button>
+
+
+</div>
+
+
+</div>    
+
+
+<div id="toastContainer"></div>
+
+<!-- CUSTOM CONFIRM WINDOW -->
+
+<div class="modal" role="dialog" aria-modal="true" id="customConfirmModal">
+
+<div class="modal-box">
+
+<h2 id="customConfirmTitle" data-i18n="confirm_title_default">Are you sure?</h2>
+
+<p id="customConfirmMessage" class="small"></p>
+
+<br>
+
+<button onclick="resolveCustomConfirm(true)" data-i18n="confirm_yes">Yes, continue</button>
+<button onclick="resolveCustomConfirm(false)" data-i18n="cancel">Cancel</button>
+
+</div>
+
+</div>
+
+<!-- QUICK ADD: PICK A DAY -->
+
+<div class="modal" role="dialog" aria-modal="true" id="quickAddDayModal">
+
+<div class="modal-box">
+
+<h2 data-i18n="quick_add_title">➕ Add a meal — which day?</h2>
+
+<div class="action-list" id="quickAddDayList"></div>
+
+<br>
+
+<button onclick="closeQuickAddDayPicker()" data-i18n="cancel">Cancel</button>
+
+</div>
+
+</div>
+
+<button id="quickAddFab" onclick="openQuickAddDayPicker()" title="Add a meal" data-i18n-aria-label="aria_add_meal" aria-label="Add a meal">➕</button>
+
+<div id="printArea"></div>
+
+<!-- WEEK ACTIONS MENU -->
+
+<div class="modal" role="dialog" aria-modal="true" id="autoPlanModal">
+
+<div class="modal-box">
+
+<h2 data-i18n="autoplan_title">✨ Fill empty days</h2>
+
+<p class="small" id="autoPlanIntro"></p>
+
+<div id="autoPlanList"></div>
+
+<br>
+
+<button onclick="shuffleAutoPlan()" data-i18n="autoplan_shuffle">🔀 Shuffle</button>
+<button data-primary onclick="confirmAutoPlan()" data-i18n="autoplan_apply">Add to planner</button>
+<button onclick="closeAutoPlan()" data-i18n="cancel">Cancel</button>
+
+</div>
+
+</div>
+
+<div class="modal" role="dialog" aria-modal="true" id="weekActionsMenu">
+
+<div class="modal-box">
+
+<h2 data-i18n="week_actions_menu_title">📆 Week Actions</h2>
+
+<div class="action-list">
+
+<button onclick="closeWeekActionsMenu(); openAutoPlan();"><span data-i18n="autoplan_button">✨ Fill empty days</span></button>
+<button onclick="closeWeekActionsMenu(); openRenameWeekModal();"><span data-i18n="nav_full_name_week">🏷️ Name This Week</span></button>
+<button onclick="closeWeekActionsMenu(); openCopyWeekModal();"><span data-i18n="nav_full_copy_forward">📆 Copy Week To...</span></button>
+<button onclick="closeWeekActionsMenu(); openSaveTemplateModal();"><span data-i18n="nav_full_save_template">💾 Save as Template</span></button>
+<button onclick="closeWeekActionsMenu(); openLoadTemplateModal();"><span data-i18n="nav_full_load_template">📂 Load Template</span></button>
+<button class="delete" onclick="closeWeekActionsMenu(); clearWeek();"><span data-i18n="nav_full_clear_week">🧹 Clear This Week</span></button>
+
+</div>
+
+<br>
+
+<button data-i18n="close" onclick="closeWeekActionsMenu()">Close</button>
+
+</div>
+
+</div>
+
+<!-- NAME THIS WEEK -->
+
+<div class="modal" role="dialog" aria-modal="true" id="renameWeekModal">
+
+<div class="modal-box">
+
+<h2 data-i18n="rename_week_modal_title">🏷️ Name This Week</h2>
+
+<p class="small" data-i18n="rename_week_description">
+Give this week a name of your own — useful for a rotating schedule, e.g. "Week 1", "Week 2", "Week 3".
+</p>
+
+<label>
+<span data-i18n="rename_week_name_label">Week name</span>
+</label>
+
+<input
+    id="renameWeekNameInput"
+    placeholder="e.g. Week 1" data-i18n-placeholder="ph_week_name"
+>
+
+<br>
+
+<button data-primary onclick="confirmRenameWeek()" data-i18n="save">Save</button>
+<button onclick="clearWeekName()" data-i18n="rename_week_clear">Remove name</button>
+<button onclick="closeRenameWeekModal()" data-i18n="cancel">Cancel</button>
+
+</div>
+
+</div>
+
+<!-- COPY WEEK TO... -->
+
+<div class="modal" role="dialog" aria-modal="true" id="copyWeekModal">
+
+<div class="modal-box">
+
+<h2 data-i18n="copy_week_modal_title">📆 Copy This Week To...</h2>
+
+<label>
+<span data-i18n="copy_week_target_label">Target week (any date in that week)</span>
+</label>
+
+<input type="date" id="copyWeekTargetInput">
+
+<div class="week-nav-secondary" style="margin-top:8px;">
+<button class="wrap-label" onclick="setCopyWeekPreset(1)" style="font-size:13px;padding:8px 10px;" data-i18n="copy_week_preset_next">Next Week</button>
+<button class="wrap-label" onclick="setCopyWeekPreset(2)" style="font-size:13px;padding:8px 10px;" data-i18n="copy_week_preset_2">In 2 Weeks</button>
+<button class="wrap-label" onclick="setCopyWeekPreset(4)" style="font-size:13px;padding:8px 10px;" data-i18n="copy_week_preset_4">In 4 Weeks</button>
+</div>
+
+<br>
+
+<button data-primary onclick="confirmCopyWeek()" data-i18n="copy">Copy</button>
+<button onclick="closeCopyWeekModal()" data-i18n="cancel">Cancel</button>
+
+</div>
+
+</div>
+
+<!-- SAVE WEEK AS TEMPLATE -->
+
+<div class="modal" role="dialog" aria-modal="true" id="saveTemplateModal">
+
+<div class="modal-box">
+
+<h2 data-i18n="save_template_modal_title">💾 Save as Template</h2>
+
+<p class="small" data-i18n="save_template_description">
+Save this week's meals as a reusable template you can apply to any week later.
+</p>
+
+<label>
+<span data-i18n="save_template_name_label">Template name</span>
+</label>
+
+<input
+    id="saveTemplateNameInput"
+    placeholder="e.g. Typical week"
+    data-i18n-placeholder="save_template_name_placeholder"
+>
+
+<br>
+
+<button data-primary onclick="confirmSaveTemplate()" data-i18n="save">Save</button>
+<button onclick="closeSaveTemplateModal()" data-i18n="cancel">Cancel</button>
+
+</div>
+
+</div>
+
+<!-- LOAD WEEK TEMPLATE -->
+
+<div class="modal" role="dialog" aria-modal="true" id="loadTemplateModal">
+
+<div class="modal-box">
+
+<h2 data-i18n="load_template_modal_title">📂 Load Template</h2>
+
+<p class="small" data-i18n="load_template_description">
+Applying a template replaces this week's meals.
+</p>
+
+<div id="templateList"></div>
+
+<br>
+
+<button onclick="closeLoadTemplateModal()" data-i18n="close">Close</button>
+
+</div>
+
+</div>
+
+
+<script>
+
+
+const days = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday"
+];
+
+
+// =======================
+// TRANSLATIONS (English / Swedish)
+// =======================
+// This covers the app's own UI chrome — buttons, labels, headings.
+// It's separate from the ingredient dictionary elsewhere in the
+// file, which already treats Swedish/English ingredient NAMES as
+// interchangeable data, not UI text.
+
+const translations = {
+
+    en: {
+
+        nav_planner: "🏠 Meal Planner",
+        nav_recipes: "📖 Recipes",
+        nav_shopping: "🛒 Shopping List",
+        app_tagline: "Plan • Shop • Cook",
+        settings_button: "⚙️ Settings",
+
+        settings_title: "⚙️ Settings",
+        settings_language: "🌍 Language",
+        settings_theme: "🎨 Theme",
+        theme_auto: "🌗 Auto (match device)",
+        theme_light: "☀️ Light",
+        theme_dark: "🌙 Dark",
+        settings_categories: "📂 Categories",
+        manage_categories: "Manage Categories",
+        new_category_option: "➕ New category",
+        quick_add_title: "➕ Add a meal — which day?",
+        quick_add_today_suffix: " (today)",
+        category_saved_prefix: "Category saved: ",
+        aria_decrease_servings: "Decrease servings",
+        aria_increase_servings: "Increase servings",
+        aria_previous_week: "Previous week",
+        aria_next_week: "Next week",
+        aria_add_meal: "Add a meal",
+        aria_move_category_up: "Move category up",
+        aria_move_category_down: "Move category down",
+        aria_delete_translation: "Delete translation",
+        settings_custom_translations: "🔤 Custom Ingredient Translations",
+        custom_translations_description: "Add your own word so it always combines on the shopping list, no matter which language it's written in.",
+        custom_translation_alias_placeholder: "e.g. kycklingfilé",
+        custom_translation_target_placeholder: "e.g. chicken breast",
+        custom_translation_category_label: "Shopping list section (optional)",
+        category_auto_other: "Other (default)",
+        add_translation: "➕ Add Translation",
+        enter_both_translation_fields: "Please fill in both fields.",
+        translation_saved: "Translation saved",
+        no_custom_translations_yet: "No custom translations added yet.",
+        day_note_placeholder: "📝 Note (e.g. eating out, leftovers)",
+        settings_shopping_categories: "🛒 Shopping List Order",
+        shopping_category_order_description: "Reorder the categories to match how your store is laid out.",
+        sync_restore: "♻️ Restore data from before sync",
+        sync_restore_title: "Restore backup?",
+        sync_restore_message: "This puts back the planner, recipes and shopping list that were on this device before you created or joined a household.",
+        sync_restored: "Backup restored",
+        sync_no_backup: "No backup found on this device.",
+        ws_title: "📅 My Planners",
+        ws_description: "Keep several separate planners on this device – for example a private one and one for each household – and switch between them.",
+        ws_default_name: "My planner",
+        ws_new_default_name: "New planner",
+        ws_household_default_name: "Household",
+        ws_new: "➕ New planner",
+        ws_new_placeholder: "Name of new planner",
+        ws_switch: "Switch",
+        ws_menu_manage: "➕ New planner or join household…",
+        ws_local_tag: "this device only",
+        ws_shared_tag: "shared",
+        ws_rename_prompt: "Name of this planner:",
+        ws_delete_title: "Delete planner?",
+        ws_delete_message: "This removes the planner from this device. A shared household stays in the cloud and can be joined again with its code.",
+        ws_cannot_delete_active: "Switch to another planner first.",
+        ws_already_joined: "You already have a planner for that household.",
+        sync_title: "👨‍👩‍👧 Household Sync",
+        sync_description: "Share your planner, recipes and shopping list with your household. Everyone sees changes live.",
+        sync_create: "➕ Create household",
+        sync_join: "🔗 Join household as new planner",
+        sync_copy: "📋 Copy code",
+        sync_leave: "🚪 Leave household",
+        sync_code_placeholder: "XXXX-XXXX-XXXX",
+        sync_status_off: "Not shared – your data stays on this device only.",
+        sync_status_on: "Shared – your household code is:",
+        sync_status_connecting: "Connecting…",
+        sync_status_error: "Sync problem – will retry. Your data is safe on this device.",
+        sync_created: "Household created. Share the code with the others.",
+        sync_joined: "Joined household – loading shared data…",
+        sync_left: "You left the household. Data stays on this device.",
+        sync_copied: "Code copied",
+        sync_invalid_code: "That code isn't valid. It should look like XXXX-XXXX-XXXX.",
+        sync_not_found: "No household found with that code.",
+        sync_join_title: "Join household?",
+        sync_join_message: "This replaces the planner, recipes and shopping list on this device with the household's data. A backup of your current data is kept on this device.",
+        sync_leave_title: "Leave household?",
+        sync_leave_message: "This device stops syncing. Your data stays here, but changes won't be shared anymore.",
+        sync_updated: "Updated by your household",
+        settings_backup: "💾 Backup",
+        backup_description: "Your data lives only in this browser. Export it now and then to keep a safe copy, or to move it to another device.",
+        export_data: "⬇️ Export Data",
+        import_data: "⬆️ Import Data",
+        close: "Close",
+        save: "Save",
+        cancel: "Cancel",
+        apply: "Apply",
+        add: "Add",
+
+        category_title: "📂 Categories",
+        category_current: "Your current categories:",
+        category_add: "Add your own meal categories",
+        category_emoji_choose: "Choose an emoji:",
+        category_name_placeholder: "Category name",
+        category_emoji_placeholder: "Or type your own emoji",
+
+        recipes_heading: "📖 Recipes",
+        add_recipe: "➕ Add Recipe",
+        paste_from_web: "📋 Paste from Web",
+        recipe_search_placeholder: "🔍 Search recipes...",
+        recipe_sort_label: "Sort / group by",
+        recipe_sort_recent: "Recently Added",
+        recipe_sort_alpha: "A–Z",
+        recipe_sort_tag: "Grouped by Tag",
+        recipe_group_untagged: "Untagged",
+        recipes_empty: "No recipes yet — tap ➕ Add Recipe or 📋 Paste from Web to get started",
+        recipes_no_match: "No recipes match",
+
+        planner_no_meals: "No meals planned yet",
+        need_exact: "need",
+        round_shopping_label: "Round up shopping amounts",
+        round_shopping_description: "80 g becomes 100 g, 1.2 kg becomes 1.5 kg. The exact amount stays visible in gray. Recipes and the planner are not changed.",
+        day_menu_note_add: "Add note",
+        day_menu_note_edit: "Edit note",
+        day_menu_eating_out: "🍽️ Eating out",
+        eating_out_note: "🍽️ Eating out",
+        eating_out_already: "Already marked as eating out",
+        day_menu_move: "↔️ Move day",
+        day_menu_shop: "🛒 Shopping list for this day",
+        day_menu_clear: "🧹 Clear day",
+        clear_day_title: "Clear day",
+        clear_day_message: "Remove all meals from {day}?",
+        clear_day_nothing: "No meals to clear",
+        clear_day_cleared: "{day} cleared",
+        move_day_title: "↔️ Move Day",
+        move_day_prefix: "Move all meals from",
+        move_day_suffix: "to:",
+        move_day_note: "The meals are added to whatever is already planned there, and removed from the original day.",
+        move_day_button: "Move",
+        move_day_next_week: "Next week",
+        move_day_prev_week: "Previous week",
+        move_day_pick: "Pick where to move the meals",
+        move_day_nothing: "No meals on {day} to move",
+        move_day_done: "Moved to {target}",
+        btn_edit: "✏️ Edit",
+        btn_delete: "🗑 Delete",
+        btn_open_recipe: "📖 Open Recipe",
+        btn_duplicate: "📄 Duplicate",
+        btn_add_to_planner: "📅 Add to Planner",
+        btn_view_recipe: "📖 View Recipe",
+        btn_select: "✅ Select",
+        fav_add: "☆ Add Favorite",
+        fav_remove: "⭐ Remove Favorite",
+        undo: "Undo",
+        confirm_yes: "Yes, continue",
+        confirm_title_default: "Are you sure?",
+        people_count: "{n} people",
+        servings_count: "{n} servings",
+        ingredients_count: "{n} ingredients",
+        ingredient_one: "1 ingredient",
+        ingredients_heading: "Ingredients",
+        shopping_not_included: "Not included: {list} — these were typed in manually without a linked recipe, so there are no ingredients to pull from.",
+        selected_count: "{n} selected",
+        sel_check: "✅ Check",
+        sel_cancel: "✖ Cancel",
+        ph_paste: "Paste the recipe text here, e.g.\n\nKöttbullar\n4 portioner\n500 g nötfärs\n1 gul lök\n1 dl ströbröd\n1 ägg",
+        ph_meal_name: "e.g. Spaghetti Bolognese",
+        ph_recipe_name: "Example: Spaghetti Bolognese",
+        ph_recipe_tags: "e.g. quick, vegetarian, dessert",
+        ph_item_name: "e.g. Tomatoes",
+        ph_item_amount: "Leave blank for none",
+        ph_item_unit: "e.g. g, dl, st",
+        ph_week_name: "e.g. Week 1",
+        ph_ingredient: "Ingredient",
+        ph_amount: "Amount",
+        ph_unit: "Unit",
+        remove_ingredient: "Remove ingredient",
+        sync_share: "🔗 Share invite link",
+        sync_share_text: "Join my FoodFlow household:",
+        sync_link_copied: "Invite link copied",
+        sync_change: "🔄 Change code",
+        sync_change_title: "Change household code",
+        sync_change_message: "This moves your household to a new code and copies your data over. Share the new code with the people who should stay. Anyone still using the old code will no longer see new changes. Continue?",
+        sync_code_changed: "New code created. Share it with your household.",
+        sync_invite_title: "Join household?",
+        sync_invite_message: "You were invited to household {code}. It will be added as a new planner on this device and your current planner stays untouched.",
+        autoplan_button: "✨ Fill empty days",
+        autoplan_title: "✨ Fill empty days",
+        autoplan_intro: "A dinner suggestion for each empty day, picked from your favorite recipes. Untick any you don't want.",
+        autoplan_intro_all: "You have no favorite recipes yet, so these are picked from all your recipes. Untick any you don't want.",
+        autoplan_shuffle: "🔀 Shuffle",
+        autoplan_apply: "Add to planner",
+        autoplan_no_recipes: "Add some recipes first",
+        autoplan_nothing_empty: "There are no empty days this week",
+        autoplan_done: "Added {n} meals",
+        shop_cat_produce: "Produce",
+        shop_cat_dairy: "Dairy & Eggs",
+        shop_cat_meat: "Meat & Fish",
+        shop_cat_pantry: "Pantry",
+        shop_cat_herbs: "Herbs & Spices",
+        shop_cat_other: "Other",
+        aria_emoji_pizza: "Pizza emoji",
+        aria_emoji_cake: "Cake emoji",
+        aria_emoji_sandwich: "Sandwich emoji",
+        aria_emoji_apple: "Apple emoji",
+        aria_emoji_drink: "Drink emoji",
+        aria_emoji_moon: "Moon emoji",
+        aria_emoji_muscle: "Muscle emoji",
+        aria_emoji_stew: "Stew emoji",
+        day_menu_label: "Day options",
+        view_week: "Week",
+        view_month: "Month",
+        nav_this_month: "📍 This Month",
+        month_more: "+{n} more",
+        planner_add: "➕ Add",
+        planner_copy_day: "📋 Copy Day",
+
+        shopping_heading: "🛒 Shopping List",
+        shopping_description: "Automatically built from every recipe in your meal planner, scaled to the number of people you set for each meal.",
+        add_item: "➕ Add Item",
+        more_actions: "⋯ More",
+        shopping_for: "🗓️ Shopping for:",
+        range_to: "to",
+        preset_this_week: "This Week",
+        preset_rest_of_week: "📍 Rest of Week",
+        preset_next_7: "Next 7 Days",
+        shopping_search_placeholder: "🔍 Search shopping list...",
+        shopping_empty: "No ingredients yet — add some recipes to your meal planner and they'll show up here.",
+        shopping_no_match: "No items match",
+
+        more_menu_title: "🛒 More Actions",
+        action_refresh: "🔄 Refresh",
+        action_select_multiple: "☑️ Select Multiple",
+        action_clear_checked: "🧹 Clear Checked",
+        action_undo_edits: "↩️ Undo My Edits",
+        action_share: "📤 Share",
+        action_print: "🖨️ Print / Save as PDF",
+
+        recipe_name_label: "Recipe Name",
+        recipe_tags_label: "Tags (comma separated)",
+        recipe_servings_label: "Servings",
+        servings_label: "servings",
+        recipe_scaled_note: "originally serves {servings}",
+        show_original_recipe: "Show original recipe",
+        show_scaled_recipe: "Show scaled amounts",
+        recipe_ingredients_label: "Ingredients",
+        add_ingredient: "➕ Add Ingredient",
+        recipe_instructions_label: "📝 Instructions / Steps (optional)",
+        recipe_instructions_label_short: "Instructions",
+        recipe_instructions_placeholder: "1. Chop the onions...\n2. Fry until golden...\n3. Add the rest and simmer for 20 minutes...",
+
+        meal_type_label: "Meal Type",
+        choose_recipe_label: "📖 Choose Recipe",
+        meal_search_placeholder: "🔍 Search recipes...",
+        or_enter_manually: "or enter manually:",
+        meal_label: "Meal",
+        people_label: "People",
+
+        week_previous: "◀︎ Previous",
+        week_next: "Next ▶︎",
+        week_today: "📍 This Week",
+        week_copy_forward: "📆 Copy Week Forward",
+
+        edit_item_title: "Edit Item",
+        add_item_title: "Add Item",
+        item_label: "Item",
+        amount_label: "Amount",
+        unit_label: "Unit",
+        day_selected_one: "1 day selected",
+        day_selected_other: "{n} days selected",
+        progress_checked: "{checked} / {total} checked",
+        modal_add_meal: "Add Meal",
+        modal_edit_meal: "Edit Meal",
+        modal_add_recipe: "Add Recipe",
+        modal_edit_recipe: "Edit Recipe",
+        use_leftovers_button: "Use Leftovers",
+        leftover_picker_title: "🔁 Use Leftovers",
+        no_leftovers_available: "No leftovers marked yet. Mark a meal as having leftovers from its \"View\" popup, then it'll show up here.",
+        portions_label: "portions left",
+        use_this_button: "Use this",
+        using_leftovers_from: "Using leftovers from",
+        unlink_leftovers: "✕ Unlink",
+        leftover_portions_label: "Portions left over from this meal",
+        save_leftovers: "Save",
+        leftovers_saved: "Leftovers saved",
+        leftovers_cleared: "Leftovers cleared",
+        leftover_source_gone: "a meal that no longer exists",
+        leftovers_badge_using: "Leftovers",
+        leftovers_badge_portions: "left",
+        leftovers_external_label: "Leftovers (not tracked here)",
+        leftovers_external_description: "From somewhere that isn't in your planner, e.g. a restaurant.",
+        leftovers_default_meal_name: "Leftovers",
+        ingredient_sources_title: "📖 Where this comes from",
+        ingredient_sources_intro: "This ingredient is used in:",
+        ingredient_sources_none: "Not linked to a recipe (added by hand).",
+        paste_recipe_title: "📋 Paste Recipe",
+        paste_recipe_description: "Copy a recipe's title, portions, and ingredient list from pretty much any website and paste it below. This works best when it's just the ingredients — not the cooking steps.",
+        parse_recipe: "✅ Parse Recipe",
+        planner_recipe_title: "📅 Add Recipe to Planner",
+        day_label: "Day",
+        copy_day_title: "📋 Copy Day",
+        copy_day_prefix: "Copy all meals from",
+        copy_day_suffix: "into:",
+        copy_day_note: "This adds to whatever's already planned on those days — it won't remove anything.",
+        copy: "Copy",
+        nav_full_previous: "◀︎ Previous",
+        nav_short_previous: "◀︎",
+        nav_full_next: "Next ▶︎",
+        nav_short_next: "▶︎",
+        nav_full_today: "📍 This Week",
+        nav_short_today: "📍 Today",
+        nav_full_copy_forward: "📆 Copy Week To...",
+        nav_short_copy_forward: "📆 Copy To...",
+        print_planner_full: "🖨️ Print / Save as PDF",
+        print_planner_short: "🖨️ Print",
+        meal_plan_title: "🍃 FoodFlow — Meal Plan",
+        print_no_meals_day: "—",
+
+        no_meals_to_copy_prefix: "There are no meals on ",
+        no_meals_to_copy_suffix: " yet to copy.",
+        moved_meal_prefix: "Moved ",
+        moved_meal_suffix: " to ",
+        pick_a_day_prefix: "Tap a day to move ",
+        pick_a_day_suffix: " there",
+        no_meals_this_week: "This week doesn't have any meals planned yet.",
+        replace_target_week_message: "That week already has meals planned. This will replace that plan with a copy of this week. Continue?",
+        replace_target_week_title: "Replace that week's plan?",
+        copied_to_chosen_week: "Copied to the chosen week!",
+        nav_full_save_template: "💾 Save as Template",
+        nav_full_load_template: "📂 Load Template",
+        nav_full_clear_week: "🧹 Clear This Week",
+        clear_week_title: "Clear this whole week?",
+        clear_week_message: "This removes every meal planned for this week. It won't affect any other week, and you can undo it right after.",
+        clear_week_nothing_to_clear: "This week is already empty.",
+        clear_week_cleared: "Week cleared",
+        nav_full_name_week: "🏷️ Name This Week",
+        rename_week_modal_title: "🏷️ Name This Week",
+        rename_week_description: "Give this week a name of your own — useful for a rotating schedule, e.g. \"Week 1\", \"Week 2\", \"Week 3\".",
+        rename_week_name_label: "Week name",
+        rename_week_clear: "Remove name",
+        week_name_saved: "Week name saved",
+        nav_full_week_actions: "📆 Week Actions",
+        nav_short_week_actions: "📆 Actions",
+        week_actions_menu_title: "📆 Week Actions",
+        save_template_modal_title: "💾 Save as Template",
+        save_template_description: "Save this week's meals as a reusable template you can apply to any week later.",
+        save_template_name_label: "Template name",
+        save_template_name_placeholder: "e.g. Typical week",
+        enter_template_name: "Please enter a name for the template.",
+        template_saved: "Template saved",
+        load_template_modal_title: "📂 Load Template",
+        load_template_description: "Applying a template replaces this week's meals.",
+        no_templates_yet: "No templates saved yet.",
+        replace_current_week_message: "This week already has meals planned. Applying this template will replace them. Continue?",
+        template_applied: "Template applied!",
+        copy_week_modal_title: "📆 Copy This Week To...",
+        copy_week_target_label: "Target week (any date in that week)",
+        copy_week_preset_next: "Next Week",
+        copy_week_preset_2: "In 2 Weeks",
+        copy_week_preset_4: "In 4 Weeks",
+        pick_a_week_date: "Pick a date first.",
+        cant_copy_to_same_week: "That's the week you're already viewing — pick a different one.",
+        enter_meal_name: "Please enter a meal name.",
+        toast_removed: "Removed",
+        toast_duplicated_prefix: "Duplicated:",
+        pick_day_to_copy: "Pick at least one day to copy into.",
+        import_backup_message: "This will replace your current recipes, meal planner, settings, and shopping list with what's in this backup file. Continue?",
+        import_backup_title: "Import backup?",
+        import_complete: "Import complete! Reloading...",
+        need_one_category: "You need at least one category.",
+        delete_category_message: "Delete this category? Meals already using it will keep showing it, but it won't be selectable for new meals.",
+        delete_category_title: "Delete category?",
+        enter_category_name: "Enter category name",
+        category_exists: "That category already exists.",
+        enter_recipe_name: "Please enter a recipe name.",
+        recipe_not_found: "Recipe not found",
+        start_before_end: "Start date needs to be on or before the end date.",
+        checked_off_items: "Checked off {n} item(s)",
+        delete_items_message: "Delete {n} selected item(s) from the shopping list?",
+        delete_items_title: "Delete items?",
+        deleted_items: "Deleted {n} item(s)",
+        undo_edits_message: "This brings back any removed or edited auto-generated items. Items you added by hand will stay. Continue?",
+        undo_edits_title: "Undo my edits?",
+        enter_item_name: "Please enter an item name.",
+        couldnt_share: "Couldn't share the list.",
+        copied_to_clipboard: "Shopping list copied to clipboard",
+        couldnt_copy_list: "Couldn't copy the list.",
+        sharing_not_supported: "Sharing isn't supported on this browser.",
+        paste_text_first: "Paste some recipe text first.",
+        this_week_suffix: "(this week)",
+        language_changed: "Language set to English"
+
+    },
+
+    sv: {
+
+        nav_planner: "🏠 Måltidsplanerare",
+        nav_recipes: "📖 Recept",
+        nav_shopping: "🛒 Inköpslista",
+        app_tagline: "Planera • Handla • Laga",
+        settings_button: "⚙️ Inställningar",
+
+        settings_title: "⚙️ Inställningar",
+        settings_language: "🌍 Språk",
+        settings_theme: "🎨 Tema",
+        theme_auto: "🌗 Auto (följ enheten)",
+        theme_light: "☀️ Ljust",
+        theme_dark: "🌙 Mörkt",
+        settings_categories: "📂 Kategorier",
+        manage_categories: "Hantera kategorier",
+        new_category_option: "➕ Ny kategori",
+        quick_add_title: "➕ Lägg till måltid — vilken dag?",
+        quick_add_today_suffix: " (idag)",
+        category_saved_prefix: "Kategori sparad: ",
+        aria_decrease_servings: "Minska antal portioner",
+        aria_increase_servings: "Öka antal portioner",
+        aria_previous_week: "Föregående vecka",
+        aria_next_week: "Nästa vecka",
+        aria_add_meal: "Lägg till en måltid",
+        aria_move_category_up: "Flytta kategori uppåt",
+        aria_move_category_down: "Flytta kategori nedåt",
+        aria_delete_translation: "Ta bort översättning",
+        settings_custom_translations: "🔤 Egna ingrediensöversättningar",
+        custom_translations_description: "Lägg till ett eget ord så att det alltid kombineras på inköpslistan, oavsett vilket språk det är skrivet på.",
+        custom_translation_alias_placeholder: "t.ex. kycklingfilé",
+        custom_translation_target_placeholder: "t.ex. chicken breast",
+        custom_translation_category_label: "Avsnitt på inköpslistan (valfritt)",
+        category_auto_other: "Övrigt (standard)",
+        add_translation: "➕ Lägg till översättning",
+        enter_both_translation_fields: "Fyll i båda fälten.",
+        translation_saved: "Översättning sparad",
+        no_custom_translations_yet: "Inga egna översättningar tillagda än.",
+        day_note_placeholder: "📝 Anteckning (t.ex. äter ute, rester)",
+        settings_shopping_categories: "🛒 Inköpslistans ordning",
+        shopping_category_order_description: "Ändra ordningen på kategorierna så att den matchar din butik.",
+        sync_restore: "♻️ Återställ data från före synk",
+        sync_restore_title: "Återställa säkerhetskopia?",
+        sync_restore_message: "Detta återställer planering, recept och inköpslista som fanns på den här enheten innan du skapade eller gick med i ett hushåll.",
+        sync_restored: "Säkerhetskopia återställd",
+        sync_no_backup: "Ingen säkerhetskopia hittades på den här enheten.",
+        ws_title: "📅 Mina planeringar",
+        ws_description: "Ha flera separata planeringar på den här enheten – till exempel en privat och en för varje hushåll – och byt mellan dem.",
+        ws_default_name: "Min planering",
+        ws_new_default_name: "Ny planering",
+        ws_household_default_name: "Hushåll",
+        ws_new: "➕ Ny planering",
+        ws_new_placeholder: "Namn på ny planering",
+        ws_switch: "Byt",
+        ws_menu_manage: "➕ Ny planering eller gå med i hushåll…",
+        ws_local_tag: "bara den här enheten",
+        ws_shared_tag: "delad",
+        ws_rename_prompt: "Namn på den här planeringen:",
+        ws_delete_title: "Ta bort planering?",
+        ws_delete_message: "Detta tar bort planeringen från den här enheten. Ett delat hushåll finns kvar i molnet och kan anslutas igen med sin kod.",
+        ws_cannot_delete_active: "Byt till en annan planering först.",
+        ws_already_joined: "Du har redan en planering för det hushållet.",
+        sync_title: "👨‍👩‍👧 Hushållssynk",
+        sync_description: "Dela din planering, dina recept och inköpslista med hushållet. Alla ser ändringar direkt.",
+        sync_create: "➕ Skapa hushåll",
+        sync_join: "🔗 Gå med i hushåll som ny planering",
+        sync_copy: "📋 Kopiera kod",
+        sync_leave: "🚪 Lämna hushållet",
+        sync_code_placeholder: "XXXX-XXXX-XXXX",
+        sync_status_off: "Inte delad – din data finns bara på den här enheten.",
+        sync_status_on: "Delad – din hushållskod är:",
+        sync_status_connecting: "Ansluter…",
+        sync_status_error: "Synkproblem – försöker igen. Din data är säker på den här enheten.",
+        sync_created: "Hushåll skapat. Dela koden med de andra.",
+        sync_joined: "Gick med i hushållet – hämtar delad data…",
+        sync_left: "Du lämnade hushållet. Datan finns kvar på den här enheten.",
+        sync_copied: "Koden kopierad",
+        sync_invalid_code: "Koden är ogiltig. Den ska se ut som XXXX-XXXX-XXXX.",
+        sync_not_found: "Inget hushåll hittades med den koden.",
+        sync_join_title: "Gå med i hushåll?",
+        sync_join_message: "Detta ersätter planering, recept och inköpslista på den här enheten med hushållets data. En säkerhetskopia av din nuvarande data sparas på enheten.",
+        sync_leave_title: "Lämna hushållet?",
+        sync_leave_message: "Den här enheten slutar synka. Din data finns kvar, men ändringar delas inte längre.",
+        sync_updated: "Uppdaterad av ditt hushåll",
+        settings_backup: "💾 Säkerhetskopia",
+        backup_description: "Din data finns bara i den här webbläsaren. Exportera då och då för att ha en säker kopia, eller för att flytta den till en annan enhet.",
+        export_data: "⬇️ Exportera data",
+        import_data: "⬆️ Importera data",
+        close: "Stäng",
+        save: "Spara",
+        cancel: "Avbryt",
+        apply: "Använd",
+        add: "Lägg till",
+
+        category_title: "📂 Kategorier",
+        category_current: "Dina nuvarande kategorier:",
+        category_add: "Lägg till egna måltidskategorier",
+        category_emoji_choose: "Välj en emoji:",
+        category_name_placeholder: "Kategorinamn",
+        category_emoji_placeholder: "Eller skriv en egen emoji",
+
+        recipes_heading: "📖 Recept",
+        add_recipe: "➕ Lägg till recept",
+        paste_from_web: "📋 Klistra in från webben",
+        recipe_search_placeholder: "🔍 Sök recept...",
+        recipe_sort_label: "Sortera / gruppera efter",
+        recipe_sort_recent: "Senast tillagda",
+        recipe_sort_alpha: "A–Ö",
+        recipe_sort_tag: "Grupperat efter tagg",
+        recipe_group_untagged: "Utan tagg",
+        recipes_empty: "Inga recept ännu — tryck på ➕ Lägg till recept eller 📋 Klistra in från webben för att komma igång",
+        recipes_no_match: "Inga recept matchar",
+
+        planner_no_meals: "Inga måltider planerade än",
+        need_exact: "behöver",
+        round_shopping_label: "Avrunda inköpsmängder uppåt",
+        round_shopping_description: "80 g blir 100 g, 1,2 kg blir 1,5 kg. Den exakta mängden visas i grått. Recept och planeraren ändras inte.",
+        day_menu_note_add: "Lägg till anteckning",
+        day_menu_note_edit: "Redigera anteckning",
+        day_menu_eating_out: "🍽️ Äter ute",
+        eating_out_note: "🍽️ Äter ute",
+        eating_out_already: "Redan markerad som äter ute",
+        day_menu_move: "↔️ Flytta dag",
+        day_menu_shop: "🛒 Inköpslista för den här dagen",
+        day_menu_clear: "🧹 Rensa dag",
+        clear_day_title: "Rensa dag",
+        clear_day_message: "Ta bort alla måltider från {day}?",
+        clear_day_nothing: "Inga måltider att rensa",
+        clear_day_cleared: "{day} rensad",
+        move_day_title: "↔️ Flytta dag",
+        move_day_prefix: "Flytta alla måltider från",
+        move_day_suffix: "till:",
+        move_day_note: "Måltiderna läggs till det som redan är planerat där och tas bort från ursprungsdagen.",
+        move_day_button: "Flytta",
+        move_day_next_week: "Nästa vecka",
+        move_day_prev_week: "Förra veckan",
+        move_day_pick: "Välj vart måltiderna ska flyttas",
+        move_day_nothing: "Inga måltider på {day} att flytta",
+        move_day_done: "Flyttad till {target}",
+        btn_edit: "✏️ Redigera",
+        btn_delete: "🗑 Ta bort",
+        btn_open_recipe: "📖 Öppna recept",
+        btn_duplicate: "📄 Duplicera",
+        btn_add_to_planner: "📅 Lägg till i planeringen",
+        btn_view_recipe: "📖 Visa recept",
+        btn_select: "✅ Välj",
+        fav_add: "☆ Lägg till favorit",
+        fav_remove: "⭐ Ta bort favorit",
+        undo: "Ångra",
+        confirm_yes: "Ja, fortsätt",
+        confirm_title_default: "Är du säker?",
+        people_count: "{n} personer",
+        servings_count: "{n} portioner",
+        ingredients_count: "{n} ingredienser",
+        ingredient_one: "1 ingrediens",
+        ingredients_heading: "Ingredienser",
+        shopping_not_included: "Ingår inte: {list} — dessa skrevs in manuellt utan kopplat recept, så det finns inga ingredienser att hämta.",
+        selected_count: "{n} valda",
+        sel_check: "✅ Markera",
+        sel_cancel: "✖ Avbryt",
+        ph_paste: "Klistra in receptets text här, t.ex.\n\nKöttbullar\n4 portioner\n500 g nötfärs\n1 gul lök\n1 dl ströbröd\n1 ägg",
+        ph_meal_name: "t.ex. Spaghetti Bolognese",
+        ph_recipe_name: "Exempel: Spaghetti Bolognese",
+        ph_recipe_tags: "t.ex. snabbt, vegetariskt, dessert",
+        ph_item_name: "t.ex. Tomater",
+        ph_item_amount: "Lämna tomt för ingen",
+        ph_item_unit: "t.ex. g, dl, st",
+        ph_week_name: "t.ex. Vecka 1",
+        ph_ingredient: "Ingrediens",
+        ph_amount: "Mängd",
+        ph_unit: "Enhet",
+        remove_ingredient: "Ta bort ingrediens",
+        sync_share: "🔗 Dela inbjudningslänk",
+        sync_share_text: "Gå med i mitt FoodFlow-hushåll:",
+        sync_link_copied: "Inbjudningslänk kopierad",
+        sync_change: "🔄 Byt kod",
+        sync_change_title: "Byt hushållskod",
+        sync_change_message: "Det här flyttar ditt hushåll till en ny kod och kopierar över din data. Dela den nya koden med de som ska vara kvar. Den som fortfarande använder den gamla koden ser inga nya ändringar. Fortsätta?",
+        sync_code_changed: "Ny kod skapad. Dela den med ditt hushåll.",
+        sync_invite_title: "Gå med i hushåll?",
+        sync_invite_message: "Du har blivit inbjuden till hushållet {code}. Det läggs till som en ny planering på den här enheten och din nuvarande planering påverkas inte.",
+        autoplan_button: "✨ Fyll tomma dagar",
+        autoplan_title: "✨ Fyll tomma dagar",
+        autoplan_intro: "Ett middagsförslag för varje tom dag, valt bland dina favoritrecept. Avmarkera de du inte vill ha.",
+        autoplan_intro_all: "Du har inga favoritrecept ännu, så förslagen väljs bland alla dina recept. Avmarkera de du inte vill ha.",
+        autoplan_shuffle: "🔀 Blanda",
+        autoplan_apply: "Lägg till i planeraren",
+        autoplan_no_recipes: "Lägg till några recept först",
+        autoplan_nothing_empty: "Det finns inga tomma dagar den här veckan",
+        autoplan_done: "{n} måltider tillagda",
+        shop_cat_produce: "Frukt & grönt",
+        shop_cat_dairy: "Mejeri & ägg",
+        shop_cat_meat: "Kött & fisk",
+        shop_cat_pantry: "Skafferi",
+        shop_cat_herbs: "Örter & kryddor",
+        shop_cat_other: "Övrigt",
+        aria_emoji_pizza: "Pizza-emoji",
+        aria_emoji_cake: "Tårta-emoji",
+        aria_emoji_sandwich: "Smörgås-emoji",
+        aria_emoji_apple: "Äpple-emoji",
+        aria_emoji_drink: "Dryck-emoji",
+        aria_emoji_moon: "Måne-emoji",
+        aria_emoji_muscle: "Muskel-emoji",
+        aria_emoji_stew: "Gryta-emoji",
+        day_menu_label: "Dagens alternativ",
+        view_week: "Vecka",
+        view_month: "Månad",
+        nav_this_month: "📍 Denna månad",
+        month_more: "+{n} till",
+        planner_add: "➕ Lägg till",
+        planner_copy_day: "📋 Kopiera dag",
+
+        shopping_heading: "🛒 Inköpslista",
+        shopping_description: "Byggs automatiskt utifrån recepten i din måltidsplanerare, skalat efter antalet personer du anger för varje måltid.",
+        add_item: "➕ Lägg till vara",
+        more_actions: "⋯ Mer",
+        shopping_for: "🗓️ Handlar för:",
+        range_to: "till",
+        preset_this_week: "Denna vecka",
+        preset_rest_of_week: "📍 Resten av veckan",
+        preset_next_7: "Kommande 7 dagar",
+        shopping_search_placeholder: "🔍 Sök i inköpslistan...",
+        shopping_empty: "Inga ingredienser än — lägg till recept i din måltidsplanerare så visas de här.",
+        shopping_no_match: "Inga varor matchar",
+
+        more_menu_title: "🛒 Fler åtgärder",
+        action_refresh: "🔄 Uppdatera",
+        action_select_multiple: "☑️ Markera flera",
+        action_clear_checked: "🧹 Rensa markerade",
+        action_undo_edits: "↩️ Ångra mina ändringar",
+        action_share: "📤 Dela",
+        action_print: "🖨️ Skriv ut / Spara som PDF",
+
+        recipe_name_label: "Receptnamn",
+        recipe_tags_label: "Taggar (kommaseparerat)",
+        recipe_servings_label: "Portioner",
+        servings_label: "portioner",
+        recipe_scaled_note: "receptet är för {servings} portioner",
+        show_original_recipe: "Visa originalrecept",
+        show_scaled_recipe: "Visa skalade mängder",
+        recipe_ingredients_label: "Ingredienser",
+        add_ingredient: "➕ Lägg till ingrediens",
+        recipe_instructions_label: "📝 Instruktioner / Steg (valfritt)",
+        recipe_instructions_label_short: "Instruktioner",
+        recipe_instructions_placeholder: "1. Hacka löken...\n2. Stek tills den är gyllenbrun...\n3. Lägg i resten och låt sjuda i 20 minuter...",
+
+        meal_type_label: "Måltidstyp",
+        choose_recipe_label: "📖 Välj recept",
+        meal_search_placeholder: "🔍 Sök recept...",
+        or_enter_manually: "eller skriv in manuellt:",
+        meal_label: "Måltid",
+        people_label: "Personer",
+
+        week_previous: "◀︎ Föregående",
+        week_next: "Nästa ▶︎",
+        week_today: "📍 Denna vecka",
+        week_copy_forward: "📆 Kopiera vecka framåt",
+
+        edit_item_title: "Redigera vara",
+        add_item_title: "Lägg till vara",
+        item_label: "Vara",
+        amount_label: "Mängd",
+        unit_label: "Enhet",
+        day_selected_one: "1 dag vald",
+        day_selected_other: "{n} dagar valda",
+        progress_checked: "{checked} / {total} avbockade",
+        modal_add_meal: "Lägg till måltid",
+        modal_edit_meal: "Redigera måltid",
+        modal_add_recipe: "Lägg till recept",
+        modal_edit_recipe: "Redigera recept",
+        use_leftovers_button: "Använd rester",
+        leftover_picker_title: "🔁 Använd rester",
+        no_leftovers_available: "Inga rester markerade än. Markera en måltid som har rester från dess \"Visa\"-popup, så visas den här.",
+        portions_label: "portioner kvar",
+        use_this_button: "Använd denna",
+        using_leftovers_from: "Använder rester från",
+        unlink_leftovers: "✕ Ta bort länk",
+        leftover_portions_label: "Portioner kvar från denna måltid",
+        save_leftovers: "Spara",
+        leftovers_saved: "Rester sparade",
+        leftovers_cleared: "Rester borttagna",
+        leftover_source_gone: "en måltid som inte längre finns",
+        leftovers_badge_using: "Rester",
+        leftovers_badge_portions: "kvar",
+        leftovers_external_label: "Rester (ej spårade här)",
+        leftovers_external_description: "Från något som inte finns i din planerare, t.ex. en restaurang.",
+        leftovers_default_meal_name: "Rester",
+        ingredient_sources_title: "📖 Varifrån detta kommer",
+        ingredient_sources_intro: "Denna ingrediens används i:",
+        ingredient_sources_none: "Inte kopplad till ett recept (tillagd för hand).",
+        paste_recipe_title: "📋 Klistra in recept",
+        paste_recipe_description: "Kopiera receptets titel, antal portioner och ingredienslista från nästan vilken webbsida som helst och klistra in det nedan. Fungerar bäst om det bara är ingredienserna — inte tillagningsstegen.",
+        parse_recipe: "✅ Tolka recept",
+        planner_recipe_title: "📅 Lägg till recept i planeraren",
+        day_label: "Dag",
+        copy_day_title: "📋 Kopiera dag",
+        copy_day_prefix: "Kopiera alla måltider från",
+        copy_day_suffix: "till:",
+        copy_day_note: "Detta läggs till utöver det som redan är planerat de dagarna — inget tas bort.",
+        copy: "Kopiera",
+        nav_full_previous: "◀︎ Föregående",
+        nav_short_previous: "◀︎",
+        nav_full_next: "Nästa ▶︎",
+        nav_short_next: "▶︎",
+        nav_full_today: "📍 Denna vecka",
+        nav_short_today: "📍 Idag",
+        nav_full_copy_forward: "📆 Kopiera vecka till...",
+        nav_short_copy_forward: "📆 Kopiera till...",
+        print_planner_full: "🖨️ Skriv ut / Spara som PDF",
+        print_planner_short: "🖨️ Skriv ut",
+        meal_plan_title: "🍃 FoodFlow — Måltidsplan",
+        print_no_meals_day: "—",
+
+        no_meals_to_copy_prefix: "Det finns inga måltider på ",
+        no_meals_to_copy_suffix: " att kopiera än.",
+        moved_meal_prefix: "Flyttade ",
+        moved_meal_suffix: " till ",
+        pick_a_day_prefix: "Tryck på en dag för att flytta ",
+        pick_a_day_suffix: " dit",
+        no_meals_this_week: "Den här veckan har inga måltider planerade än.",
+        replace_target_week_message: "Den veckan har redan måltider planerade. Detta ersätter den planen med en kopia av denna vecka. Fortsätt?",
+        replace_target_week_title: "Ersätta den veckans plan?",
+        copied_to_chosen_week: "Kopierat till den valda veckan!",
+        nav_full_save_template: "💾 Spara som mall",
+        nav_full_load_template: "📂 Ladda mall",
+        nav_full_clear_week: "🧹 Rensa denna vecka",
+        clear_week_title: "Rensa hela denna vecka?",
+        clear_week_message: "Detta tar bort alla måltider planerade för denna vecka. Det påverkar inga andra veckor, och du kan ångra det direkt efteråt.",
+        clear_week_nothing_to_clear: "Denna vecka är redan tom.",
+        clear_week_cleared: "Veckan rensad",
+        nav_full_name_week: "🏷️ Namnge denna vecka",
+        rename_week_modal_title: "🏷️ Namnge denna vecka",
+        rename_week_description: "Ge veckan ett eget namn — praktiskt för ett roterande schema, t.ex. \"Vecka 1\", \"Vecka 2\", \"Vecka 3\".",
+        rename_week_name_label: "Veckans namn",
+        rename_week_clear: "Ta bort namn",
+        week_name_saved: "Veckans namn sparat",
+        nav_full_week_actions: "📆 Veckoåtgärder",
+        nav_short_week_actions: "📆 Åtgärder",
+        week_actions_menu_title: "📆 Veckoåtgärder",
+        save_template_modal_title: "💾 Spara som mall",
+        save_template_description: "Spara den här veckans måltider som en återanvändbar mall du kan använda för valfri vecka senare.",
+        save_template_name_label: "Mallens namn",
+        save_template_name_placeholder: "t.ex. Vanlig vecka",
+        enter_template_name: "Ange ett namn för mallen.",
+        template_saved: "Mall sparad",
+        load_template_modal_title: "📂 Ladda mall",
+        load_template_description: "Att använda en mall ersätter den här veckans måltider.",
+        no_templates_yet: "Inga mallar sparade än.",
+        replace_current_week_message: "Den här veckan har redan måltider planerade. Att använda mallen ersätter dem. Fortsätt?",
+        template_applied: "Mall tillämpad!",
+        copy_week_modal_title: "📆 Kopiera denna vecka till...",
+        copy_week_target_label: "Målvecka (valfritt datum den veckan)",
+        copy_week_preset_next: "Nästa vecka",
+        copy_week_preset_2: "Om 2 veckor",
+        copy_week_preset_4: "Om 4 veckor",
+        pick_a_week_date: "Välj ett datum först.",
+        cant_copy_to_same_week: "Det är veckan du redan tittar på — välj en annan.",
+        enter_meal_name: "Ange ett namn på måltiden.",
+        toast_removed: "Borttagen",
+        toast_duplicated_prefix: "Duplicerad:",
+        pick_day_to_copy: "Välj minst en dag att kopiera till.",
+        import_backup_message: "Detta ersätter dina nuvarande recept, måltidsplan, inställningar och inköpslista med innehållet i denna säkerhetskopia. Fortsätt?",
+        import_backup_title: "Importera säkerhetskopia?",
+        import_complete: "Importen är klar! Laddar om...",
+        need_one_category: "Du behöver minst en kategori.",
+        delete_category_message: "Ta bort den här kategorin? Måltider som redan använder den visar den fortfarande, men den går inte att välja för nya måltider.",
+        delete_category_title: "Ta bort kategori?",
+        enter_category_name: "Ange ett kategorinamn",
+        category_exists: "Den kategorin finns redan.",
+        enter_recipe_name: "Ange ett namn på receptet.",
+        recipe_not_found: "Receptet hittades inte",
+        start_before_end: "Startdatumet måste vara samma dag som eller före slutdatumet.",
+        checked_off_items: "Bockade av {n} vara/varor",
+        delete_items_message: "Ta bort {n} markerade varor från inköpslistan?",
+        delete_items_title: "Ta bort varor?",
+        deleted_items: "Tog bort {n} vara/varor",
+        undo_edits_message: "Detta återställer allt du tagit bort eller ändrat bland de automatiska varorna. Sådant du lagt till själv finns kvar. Fortsätt?",
+        undo_edits_title: "Ångra mina ändringar?",
+        enter_item_name: "Ange ett namn på varan.",
+        couldnt_share: "Kunde inte dela listan.",
+        copied_to_clipboard: "Inköpslistan kopierades till urklipp",
+        couldnt_copy_list: "Kunde inte kopiera listan.",
+        sharing_not_supported: "Delning stöds inte i den här webbläsaren.",
+        paste_text_first: "Klistra in receptext först.",
+        this_week_suffix: "(denna vecka)",
+        language_changed: "Språk satt till Svenska"
+
+    }
+
+};
+
+
+let currentLanguage = localStorage.getItem("foodflowLanguage") || "en";
+
+
+// Day names ("Monday".."Sunday") are used as internal data keys
+// everywhere (meals[day], storage, etc.) and must never change. This
+// only affects what's displayed on screen.
+const dayNameTranslations = {
+
+    en: {
+        Monday:"Monday", Tuesday:"Tuesday", Wednesday:"Wednesday",
+        Thursday:"Thursday", Friday:"Friday", Saturday:"Saturday", Sunday:"Sunday"
+    },
+
+    sv: {
+        Monday:"Måndag", Tuesday:"Tisdag", Wednesday:"Onsdag",
+        Thursday:"Torsdag", Friday:"Fredag", Saturday:"Lördag", Sunday:"Söndag"
+    }
+
+};
+
+
+function translateDayName(day){
+
+    let dict = dayNameTranslations[currentLanguage] || dayNameTranslations.en;
+
+    return dict[day] || day;
+
+}
+
+
+// Looks up a UI string in the current language, falling back to
+// English (and finally to the raw key) if a translation is missing —
+// so nothing ever breaks while more strings are added over time.
+function t(key){
+
+    let dict = translations[currentLanguage] || translations.en;
+
+    return dict[key] || translations.en[key] || key;
+
+}
+
+
+// Sweeps the page for anything tagged with a translation key and
+// updates it — text content for most elements, or the placeholder
+// attribute for inputs marked with data-i18n-placeholder.
+function applyTranslations(){
+
+    document.querySelectorAll("[data-i18n]").forEach(el=>{
+
+        el.textContent = t(el.getAttribute("data-i18n"));
+
+    });
+
+    document.querySelectorAll("option[data-day]").forEach(el=>{
+        el.textContent = translateDayName(el.getAttribute("data-day"));
+    });
+
+    document.querySelectorAll("[data-i18n-placeholder]").forEach(el=>{
+
+        el.placeholder = t(el.getAttribute("data-i18n-placeholder"));
+
+    });
+
+    document.querySelectorAll("[data-i18n-aria-label]").forEach(el=>{
+
+        el.setAttribute(
+            "aria-label",
+            t(el.getAttribute("data-i18n-aria-label"))
+        );
+
+    });
+
+    document.documentElement.lang = currentLanguage;
+
+    if(window.renderSyncSettings) window.renderSyncSettings();
+
+}
+
+
+// =======================
+// TOASTS
+// =======================
+
+function showToast(message, options={}){
+
+    let container = document.getElementById("toastContainer");
+
+    if(!container) return;
+
+    let toast = document.createElement("div");
+    toast.className = "toast" + (options.type === "error" ? " error" : "");
+
+    let msg = document.createElement("span");
+    msg.className = "msg";
+    msg.innerText = message;
+    toast.appendChild(msg);
+
+    let dismissed = false;
+
+    let removeToast = () => {
+        if(dismissed) return;
+        dismissed = true;
+        toast.remove();
+    };
+
+    if(options.actionLabel && options.onAction){
+
+        let btn = document.createElement("button");
+        btn.innerText = options.actionLabel;
+
+        btn.onclick = () => {
+            removeToast();
+            options.onAction();
+        };
+
+        toast.appendChild(btn);
+
+    }
+
+    container.appendChild(toast);
+
+    setTimeout(removeToast, options.duration || 5000);
+
+}
+
+
+// =======================
+// CUSTOM CONFIRM (replaces native confirm())
+// =======================
+
+let customConfirmResolver = null;
+
+function customConfirm(message, title){
+
+    document.getElementById("customConfirmTitle").innerText =
+        title || t("confirm_title_default");
+
+    document.getElementById("customConfirmMessage").innerText = message;
+
+    document.getElementById("customConfirmModal").style.display = "flex";
+
+    return new Promise(resolve=>{
+        customConfirmResolver = resolve;
+    });
+
+}
+
+function resolveCustomConfirm(result){
+
+    document.getElementById("customConfirmModal").style.display = "none";
+
+    if(customConfirmResolver){
+        customConfirmResolver(result);
+        customConfirmResolver = null;
+    }
+
+}
+
+
+// Closes any modal safely — customConfirmModal needs to resolve its
+// pending promise (as "cancelled") rather than just being hidden,
+// or code awaiting it would hang forever. Used by Escape, clicking
+// outside a modal, and anywhere else that closes modals generically.
+function closeAnyModal(modal){
+
+    if(!modal || modal.style.display !== "flex"){
+        return;
+    }
+
+    if(modal.id === "customConfirmModal"){
+        resolveCustomConfirm(false);
+    }else{
+
+        modal.style.display = "none";
+
+        if(modal.id === "categoryModal"){
+            pendingCategorySelectId = null;
+        }
+
+    }
+
+}
+
+
+// Clicking the dimmed backdrop (not the modal-box content itself)
+// closes whichever modal is open.
+document.addEventListener("click", function(e){
+
+    if(e.target.classList && e.target.classList.contains("modal")){
+        closeAnyModal(e.target);
+    }
+
 });
 
-self.addEventListener("activate", (event) => {
-    event.waitUntil(
-        (async () => {
-            const keys = await caches.keys();
 
-            // Only remove old FoodFlow caches - other apps on the same
-            // site (transform-sweden.github.io) share the cache storage.
-            await Promise.all(
-                keys
-                    .filter(
-                        key =>
-                            key.startsWith("foodflow-cache-") &&
-                            key !== CACHE_NAME
-                    )
-                    .map(key => caches.delete(key))
-            );
+// =======================
+// DRAG & DROP MEALS BETWEEN DAYS (desktop)
+// =======================
 
-            await self.clients.claim();
-        })()
+let draggedMealInfo = null;
+
+
+function setupMealDragSource(box, day, index){
+
+    box.draggable = true;
+
+    box.addEventListener("dragstart", (e)=>{
+
+        draggedMealInfo = { day, index };
+        box.style.opacity = "0.5";
+
+        if(e.dataTransfer){
+            e.dataTransfer.effectAllowed = "move";
+        }
+
+    });
+
+    box.addEventListener("dragend", ()=>{
+        box.style.opacity = "1";
+    });
+
+}
+
+
+function setupDayDropZone(card, targetDay){
+
+    card.addEventListener("dragover", (e)=>{
+        e.preventDefault();
+        card.style.outline = "2px dashed var(--primary)";
+    });
+
+    card.addEventListener("dragleave", ()=>{
+        card.style.outline = "none";
+    });
+
+    card.addEventListener("drop", (e)=>{
+
+        e.preventDefault();
+        card.style.outline = "none";
+
+        if(!draggedMealInfo){
+            return;
+        }
+
+        let { day: sourceDay, index: sourceIndex } = draggedMealInfo;
+        draggedMealInfo = null;
+
+        if(!meals[sourceDay] || !meals[sourceDay][sourceIndex]){
+            return;
+        }
+
+        let movedMeal = meals[sourceDay][sourceIndex];
+
+        meals[sourceDay].splice(sourceIndex, 1);
+
+        if(!meals[targetDay]){
+            meals[targetDay] = [];
+        }
+
+        meals[targetDay].push(movedMeal);
+
+        saveData();
+        render();
+
+        if(sourceDay !== targetDay){
+            hapticFeedback();
+            showToast(`${t("moved_meal_prefix")}"${movedMeal.name}"${t("moved_meal_suffix")}${translateDayName(targetDay)}`);
+        }
+
+    });
+
+}
+
+
+// =======================
+// LONG-PRESS TO MOVE (mobile equivalent of drag-and-drop)
+// =======================
+
+let pickedUpMeal = null;
+let pickedUpElement = null;
+let pickupCancelTimer = null;
+
+
+function attachLongPressToMove(element, day, index){
+
+    let pressTimer = null;
+    let moved = false;
+    let startX = 0;
+    let startY = 0;
+
+    element.addEventListener("touchstart", (e)=>{
+
+        // Don't start the long-press timer if the touch began on one
+        // of the card's own buttons (Edit, Delete, View, etc.) — let
+        // those work normally no matter how long they're held.
+        if(e.target.closest("button")){
+            return;
+        }
+
+        moved = false;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+
+        pressTimer = setTimeout(()=>{
+
+            if(!moved && meals[day] && meals[day][index]){
+                pickUpMeal(day, index, element);
+            }
+
+        }, 450);
+
+    }, { passive:true });
+
+    element.addEventListener("touchmove", (e)=>{
+
+        let dx = Math.abs(e.touches[0].clientX - startX);
+        let dy = Math.abs(e.touches[0].clientY - startY);
+
+        // A real swipe (for swipe-to-delete) or scroll cancels the
+        // long-press — only a still, sustained touch picks it up.
+        if(dx > 10 || dy > 10){
+            moved = true;
+            clearTimeout(pressTimer);
+        }
+
+    }, { passive:true });
+
+    element.addEventListener("touchend", ()=>{
+        clearTimeout(pressTimer);
+    });
+
+    element.addEventListener("touchcancel", ()=>{
+        clearTimeout(pressTimer);
+    });
+
+}
+
+
+function pickUpMeal(day, index, element){
+
+    let meal = meals[day] && meals[day][index];
+
+    if(!meal){
+        return;
+    }
+
+    // Only one meal can be picked up at a time
+    if(pickedUpMeal){
+        cancelMealPickup();
+    }
+
+    hapticFeedback();
+
+    pickedUpMeal = { day, index };
+    pickedUpElement = element;
+
+    element.classList.add("meal-picked-up");
+
+    document.querySelectorAll(".day").forEach(card=>{
+        card.classList.add("drop-target-highlight");
+    });
+
+    clearTimeout(pickupCancelTimer);
+
+    showToast(
+        `${t("pick_a_day_prefix")}"${meal.name}"${t("pick_a_day_suffix")}`,
+        {
+            actionLabel: t("cancel"),
+            onAction: cancelMealPickup,
+            duration: 6000
+        }
     );
+
+    pickupCancelTimer = setTimeout(cancelMealPickup, 6000);
+
+}
+
+
+function cancelMealPickup(){
+
+    if(pickedUpElement){
+        pickedUpElement.classList.remove("meal-picked-up");
+    }
+
+    document.querySelectorAll(".day").forEach(card=>{
+        card.classList.remove("drop-target-highlight");
+    });
+
+    pickedUpMeal = null;
+    pickedUpElement = null;
+
+    clearTimeout(pickupCancelTimer);
+
+}
+
+
+function setupDayTapDropZone(card, targetDay){
+
+    // Capture phase so this runs before any inner button's own
+    // onclick (Add, Copy Day, Edit, Delete, etc.) while a meal is
+    // actively picked up — otherwise tapping the destination day
+    // would also trigger whatever button happened to be underneath.
+    card.addEventListener("click", (e)=>{
+
+        if(!pickedUpMeal){
+            return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        tryDropMealOnDay(targetDay);
+
+    }, true);
+
+}
+
+
+function tryDropMealOnDay(targetDay){
+
+    if(!pickedUpMeal){
+        return;
+    }
+
+    let { day: sourceDay, index: sourceIndex } = pickedUpMeal;
+
+    if(sourceDay === targetDay){
+        // Tapping the same day it's already on just cancels
+        cancelMealPickup();
+        return;
+    }
+
+    if(!meals[sourceDay] || !meals[sourceDay][sourceIndex]){
+        cancelMealPickup();
+        return;
+    }
+
+    let movedMeal = meals[sourceDay][sourceIndex];
+
+    meals[sourceDay].splice(sourceIndex, 1);
+
+    if(!meals[targetDay]){
+        meals[targetDay] = [];
+    }
+
+    meals[targetDay].push(movedMeal);
+
+    saveData();
+
+    cancelMealPickup();
+
+    hapticFeedback();
+
+    render();
+
+    showToast(`${t("moved_meal_prefix")}"${movedMeal.name}"${t("moved_meal_suffix")}${translateDayName(targetDay)}`);
+
+}
+
+
+// =======================
+// SWIPE TO DELETE (mobile)
+// =======================
+
+function attachSwipeToDelete(element, onDelete){
+
+    let startX = 0;
+    let deltaX = 0;
+    let dragging = false;
+    const threshold = 80;
+
+    element.addEventListener("touchstart", (e)=>{
+
+        startX = e.touches[0].clientX;
+        dragging = true;
+        element.style.transition = "none";
+
+    }, { passive: true });
+
+    element.addEventListener("touchmove", (e)=>{
+
+        if(!dragging) return;
+
+        deltaX = e.touches[0].clientX - startX;
+
+        if(deltaX < 0){
+
+            element.style.transform = `translateX(${deltaX}px)`;
+
+            let intensity = Math.min(1, Math.abs(deltaX) / threshold);
+            element.style.background =
+                `rgba(229,57,53,${intensity * 0.25})`;
+
+        }
+
+    }, { passive: true });
+
+    element.addEventListener("touchend", ()=>{
+
+        dragging = false;
+        element.style.transition = "transform 0.2s ease, opacity 0.2s ease";
+
+        if(deltaX < -threshold){
+
+            element.style.transform = "translateX(-100%)";
+            element.style.opacity = "0";
+
+            hapticFeedback();
+
+            setTimeout(onDelete, 200);
+
+        }else{
+
+            element.style.transform = "translateX(0)";
+            element.style.background = "";
+
+        }
+
+        deltaX = 0;
+
+    });
+
+}
+
+
+// =======================
+// MODAL FOCUS: auto-focus + keyboard trap (desktop)
+// =======================
+
+function getFocusableElements(container){
+
+    return Array.from(container.querySelectorAll(
+        'button, [href], input:not([type="hidden"]), select, textarea, [tabindex]:not([tabindex="-1"])'
+    )).filter(el => !el.disabled && el.offsetParent !== null);
+
+}
+
+
+function autoFocusModal(modal){
+
+    let firstField = modal.querySelector(
+        'input:not([type="hidden"]), textarea, select'
+    );
+
+    let target = firstField || getFocusableElements(modal)[0];
+
+    if(target){
+        setTimeout(()=> target.focus(), 50);
+    }
+
+}
+
+
+// Watches every modal for it becoming visible, so focus behavior
+// works no matter which function opened it — no need to touch each
+// individual openXModal() function. Also brings whichever modal was
+// opened most recently to the front, since two modals can be open
+// at once (e.g. "+ New category" from inside Add Meal) and DOM order
+// alone isn't a reliable way to decide which one should be on top.
+let topModalZIndex = 1000;
+
+document.querySelectorAll(".modal").forEach(modal=>{
+
+    let wasOpen = false;
+
+    new MutationObserver(()=>{
+
+        let isOpen = modal.style.display === "flex";
+
+        if(isOpen && !wasOpen){
+            autoFocusModal(modal);
+            modal.style.zIndex = ++topModalZIndex;
+        }
+
+        wasOpen = isOpen;
+
+    }).observe(modal, { attributes:true, attributeFilter:["style"] });
+
 });
 
-self.addEventListener("fetch", (event) => {
 
-    // Only GET requests can be cached/replayed this way.
-    if(event.request.method !== "GET") return;
+// A short, subtle vibration for touch interactions that just
+// completed (swipe-delete, drag-drop) — silently does nothing on
+// devices/browsers without vibration support.
+function hapticFeedback(){
 
-    // Only handle FoodFlow's own files and the Firebase library files.
-    // Live sync traffic to Firebase's servers must go straight through.
-    let url = new URL(event.request.url);
-    if(url.origin !== self.location.origin && url.hostname !== "www.gstatic.com") return;
+    if(navigator.vibrate){
+        navigator.vibrate(15);
+    }
 
-    event.respondWith(
-        caches.open(CACHE_NAME).then(async (cache) => {
+}
 
-            try {
 
-                let response = await fetch(event.request);
+// Used by the +/- stepper controls on servings/people fields.
+function adjustStepper(inputId, delta){
 
-                if(response && response.status === 200){
-                    cache.put(event.request, response.clone());
+    let input = document.getElementById(inputId);
+
+    if(!input){
+        return;
+    }
+
+    let value = parseInt(input.value, 10);
+
+    if(isNaN(value)){
+        value = 1;
+    }
+
+    value = Math.max(1, value + delta);
+
+    input.value = value;
+
+}
+
+
+// Cleans up whatever the person typed by hand once they leave the
+// field — blank, zero, negative, or non-numeric all become 1, so a
+// bad value can't sneak into the recipe-scaling math elsewhere.
+function clampStepperInput(inputId){
+
+    let input = document.getElementById(inputId);
+
+    if(!input){
+        return;
+    }
+
+    let value = parseInt(input.value, 10);
+
+    if(isNaN(value) || value < 1){
+        value = 1;
+    }
+
+    input.value = value;
+
+}
+
+
+// Lets the person pick which day to add a meal to, instead of
+// always assuming "today" — the FAB used to jump straight to
+// today's weekday with no way to choose, which was the actual bug.
+function openQuickAddDayPicker(){
+
+    let todayWeekKey = getMondayKey(new Date());
+    let isViewingCurrentWeek = currentWeekKey === todayWeekKey;
+    let todayName = isViewingCurrentWeek
+        ? days[(new Date().getDay() + 6) % 7]
+        : null;
+
+    let list = document.getElementById("quickAddDayList");
+
+    list.innerHTML = days.map(day => {
+
+        let label = translateDayName(day) +
+            (day === todayName ? t("quick_add_today_suffix") : "");
+
+        return `<button onclick="pickQuickAddDay('${day}')">${label}</button>`;
+
+    }).join("");
+
+    document.getElementById("quickAddDayModal").style.display = "flex";
+
+}
+
+
+function pickQuickAddDay(day){
+
+    closeQuickAddDayPicker();
+
+    openModal(day);
+
+}
+
+
+function closeQuickAddDayPicker(){
+
+    document.getElementById("quickAddDayModal").style.display = "none";
+
+}
+
+
+// =======================
+// KEYBOARD SHORTCUTS (desktop)
+// =======================
+
+document.addEventListener("keydown", function(e){
+
+    let tag = (e.target.tagName || "").toLowerCase();
+    let typing = tag === "input" || tag === "textarea" || tag === "select";
+
+    // Tab inside an open modal stays trapped within it, instead of
+    // tabbing out into the page behind it.
+    if(e.key === "Tab"){
+
+        let openModal = Array.from(document.querySelectorAll(".modal"))
+            .find(m => m.style.display === "flex");
+
+        if(openModal){
+
+            let focusable = getFocusableElements(openModal);
+
+            if(focusable.length > 0){
+
+                let first = focusable[0];
+                let last = focusable[focusable.length - 1];
+
+                if(e.shiftKey && document.activeElement === first){
+                    e.preventDefault();
+                    last.focus();
+                }else if(!e.shiftKey && document.activeElement === last){
+                    e.preventDefault();
+                    first.focus();
                 }
-
-                return response;
-
-            } catch (networkError) {
-
-                let cached = await cache.match(event.request);
-
-                if(cached) return cached;
-
-                throw networkError;
 
             }
 
-        })
-    );
+        }
+
+    }
+
+    // Esc closes whichever modal is open
+    if(e.key === "Escape"){
+
+        document.querySelectorAll(".modal").forEach(modal=>{
+            closeAnyModal(modal);
+        });
+
+        return;
+
+    }
+
+    // Enter inside a modal triggers its primary action button —
+    // but not inside a textarea, where Enter should just add a
+    // new line (e.g. while composing a pasted recipe).
+    if(e.key === "Enter" && typing){
+
+        if(tag === "textarea"){
+            return;
+        }
+
+        let openModal = Array.from(document.querySelectorAll(".modal"))
+            .find(m => m.style.display === "flex");
+
+        if(openModal){
+
+            // Prefer an explicit primary button; otherwise fall back to
+            // the first *visible* button in the modal — skipping any
+            // button that's currently hidden (display:none), since a
+            // popup like the meal-detail view keeps some buttons in the
+            // DOM but hidden depending on that meal's state.
+            let primaryButton =
+                openModal.querySelector("[data-primary]") ||
+                Array.from(openModal.querySelectorAll(".modal-box button"))
+                    .find(btn => btn.offsetParent !== null);
+
+            if(primaryButton){
+                e.preventDefault();
+                primaryButton.click();
+            }
+
+        }
+
+        return;
+
+    }
+
+    // Left/Right arrows switch weeks, but only when not typing and
+    // the planner page is the one showing
+    if(!typing){
+
+        let plannerVisible =
+            document.getElementById("plannerPage") &&
+            document.getElementById("plannerPage").style.display !== "none";
+
+        if(plannerVisible && e.key === "ArrowLeft"){
+            goToPreviousWeek();
+        }
+
+        if(plannerVisible && e.key === "ArrowRight"){
+            goToNextWeek();
+        }
+
+    }
 
 });
+
+
+// =======================
+// SWIPE NAVIGATION BETWEEN WEEKS (mobile)
+// =======================
+
+(function setupWeekSwipe(){
+
+    let touchStartX = null;
+    let touchStartY = null;
+
+    document.addEventListener("touchstart", function(e){
+
+        let weekEl = document.getElementById("week");
+        if(!weekEl || !weekEl.contains(e.target)) return;
+
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+
+    }, { passive:true });
+
+    document.addEventListener("touchend", function(e){
+
+        if(touchStartX === null) return;
+
+        let dx = e.changedTouches[0].clientX - touchStartX;
+        let dy = e.changedTouches[0].clientY - touchStartY;
+
+        touchStartX = null;
+        touchStartY = null;
+
+        // Require a mostly-horizontal swipe of decent length
+        if(Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5){
+
+            if(dx < 0){
+                goToNextWeek();
+            }else{
+                goToPreviousWeek();
+            }
+
+        }
+
+    }, { passive:true });
+
+})();
+
+
+let recipes = JSON.parse(
+localStorage.getItem("foodflowRecipes")
+) || [];
+
+// Convert old ingredient format to new format
+
+recipes = recipes.map(recipe => {
+
+    recipe.ingredients =
+    recipe.ingredients.map(item => {
+
+        if(typeof item === "string"){
+
+            return {
+
+                name:item,
+                amount:"",
+                unit:""
+
+            };
+
+        }
+
+        return item;
+
+    });
+
+
+    return recipe;
+
+});
+
+
+localStorage.setItem(
+"foodflowRecipes",
+JSON.stringify(recipes)
+);    
+
+recipes = recipes.map(recipe => {
+
+return {
+
+...recipe,
+
+expanded: recipe.expanded || false,
+
+favorite: recipe.favorite || false
+
+};
+
+});
+
+
+localStorage.setItem(
+"foodflowRecipes",
+JSON.stringify(recipes)
+);  
+
+
+let selectedDay = null;
+let selectedMeal = null;
+
+// Set while the "Use Leftovers" picker is open, and consumed by
+// saveMeal() when the new meal is created — a {weekKey, day, mealId}
+// reference to the meal whose leftovers this new meal is eating.
+let pendingLeftoverSource = null;
+let selectedRecipe = null;
+let activeRecipeTagFilter = null;
+let recipeSortMode = localStorage.getItem("foodflowRecipeSortMode") || "recent";
+
+function changeRecipeSortMode(mode){
+
+    recipeSortMode = mode;
+
+    localStorage.setItem("foodflowRecipeSortMode", mode);
+
+    renderRecipes();
+
+}
+
+let plannerRecipeIndex = null;
+
+// Ingredients hidden from the auto-generated list (e.g. pantry
+// staples like salt or sugar the person already has). This one
+// stays global — it applies no matter which week you're viewing.
+let shoppingRemoved = JSON.parse(
+    localStorage.getItem("foodflowShoppingRemoved")
+) || {};
+
+
+// Load old FoodFlow v0.1 data
+function migrateOldData(){
+
+    let old = localStorage.getItem("foodflowMeals");
+
+    if(!old) return;
+
+
+    let data = JSON.parse(old);
+
+
+    days.forEach(day=>{
+
+        if(
+            data[day] &&
+            !Array.isArray(data[day])
+        ){
+
+            data[day] = [
+                {
+                    type:"🍝 Dinner",
+                    name:data[day].name,
+                    people:data[day].people
+                }
+            ];
+
+        }
+
+    });
+
+
+    localStorage.setItem(
+        "foodflowMeals",
+        JSON.stringify(data)
+    );
+
+
+}
+
+
+
+migrateOldData();
+
+
+// =======================
+// MULTI-WEEK PLANNING
+// =======================
+
+// Formats a Date as "YYYY-MM-DD" using its LOCAL date fields —
+// unlike toISOString(), this can't shift the day backward for
+// timezones ahead of UTC.
+function formatDateKey(date){
+
+    let year = date.getFullYear();
+    let month = String(date.getMonth() + 1).padStart(2, "0");
+    let day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+
+}
+
+
+// Parses a "YYYY-MM-DD" key as a LOCAL date. Using `new Date("YYYY-MM-DD")`
+// directly would parse it as UTC midnight instead, which combined with
+// local-time methods elsewhere caused week navigation to get stuck.
+function parseDateKey(key){
+
+    let [year, month, day] = key.split("-").map(Number);
+
+    return new Date(year, month - 1, day);
+
+}
+
+
+// Returns the date key (YYYY-MM-DD) of the Monday that starts the
+// week containing the given date — used as each week's storage key.
+function getMondayKey(date){
+
+    let d = new Date(date);
+    let dayNum = d.getDay(); // 0 = Sunday ... 6 = Saturday
+    let diff = (dayNum === 0 ? -6 : 1) - dayNum;
+
+    d.setDate(d.getDate() + diff);
+    d.setHours(0,0,0,0);
+
+    return formatDateKey(d);
+
+}
+
+
+// Adds N days (can be negative) to a "YYYY-MM-DD" key and returns
+// the resulting key.
+function addDaysToKey(key, n){
+
+    let d = parseDateKey(key);
+    d.setDate(d.getDate() + n);
+
+    return formatDateKey(d);
+
+}
+
+
+// Walks every calendar day from startKey to endKey (inclusive),
+// regardless of week boundaries, returning which week/day-name each
+// one belongs to — this is what lets the shopping list span across
+// two different weeks (e.g. Wed this week through Wed next week).
+function getDateRangeDays(startKey, endKey){
+
+    let result = [];
+
+    let current = parseDateKey(startKey);
+    let end = parseDateKey(endKey);
+
+    let count = 0;
+    const maxDays = 60; // safety cap against a reversed/bad range
+
+    while(current.getTime() <= end.getTime() && count < maxDays){
+
+        let weekKey = getMondayKey(current);
+        let dayIndex = (current.getDay() + 6) % 7; // Monday=0 ... Sunday=6
+        let dayName = days[dayIndex];
+
+        result.push({
+            weekKey: weekKey,
+            day: dayName,
+            dateKey: formatDateKey(current)
+        });
+
+        current.setDate(current.getDate() + 1);
+        count++;
+
+    }
+
+    return result;
+
+}
+
+
+function ensureWeek(weekKey){
+
+    if(!weeks[weekKey]){
+        weeks[weekKey] = {};
+    }
+
+    return weeks[weekKey];
+
+}
+
+
+let weeks = JSON.parse(
+    localStorage.getItem("foodflowWeeks")
+) || null;
+
+// After a live-sync refresh, stay on the week being worked on
+// instead of jumping back to the current week.
+let currentWeekKey = (function(){
+    try{
+        let k = sessionStorage.getItem("ff_week");
+        if(k){
+            sessionStorage.removeItem("ff_week");
+            if(/^\d{4}-\d{2}-\d{2}$/.test(k)) return k;
+        }
+    }catch(e){}
+    return getMondayKey(new Date());
+})();
+
+if(weeks === null){
+
+    // First time using multi-week planning — bring the existing
+    // single repeating plan across as "this week's" plan.
+    let oldMeals = JSON.parse(
+        localStorage.getItem("foodflowMeals")
+    ) || null;
+
+    weeks = {};
+
+    if(oldMeals){
+        weeks[currentWeekKey] = oldMeals;
+    }
+
+    localStorage.setItem("foodflowWeeks", JSON.stringify(weeks));
+
+}
+
+// One-time repair: an earlier version of week-key math could save a
+// week under a date one day off from the actual Monday for timezones
+// ahead of UTC. Realign any such keys so that data isn't stranded
+// under a key the app will never navigate to again.
+(function repairMisalignedWeekKeys(){
+
+    let changed = false;
+
+    Object.keys(weeks).forEach(key=>{
+
+        let parsed = parseDateKey(key);
+
+        if(isNaN(parsed.getTime())){
+            return;
+        }
+
+        // The old bug always landed one day early — on a Sunday
+        // instead of the Monday it meant to store. Shift those
+        // forward by a day; anything already on a Monday is fine.
+        if(parsed.getDay() !== 0){
+            return;
+        }
+
+        let corrected = new Date(parsed);
+        corrected.setDate(corrected.getDate() + 1);
+        let correctKey = formatDateKey(corrected);
+
+        changed = true;
+
+        if(!weeks[correctKey]){
+            weeks[correctKey] = {};
+        }
+
+        let misalignedWeek = weeks[key];
+
+        days.forEach(day=>{
+
+            if(misalignedWeek[day] && misalignedWeek[day].length > 0){
+
+                if(!weeks[correctKey][day]){
+                    weeks[correctKey][day] = [];
+                }
+
+                weeks[correctKey][day] =
+                    weeks[correctKey][day].concat(misalignedWeek[day]);
+
+            }
+
+        });
+
+        delete weeks[key];
+
+    });
+
+    if(changed){
+
+        localStorage.setItem("foodflowWeeks", JSON.stringify(weeks));
+
+    }
+
+})();
+
+// `meals` always points at the currently displayed week's data.
+// Since it's the same object as weeks[currentWeekKey], anything
+// that edits `meals` is automatically editing that week already —
+// saveData() just needs to persist the whole `weeks` object.
+let meals = ensureWeek(currentWeekKey);
+
+// One-time migration: give every existing meal a stable id, so a
+// leftover-tracking link (which points at one specific meal) keeps
+// working even if meals around it are added, removed or reordered.
+(function ensureMealIds(){
+
+    let changed = false;
+
+    Object.keys(weeks).forEach(wk => {
+        let week = weeks[wk];
+        Object.keys(week).forEach(day => {
+            (week[day] || []).forEach(meal => {
+                if(!meal.id){
+                    meal.id = "m" + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+                    changed = true;
+                }
+            });
+        });
+    });
+
+    if(changed){
+        localStorage.setItem("foodflowWeeks", JSON.stringify(weeks));
+    }
+
+})();
+
+
+// =======================
+// LEFTOVER TRACKING
+// =======================
+
+// Finds the actual meal object a leftover link points to, or null
+// if that meal (or its week/day) no longer exists.
+function findMealByRef(ref){
+
+    if(!ref) return null;
+
+    let week = weeks[ref.weekKey];
+    if(!week || !week[ref.day]) return null;
+
+    return week[ref.day].find(m => m.id === ref.mealId) || null;
+
+}
+
+// Short human label for a meal reference, e.g. "Monday Oct 5 — Spaghetti Bolognese".
+function describeMealRef(ref){
+
+    if(ref && ref.external) return t("leftovers_external_label");
+
+    let meal = findMealByRef(ref);
+    if(!meal) return t("leftover_source_gone");
+
+    let dayIndex = days.indexOf(ref.day);
+    let dateKey = dayIndex >= 0 ? addDaysToKey(ref.weekKey, dayIndex) : null;
+    let dateLabel = dateKey ? parseDateKey(dateKey).toLocaleDateString(undefined, { month:"short", day:"numeric" }) : "";
+
+    return `${translateDayName(ref.day)} ${dateLabel} — ${meal.name}`;
+
+}
+
+// Every meal across every week that currently has leftover portions
+// available, newest first, excluding the meal currently being edited
+// (so a meal can't "use leftovers from" itself).
+function getAvailableLeftovers(excludeMealId){
+
+    let results = [];
+
+    Object.keys(weeks).sort().reverse().forEach(weekKey => {
+        let week = weeks[weekKey];
+        days.forEach(day => {
+            (week[day] || []).forEach(meal => {
+                if(
+                    meal.leftoverPortions > 0 &&
+                    meal.id !== excludeMealId
+                ){
+                    results.push({ weekKey, day, meal });
+                }
+            });
+        });
+    });
+
+    return results;
+
+}
+
+
+// Per-week shopping-list state: what's checked off, manual
+// corrections, and anything added by hand — all scoped to whichever
+// week's list is showing, so ticking off "milk" this week doesn't
+// wrongly show it as already done next week too.
+let shoppingCheckedByWeek = JSON.parse(
+    localStorage.getItem("foodflowShoppingCheckedByWeek")
+) || null;
+
+let shoppingOverridesByWeek = JSON.parse(
+    localStorage.getItem("foodflowShoppingOverridesByWeek")
+) || null;
+
+let shoppingExtrasByWeek = JSON.parse(
+    localStorage.getItem("foodflowShoppingExtrasByWeek")
+) || null;
+
+// The date range currently being shopped for — a plain start/end
+// date, independent of the week you happen to be viewing in the
+// planner, so it can span across a week boundary (e.g. Wednesday
+// this week through Wednesday next week).
+let shoppingRangeStart = localStorage.getItem("foodflowShoppingRangeStart");
+let shoppingRangeEnd = localStorage.getItem("foodflowShoppingRangeEnd");
+
+if(!shoppingRangeStart || !shoppingRangeEnd){
+
+    // Default: the current week's Monday through Sunday.
+    shoppingRangeStart = currentWeekKey;
+    shoppingRangeEnd = addDaysToKey(currentWeekKey, 6);
+
+}
+
+if(shoppingCheckedByWeek === null){
+
+    // First time using per-week lists — bring any existing
+    // (previously global) checked-off state across as "this week's".
+    shoppingCheckedByWeek = {};
+
+    let oldChecked = JSON.parse(
+        localStorage.getItem("foodflowShoppingChecked")
+    );
+
+    if(oldChecked){
+        shoppingCheckedByWeek[currentWeekKey] = oldChecked;
+    }
+
+    localStorage.setItem(
+        "foodflowShoppingCheckedByWeek",
+        JSON.stringify(shoppingCheckedByWeek)
+    );
+
+}
+
+if(shoppingOverridesByWeek === null){
+
+    shoppingOverridesByWeek = {};
+
+    let oldOverrides = JSON.parse(
+        localStorage.getItem("foodflowShoppingOverrides")
+    );
+
+    if(oldOverrides){
+        shoppingOverridesByWeek[currentWeekKey] = oldOverrides;
+    }
+
+    localStorage.setItem(
+        "foodflowShoppingOverridesByWeek",
+        JSON.stringify(shoppingOverridesByWeek)
+    );
+
+}
+
+if(shoppingExtrasByWeek === null){
+
+    shoppingExtrasByWeek = {};
+
+    let oldExtras = JSON.parse(
+        localStorage.getItem("foodflowShoppingExtras")
+    );
+
+    if(oldExtras){
+        shoppingExtrasByWeek[currentWeekKey] = oldExtras;
+    }
+
+    localStorage.setItem(
+        "foodflowShoppingExtrasByWeek",
+        JSON.stringify(shoppingExtrasByWeek)
+    );
+
+}
+
+
+// Same repair as the meals data above, applied to the per-week
+// shopping-list containers in case any got saved under a
+// timezone-misaligned key.
+function repairMisalignedWeekKeyedObject(container, isArrayValued){
+
+    let changed = false;
+
+    Object.keys(container).forEach(key=>{
+
+        let parsed = parseDateKey(key);
+
+        if(isNaN(parsed.getTime())){
+            return;
+        }
+
+        // Same off-by-one-day issue as the meals repair above.
+        if(parsed.getDay() !== 0){
+            return;
+        }
+
+        let corrected = new Date(parsed);
+        corrected.setDate(corrected.getDate() + 1);
+        let correctKey = formatDateKey(corrected);
+
+        changed = true;
+
+        if(isArrayValued){
+
+            if(!container[correctKey]){
+                container[correctKey] = [];
+            }
+
+            container[correctKey] =
+                container[correctKey].concat(container[key]);
+
+        }else{
+
+            container[correctKey] = {
+                ...container[key],
+                ...(container[correctKey] || {})
+            };
+
+        }
+
+        delete container[key];
+
+    });
+
+    return changed;
+
+}
+
+if(repairMisalignedWeekKeyedObject(shoppingCheckedByWeek, false)){
+    localStorage.setItem(
+        "foodflowShoppingCheckedByWeek",
+        JSON.stringify(shoppingCheckedByWeek)
+    );
+}
+
+if(repairMisalignedWeekKeyedObject(shoppingOverridesByWeek, false)){
+    localStorage.setItem(
+        "foodflowShoppingOverridesByWeek",
+        JSON.stringify(shoppingOverridesByWeek)
+    );
+}
+
+if(repairMisalignedWeekKeyedObject(shoppingExtrasByWeek, true)){
+    localStorage.setItem(
+        "foodflowShoppingExtrasByWeek",
+        JSON.stringify(shoppingExtrasByWeek)
+    );
+}
+
+
+function ensureWeekShoppingChecked(weekKey){
+
+    if(!shoppingCheckedByWeek[weekKey]){
+        shoppingCheckedByWeek[weekKey] = {};
+    }
+
+    return shoppingCheckedByWeek[weekKey];
+
+}
+
+
+function ensureWeekShoppingOverrides(weekKey){
+
+    if(!shoppingOverridesByWeek[weekKey]){
+        shoppingOverridesByWeek[weekKey] = {};
+    }
+
+    return shoppingOverridesByWeek[weekKey];
+
+}
+
+
+function ensureWeekShoppingExtras(weekKey){
+
+    if(!shoppingExtrasByWeek[weekKey]){
+        shoppingExtrasByWeek[weekKey] = [];
+    }
+
+    return shoppingExtrasByWeek[weekKey];
+
+}
+
+
+let shoppingChecked = ensureWeekShoppingChecked(currentWeekKey);
+let shoppingOverrides = ensureWeekShoppingOverrides(currentWeekKey);
+let shoppingExtras = ensureWeekShoppingExtras(currentWeekKey);
+
+
+// Saves all shopping-list state — the three per-week pieces plus
+// the global "always hide these" pantry-staples list.
+function saveShoppingState(){
+
+    shoppingCheckedByWeek[currentWeekKey] = shoppingChecked;
+    shoppingOverridesByWeek[currentWeekKey] = shoppingOverrides;
+    shoppingExtrasByWeek[currentWeekKey] = shoppingExtras;
+
+    localStorage.setItem(
+        "foodflowShoppingCheckedByWeek",
+        JSON.stringify(shoppingCheckedByWeek)
+    );
+
+    localStorage.setItem(
+        "foodflowShoppingOverridesByWeek",
+        JSON.stringify(shoppingOverridesByWeek)
+    );
+
+    localStorage.setItem(
+        "foodflowShoppingExtrasByWeek",
+        JSON.stringify(shoppingExtrasByWeek)
+    );
+
+    localStorage.setItem(
+        "foodflowShoppingRemoved",
+        JSON.stringify(shoppingRemoved)
+    );
+
+    localStorage.setItem("foodflowShoppingRangeStart", shoppingRangeStart);
+    localStorage.setItem("foodflowShoppingRangeEnd", shoppingRangeEnd);
+
+}
+
+
+// =======================
+// PLANNER VIEW: Week / Month (per device)
+// =======================
+let plannerView = (function(){
+    try{ return localStorage.getItem("foodflowPlannerView") === "month" ? "month" : "week"; }
+    catch(e){ return "week"; }
+})();
+
+let monthAnchor = (function(){
+    try{
+        let saved = sessionStorage.getItem("ff_month");
+        if(saved && /^\d{4}-\d{2}$/.test(saved)){
+            let [y, m] = saved.split("-").map(Number);
+            return new Date(y, m - 1, 1);
+        }
+    }catch(e){}
+    // Month that contains most of the displayed week (its Thursday)
+    let d = parseDateKey(currentWeekKey);
+    d.setDate(d.getDate() + 3);
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+})();
+
+function saveMonthAnchor(){
+    try{
+        sessionStorage.setItem("ff_month",
+            monthAnchor.getFullYear() + "-" + String(monthAnchor.getMonth() + 1).padStart(2, "0"));
+    }catch(e){}
+}
+
+function applyPlannerView(){
+    let isMonth = plannerView === "month";
+    let nav = document.getElementById("weekNav");
+    if(nav) nav.classList.toggle("month-mode", isMonth);
+    let weekEl = document.getElementById("week");
+    let monthEl = document.getElementById("month");
+    if(weekEl) weekEl.style.display = isMonth ? "none" : "";
+    if(monthEl) monthEl.style.display = isMonth ? "block" : "none";
+    let bw = document.getElementById("viewWeekBtn");
+    let bm = document.getElementById("viewMonthBtn");
+    if(bw) bw.classList.toggle("active", !isMonth);
+    if(bm) bm.classList.toggle("active", isMonth);
+}
+
+function setPlannerView(view){
+    plannerView = view === "month" ? "month" : "week";
+    try{ localStorage.setItem("foodflowPlannerView", plannerView); }catch(e){}
+    if(plannerView === "month"){
+        let d = parseDateKey(currentWeekKey);
+        d.setDate(d.getDate() + 3);
+        monthAnchor = new Date(d.getFullYear(), d.getMonth(), 1);
+        saveMonthAnchor();
+    }
+    updateWeekLabel();
+    render();
+}
+
+function shiftMonth(n){
+    monthAnchor = new Date(monthAnchor.getFullYear(), monthAnchor.getMonth() + n, 1);
+    saveMonthAnchor();
+    updateWeekLabel();
+    render();
+}
+
+function goToThisMonth(){
+    let now = new Date();
+    monthAnchor = new Date(now.getFullYear(), now.getMonth(), 1);
+    saveMonthAnchor();
+    updateWeekLabel();
+    render();
+}
+
+function monthOpenDay(weekKey){
+    plannerView = "week";
+    try{ localStorage.setItem("foodflowPlannerView", "week"); }catch(e){}
+    switchToWeek(weekKey);
+}
+
+function monthOpenMeal(weekKey, day, index){
+    monthOpenDay(weekKey);
+    openMealDetail(day, index);
+}
+
+function renderMonth(){
+
+    let box = document.getElementById("month");
+    if(!box) return;
+
+    let locale = currentLanguage === "sv" ? "sv-SE" : "en-US";
+    let esc = str => String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+    let y = monthAnchor.getFullYear();
+    let m = monthAnchor.getMonth();
+    let start = parseDateKey(getMondayKey(new Date(y, m, 1)));
+    let lastMon = parseDateKey(getMondayKey(new Date(y, m + 1, 0)));
+    let weekCount = Math.round((lastMon - start) / (7 * 86400000)) + 1;
+    let todayKey = formatDateKey(new Date());
+    let order = getMealOrder();
+
+    // Weekday header (2024-01-01 is a Monday)
+    let head = "";
+    for(let i = 0; i < 7; i++){
+        head += "<div>" + new Date(2024, 0, 1 + i).toLocaleDateString(locale, { weekday:"short" }) + "</div>";
+    }
+
+    let cells = "";
+
+    for(let w = 0; w < weekCount; w++){
+
+        let wk = new Date(start);
+        wk.setDate(start.getDate() + 7 * w);
+        let wkKey = formatDateKey(wk);
+        let wdata = weeks[wkKey] || {};
+
+        for(let i = 0; i < 7; i++){
+
+            let d = new Date(wk);
+            d.setDate(wk.getDate() + i);
+
+            let dayName = days[i];
+            let list = (wdata[dayName] || [])
+                .map((meal, idx) => ({ meal, idx }))
+                .sort((a, b) => (order[a.meal.type] ?? 99) - (order[b.meal.type] ?? 99));
+
+            let numLabel = d.getDate() === 1
+                ? d.getDate() + " " + d.toLocaleDateString(locale, { month:"short" })
+                : String(d.getDate());
+
+            let shown = list.slice(0, 3);
+            let chips = shown.map(({meal, idx}) => `
+                <div class="mchip" style="--accent:${getMealTypeAccent(meal.type)}"
+                     title="${esc(meal.type)} — ${esc(meal.name)}"
+                     onclick="event.stopPropagation(); monthOpenMeal('${wkKey}','${dayName}',${idx})">${esc(meal.name)}</div>
+            `).join("");
+
+            let more = list.length > shown.length
+                ? `<div class="mmore">${t("month_more").replace("{n}", list.length - shown.length)}</div>`
+                : "";
+
+            let dots = list.map(({meal}) =>
+                `<span class="mdot" style="background:${getMealTypeAccent(meal.type)}"></span>`
+            ).join("");
+
+            cells += `
+            <div class="mcell${d.getMonth() !== m ? " out" : ""}${formatDateKey(d) === todayKey ? " today" : ""}"
+                 role="button" tabindex="0"
+                 onclick="monthOpenDay('${wkKey}')"
+                 onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();monthOpenDay('${wkKey}');}">
+                <div class="mnum">${numLabel}</div>
+                <div class="mchips">${chips}${more}</div>
+                <div class="mdots">${dots}</div>
+            </div>`;
+
+        }
+
+    }
+
+    box.innerHTML = `<div class="month-head">${head}</div><div class="month-grid">${cells}</div>`;
+
+}
+
+
+function switchToWeek(weekKey){
+
+    currentWeekKey = weekKey;
+    meals = ensureWeek(weekKey);
+
+    shoppingChecked = ensureWeekShoppingChecked(weekKey);
+    shoppingOverrides = ensureWeekShoppingOverrides(weekKey);
+    shoppingExtras = ensureWeekShoppingExtras(weekKey);
+
+    updateWeekLabel();
+    render();
+    renderShoppingList();
+
+}
+
+
+function goToPreviousWeek(){
+
+    if(plannerView === "month"){ shiftMonth(-1); return; }
+
+    let d = parseDateKey(currentWeekKey);
+    d.setDate(d.getDate() - 7);
+
+    switchToWeek(getMondayKey(d));
+
+}
+
+
+function goToNextWeek(){
+
+    if(plannerView === "month"){ shiftMonth(1); return; }
+
+    let d = parseDateKey(currentWeekKey);
+    d.setDate(d.getDate() + 7);
+
+    switchToWeek(getMondayKey(d));
+
+}
+
+
+function goToThisWeek(){
+
+    if(plannerView === "month"){ goToThisMonth(); return; }
+
+    switchToWeek(getMondayKey(new Date()));
+
+}
+
+
+function updateWeekLabel(){
+
+    if(plannerView === "month"){
+
+        let loc = currentLanguage === "sv" ? "sv-SE" : "en-US";
+        let txt = monthAnchor.toLocaleDateString(loc, { month:"long", year:"numeric" });
+        let lab = document.getElementById("weekLabel");
+        if(lab) lab.innerText = txt.charAt(0).toUpperCase() + txt.slice(1);
+
+        let now = new Date();
+        let tm = document.getElementById("thisMonthBtn");
+        if(tm) tm.classList.toggle("active",
+            monthAnchor.getFullYear() === now.getFullYear() && monthAnchor.getMonth() === now.getMonth());
+
+        return;
+
+    }
+
+    let start = parseDateKey(currentWeekKey);
+    let end = parseDateKey(currentWeekKey);
+    end.setDate(end.getDate() + 6);
+
+    let locale = currentLanguage === "sv" ? "sv-SE" : "en-US";
+
+    let options = { month:"short", day:"numeric" };
+    let startStr = start.toLocaleDateString(locale, options);
+    let endStr = end.toLocaleDateString(locale, { ...options, year:"numeric" });
+
+    let isThisWeek = currentWeekKey === getMondayKey(new Date());
+    let thisWeekBtn = document.getElementById("thisWeekBtn");
+    if(thisWeekBtn){ thisWeekBtn.classList.toggle("active", isThisWeek); }
+
+    let label = document.getElementById("weekLabel");
+
+    let customName = weekNames[currentWeekKey];
+
+    if(label){
+        label.innerText =
+            (customName ? customName + " · " : "") +
+            startStr + " – " + endStr +
+            (isThisWeek ? "  " + t("this_week_suffix") : "");
+    }
+
+}
+
+
+function openWeekActionsMenu(){
+
+    document.getElementById("weekActionsMenu").style.display = "flex";
+
+}
+
+function closeWeekActionsMenu(){
+
+    document.getElementById("weekActionsMenu").style.display = "none";
+
+}
+
+
+function openCopyWeekModal(){
+
+    let hasAnyMeals = Object.values(meals)
+        .some(dayMeals => dayMeals && dayMeals.length > 0);
+
+    if(!hasAnyMeals){
+
+        showToast(t("no_meals_this_week"), { type:"error" });
+        return;
+
+    }
+
+    // Default suggestion: next week, same as the old behavior
+    setCopyWeekPreset(1);
+
+    document.getElementById("copyWeekModal").style.display = "flex";
+
+}
+
+
+function closeCopyWeekModal(){
+
+    document.getElementById("copyWeekModal").style.display = "none";
+
+}
+
+
+function setCopyWeekPreset(weeksAhead){
+
+    let d = parseDateKey(currentWeekKey);
+    d.setDate(d.getDate() + (7 * weeksAhead));
+
+    document.getElementById("copyWeekTargetInput").value = formatDateKey(d);
+
+}
+
+
+async function confirmCopyWeek(){
+
+    let inputValue = document.getElementById("copyWeekTargetInput").value;
+
+    if(!inputValue){
+
+        showToast(t("pick_a_week_date"), { type:"error" });
+        return;
+
+    }
+
+    let targetWeekKey = getMondayKey(parseDateKey(inputValue));
+
+    if(targetWeekKey === currentWeekKey){
+
+        showToast(t("cant_copy_to_same_week"), { type:"error" });
+        return;
+
+    }
+
+    let targetHasMeals =
+        weeks[targetWeekKey] &&
+        Object.values(weeks[targetWeekKey]).some(dm => dm && dm.length > 0);
+
+    if(targetHasMeals){
+
+        let ok = await customConfirm(
+            t("replace_target_week_message"),
+            t("replace_target_week_title")
+        );
+
+        if(!ok) return;
+
+    }
+
+    // Deep copy so editing the target week later doesn't also change this week
+    weeks[targetWeekKey] = JSON.parse(JSON.stringify(meals));
+
+    // Collapse any expanded state so it opens tidy
+    days.forEach(day=>{
+        if(weeks[targetWeekKey][day]){
+            weeks[targetWeekKey][day].forEach(m => m.expanded = false);
+        }
+    });
+
+    saveData();
+
+    closeCopyWeekModal();
+
+    showToast(t("copied_to_chosen_week"));
+
+}
+
+
+// =======================
+// WEEK TEMPLATES
+// =======================
+// Named, reusable sets of meals (e.g. "Typical week") that can be
+// applied to any calendar week, separate from the weeks themselves.
+
+let weekTemplates = loadWeekTemplates();
+
+// =======================
+// RECIPE IDS
+// Every recipe has a permanent id. Meals point at the id (not at the
+// recipe's position in the list), so deleting, duplicating or re-sorting
+// recipes can never make a meal open the wrong recipe.
+// =======================
+function newRecipeId(){
+    return "r_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+// Same recipe -> same id on every device, so devices that upgrade at
+// different times still agree and household sync doesn't duplicate recipes.
+function legacyRecipeId(r){
+    let str = (r.name || "") + "|" + (r.servings || "") + "|" + JSON.stringify(r.ingredients || []);
+    let h = 5381;
+    for(let i = 0; i < str.length; i++){ h = ((h << 5) + h + str.charCodeAt(i)) | 0; }
+    return "r_" + (h >>> 0).toString(36);
+}
+
+function recipeIdAt(index){
+    let r = recipes[index];
+    return r && r.id ? r.id : null;
+}
+
+// Accepts an id (new), a number (old saved data) or nothing.
+// Returns the recipe's position in the list, or -1.
+function recipeIndexFor(ref){
+    if(ref === null || ref === undefined || ref === "") return -1;
+    if(typeof ref === "number") return recipes[ref] ? ref : -1;
+    return recipes.findIndex(r => r.id === ref);
+}
+
+function migrateRecipeIds(){
+
+    let recipesChanged = false;
+    let used = new Set(recipes.filter(r => r.id).map(r => r.id));
+
+    recipes.forEach(r=>{
+        if(r.id) return;
+        let id = legacyRecipeId(r);
+        let n = 1;
+        while(used.has(id)){ n++; id = legacyRecipeId(r) + "_" + n; }
+        r.id = id;
+        used.add(id);
+        recipesChanged = true;
+    });
+
+    const fixMeals = (mealsByDay) => {
+        let changed = false;
+        days.forEach(day=>{
+            (mealsByDay && mealsByDay[day] || []).forEach(m=>{
+                if(typeof m.recipe === "number" && recipes[m.recipe] && recipes[m.recipe].id){
+                    m.recipe = recipes[m.recipe].id;
+                    changed = true;
+                }
+            });
+        });
+        return changed;
+    };
+
+    let weeksChanged = false;
+    Object.values(weeks).forEach(w => { if(fixMeals(w)) weeksChanged = true; });
+
+    let templatesChanged = false;
+    weekTemplates.forEach(tpl => { if(fixMeals(tpl.days)) templatesChanged = true; });
+
+    if(recipesChanged) localStorage.setItem("foodflowRecipes", JSON.stringify(recipes));
+    if(weeksChanged) localStorage.setItem("foodflowWeeks", JSON.stringify(weeks));
+    if(templatesChanged) localStorage.setItem("foodflowWeekTemplates", JSON.stringify(weekTemplates));
+
+}
+
+migrateRecipeIds();
+
+// Custom names for individual weeks (e.g. a rotating "Week 1" / "Week 2" /
+// "Week 3" schedule) — keyed by weekKey, separate from templates, since
+// a name just labels a specific calendar week rather than a reusable plan.
+let weekNames = loadWeekNames();
+
+function loadWeekNames(){
+
+    try{
+
+        let saved = localStorage.getItem("foodflowWeekNames");
+
+        return saved ? JSON.parse(saved) : {};
+
+    }catch(e){
+
+        return {};
+
+    }
+
+}
+
+function saveWeekNames(){
+
+    localStorage.setItem(
+        "foodflowWeekNames",
+        JSON.stringify(weekNames)
+    );
+
+}
+
+function openRenameWeekModal(){
+
+    document.getElementById("renameWeekNameInput").value =
+        weekNames[currentWeekKey] || "";
+
+    document.getElementById("renameWeekModal").style.display = "flex";
+
+}
+
+function closeRenameWeekModal(){
+
+    document.getElementById("renameWeekModal").style.display = "none";
+
+}
+
+function confirmRenameWeek(){
+
+    let name = document.getElementById("renameWeekNameInput").value.trim();
+
+    if(name){
+        weekNames[currentWeekKey] = name;
+    }else{
+        delete weekNames[currentWeekKey];
+    }
+
+    saveWeekNames();
+    closeRenameWeekModal();
+    updateWeekLabel();
+
+    showToast(t("week_name_saved"));
+
+}
+
+function clearWeekName(){
+
+    delete weekNames[currentWeekKey];
+
+    saveWeekNames();
+    closeRenameWeekModal();
+    updateWeekLabel();
+
+}
+
+function loadWeekTemplates(){
+
+    try{
+
+        let saved = localStorage.getItem("foodflowWeekTemplates");
+
+        return saved ? JSON.parse(saved) : [];
+
+    }catch(e){
+
+        return [];
+
+    }
+
+}
+
+function saveWeekTemplates(){
+
+    localStorage.setItem(
+        "foodflowWeekTemplates",
+        JSON.stringify(weekTemplates)
+    );
+
+}
+
+function openSaveTemplateModal(){
+
+    let hasAnyMeals = Object.values(meals)
+        .some(dayMeals => dayMeals && dayMeals.length > 0);
+
+    if(!hasAnyMeals){
+
+        showToast(t("no_meals_this_week"), { type:"error" });
+        return;
+
+    }
+
+    document.getElementById("saveTemplateNameInput").value = "";
+
+    document.getElementById("saveTemplateModal").style.display = "flex";
+
+}
+
+function closeSaveTemplateModal(){
+
+    document.getElementById("saveTemplateModal").style.display = "none";
+
+}
+
+function confirmSaveTemplate(){
+
+    let name = document.getElementById("saveTemplateNameInput").value.trim();
+
+    if(name === ""){
+
+        showToast(t("enter_template_name"), { type:"error" });
+        return;
+
+    }
+
+    // Deep copy, with expanded state collapsed, so this template
+    // opens tidy wherever it's later applied.
+    let templateDays = JSON.parse(JSON.stringify(meals));
+
+    days.forEach(day=>{
+        if(templateDays[day]){
+            templateDays[day].forEach(m => m.expanded = false);
+        }
+    });
+
+    weekTemplates.push({
+        id: Date.now().toString(),
+        name: name,
+        days: templateDays
+    });
+
+    saveWeekTemplates();
+
+    closeSaveTemplateModal();
+
+    showToast(t("template_saved"));
+
+}
+
+function openLoadTemplateModal(){
+
+    renderTemplateList();
+
+    document.getElementById("loadTemplateModal").style.display = "flex";
+
+}
+
+function closeLoadTemplateModal(){
+
+    document.getElementById("loadTemplateModal").style.display = "none";
+
+}
+
+function renderTemplateList(){
+
+    let container = document.getElementById("templateList");
+
+    if(!container) return;
+
+    if(weekTemplates.length === 0){
+
+        container.innerHTML = `<p class="small" style="opacity:0.7;">${t("no_templates_yet")}</p>`;
+
+        return;
+
+    }
+
+    container.innerHTML = weekTemplates.map(template => `
+
+        <div style="
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:8px;
+            padding:8px 10px;
+            margin-bottom:6px;
+            border-radius:8px;
+            background:var(--bg);
+        ">
+            <span>${template.name}</span>
+
+            <span style="display:flex; gap:6px;">
+                <button
+                    onclick="applyTemplate('${template.id}')"
+                    style="padding:4px 10px;font-size:13px;"
+                >${t("apply")}</button>
+
+                <button
+                    class="delete"
+                    onclick="deleteTemplate('${template.id}')"
+                    style="padding:4px 10px;font-size:13px;"
+                >🗑</button>
+            </span>
+        </div>
+
+    `).join("");
+
+}
+
+async function applyTemplate(templateId){
+
+    let template = weekTemplates.find(t => t.id === templateId);
+
+    if(!template) return;
+
+    let currentHasMeals = Object.values(meals)
+        .some(dayMeals => dayMeals && dayMeals.length > 0);
+
+    if(currentHasMeals){
+
+        let ok = await customConfirm(
+            t("replace_current_week_message"),
+            t("replace_target_week_title")
+        );
+
+        if(!ok) return;
+
+    }
+
+    // Deep copy so editing this week later doesn't also change the template
+    weeks[currentWeekKey] = JSON.parse(JSON.stringify(template.days));
+    meals = weeks[currentWeekKey];
+
+    saveData();
+
+    closeLoadTemplateModal();
+
+    render();
+    renderShoppingList();
+
+    showToast(t("template_applied"));
+
+}
+
+function deleteTemplate(templateId){
+
+    weekTemplates = weekTemplates.filter(t => t.id !== templateId);
+
+    saveWeekTemplates();
+
+    renderTemplateList();
+
+}
+
+
+// Meal type categories — the built-in four, plus any custom ones
+// added through Settings -> Manage Categories.
+let mealCategories = JSON.parse(
+    localStorage.getItem("foodflowCategories")
+) || ["🍳 Breakfast","☕ Fika","🥗 Lunch","🍝 Dinner"];
+
+
+// One-time migration: the original built-in categories were named
+// in Swedish ("Frukost"/"Middag"), and Fika used to sit at the end.
+// Rename them to English for anyone who already had them saved, move
+// Fika between Breakfast and Lunch, and update any already-planned
+// meals so they keep matching their category correctly.
+(function migrateSwedishMealCategoryNames(){
+
+    const renameMap = {
+        "🍳 Frukost":"🍳 Breakfast",
+        "🍝 Middag":"🍝 Dinner"
+    };
+
+    const canonicalOrder = ["🍳 Breakfast","☕ Fika","🥗 Lunch","🍝 Dinner"];
+
+    let categoriesChanged = false;
+
+    mealCategories = mealCategories.map(cat=>{
+        if(renameMap[cat]){
+            categoriesChanged = true;
+            return renameMap[cat];
+        }
+        return cat;
+    });
+
+    // Only reorder if it's still exactly the four built-in categories
+    // with nothing custom added — otherwise leave whatever order the
+    // person has already set up through Manage Categories alone.
+    if(
+        mealCategories.length === canonicalOrder.length &&
+        canonicalOrder.every(cat => mealCategories.includes(cat))
+    ){
+        let reordered = canonicalOrder.slice();
+        if(JSON.stringify(reordered) !== JSON.stringify(mealCategories)){
+            categoriesChanged = true;
+        }
+        mealCategories = reordered;
+    }
+
+    if(categoriesChanged){
+        localStorage.setItem(
+            "foodflowCategories",
+            JSON.stringify(mealCategories)
+        );
+    }
+
+    // Separately — and every time, regardless of whether the category
+    // list above needed changing — rename any already-planned meals
+    // still carrying the old Swedish type string. The category list
+    // may already have defaulted to English (e.g. it was never
+    // customized, so nothing was ever saved under foodflowCategories)
+    // while meals saved earlier still have the old literal string.
+    let mealsChanged = false;
+
+    Object.values(weeks || {}).forEach(week=>{
+        Object.values(week).forEach(dayMeals=>{
+            if(!Array.isArray(dayMeals)) return;
+            dayMeals.forEach(meal=>{
+                if(meal && renameMap[meal.type]){
+                    meal.type = renameMap[meal.type];
+                    mealsChanged = true;
+                }
+            });
+        });
+    });
+
+    if(mealsChanged){
+        localStorage.setItem(
+            "foodflowWeeks",
+            JSON.stringify(weeks)
+        );
+    }
+
+})();
+
+
+// A distinct accent color per meal type, so the planner is scannable
+// at a glance. Cycles through the palette if there are more custom
+// categories than colors.
+const accentPalette = [
+    "#4caf50", // green
+    "#2196f3", // blue
+    "#ff9800", // orange
+    "#9c27b0", // purple
+    "#e53935", // red
+    "#00bcd4", // cyan
+    "#8bc34a", // light green
+    "#ff5722"  // deep orange
+];
+
+
+function getMealTypeAccent(mealType){
+
+    let idx = mealCategories.indexOf(mealType);
+
+    if(idx === -1){
+        idx = 0;
+    }
+
+    return accentPalette[idx % accentPalette.length];
+
+}
+
+
+function getMealOrder(){
+
+    let order = {};
+
+    mealCategories.forEach((cat, index)=>{
+        order[cat] = index;
+    });
+
+    return order;
+
+}
+
+
+function renderMealTypeOptions(){
+
+    let optionsHtml = mealCategories
+        .map(cat => `<option>${cat}</option>`)
+        .join("") +
+        `<option value="__new_category__">${t("new_category_option")}</option>`;
+
+    let mealTypeSelect = document.getElementById("mealType");
+    let plannerTypeSelect = document.getElementById("plannerRecipeType");
+
+    [mealTypeSelect, plannerTypeSelect].forEach(select=>{
+
+        if(!select) return;
+
+        let current = select.value;
+
+        select.innerHTML = optionsHtml;
+
+        if(mealCategories.includes(current)){
+            select.value = current;
+        }
+
+    });
+
+}
+
+
+// When "+ New category" is picked from a meal-type dropdown, open
+// the category manager instead of actually selecting it as a value,
+// and remember which select triggered it so the newly created
+// category can be selected there automatically once it's saved.
+let pendingCategorySelectId = null;
+
+function handleMealTypeSelectChange(select){
+
+    if(select.value !== "__new_category__"){
+        return;
+    }
+
+    pendingCategorySelectId = select.id;
+
+    // Fall back to the first real category for now, so the dropdown
+    // doesn't stay stuck on the "+ New category" placeholder.
+    select.value = mealCategories[0] || "";
+
+    openCategoryManager();
+
+}
+
+
+// =======================
+// PER-DAY NOTES
+// =======================
+// Quick free-text notes per calendar day (e.g. "eating out", "leftovers")
+// that show in the planner without needing a full meal entry.
+
+let dayNotes = loadDayNotes();
+
+function loadDayNotes(){
+
+    try{
+
+        let saved = localStorage.getItem("foodflowDayNotes");
+
+        return saved ? JSON.parse(saved) : {};
+
+    }catch(e){
+
+        return {};
+
+    }
+
+}
+
+function saveDayNotes(){
+
+    localStorage.setItem(
+        "foodflowDayNotes",
+        JSON.stringify(dayNotes)
+    );
+
+}
+
+function dayNoteKey(day){
+
+    return `${currentWeekKey}_${day}`;
+
+}
+
+function updateDayNote(day, value){
+
+    let key = dayNoteKey(day);
+
+    let trimmed = value.trim();
+
+    if(trimmed === ""){
+        delete dayNotes[key];
+    }else{
+        dayNotes[key] = trimmed;
+    }
+
+    saveDayNotes();
+
+}
+
+
+// Small menu behind the ⋯ button on each day
+function closeDayMenu(){
+    let m = document.getElementById("dayMenu");
+    if(m) m.remove();
+}
+
+function openDayMenu(btn, day){
+
+    closeDayMenu();
+
+    let menu = document.createElement("div");
+    menu.id = "dayMenu";
+    menu.setAttribute("role", "menu");
+
+    let firstItem = null;
+
+    const item = (label, fn, danger) => {
+        let b = document.createElement("button");
+        b.setAttribute("role", "menuitem");
+        if(danger) b.className = "danger";
+        b.textContent = label;
+        b.onclick = () => { closeDayMenu(); fn(); };
+        menu.appendChild(b);
+        if(!firstItem) firstItem = b;
+    };
+
+    let hasNote = !!(dayNotes[dayNoteKey(day)] || "");
+
+    item("📝 " + t(hasNote ? "day_menu_note_edit" : "day_menu_note_add"), () => {
+        let card = btn.closest(".day");
+        let input = card && card.querySelector(".day-note-input");
+        if(input){ input.classList.remove("is-hidden"); input.focus(); }
+    });
+    item(t("day_menu_eating_out"), () => markDayEatingOut(day));
+    item(t("planner_copy_day"), () => openCopyDayModal(day));
+    item(t("day_menu_move"), () => openMoveDayModal(day));
+    item(t("day_menu_shop"), () => shopForDay(day));
+    menu.appendChild(document.createElement("hr"));
+    item(t("day_menu_clear"), () => clearDay(day), true);
+
+    document.body.appendChild(menu);
+
+    let r = btn.getBoundingClientRect();
+    let w = menu.offsetWidth;
+    menu.style.top = (window.scrollY + r.bottom + 4) + "px";
+    menu.style.left = Math.max(8, Math.min(window.scrollX + r.left, window.scrollX + document.documentElement.clientWidth - w - 8)) + "px";
+
+    setTimeout(() => {
+        const away = (e) => {
+            if(!menu.contains(e.target)){ closeDayMenu(); document.removeEventListener("click", away, true); }
+        };
+        document.addEventListener("click", away, true);
+    }, 0);
+
+    if(firstItem) firstItem.focus();
+
+}
+
+document.addEventListener("keydown", (e)=>{ if(e.key === "Escape") closeDayMenu(); });
+
+function render(){
+
+applyPlannerView();
+
+if(plannerView === "month"){ renderMonth(); return; }
+
+const week =
+document.getElementById("week");
+
+
+week.innerHTML="";
+
+
+let mealOrder = getMealOrder();
+
+
+days.forEach(day=>{
+
+
+let card =
+document.createElement("div");
+
+
+card.className="day";
+
+
+
+card.innerHTML = `
+
+<h2>${translateDayName(day)}</h2>
+
+<input
+    class="day-note-input${(dayNotes[dayNoteKey(day)] || "") ? "" : " is-hidden"}"
+    type="text"
+    placeholder="${t("day_note_placeholder")}"
+    value="${(dayNotes[dayNoteKey(day)] || "").replace(/"/g, "&quot;")}"
+    onchange="updateDayNote('${day}', this.value)"
+    onblur="if(!this.value.trim()) this.classList.add('is-hidden')"
+    style="
+        width:100%;
+        box-sizing:border-box;
+        font-size:0.85em;
+        font-style:italic;
+        padding:4px 8px;
+        margin-bottom:6px;
+        border:1px dashed var(--primary);
+        border-radius:6px;
+        background:transparent;
+        color:inherit;
+    "
+>
+
+<div class="day-actions">
+<button class="add-btn" onclick="openModal('${day}')">
+${t("planner_add")}
+</button>
+
+<button class="more-btn" aria-haspopup="menu" aria-label="${t("day_menu_label")}" title="${t("day_menu_label")}" onclick="openDayMenu(this,'${day}')">
+⋯
+</button>
+</div>
+
+`;
+
+
+
+if(meals[day] && meals[day].length > 0){
+
+    // Keep each meal's original index (needed for edit/delete)
+    // while sorting the displayed order by meal type.
+    let sortedMeals = meals[day]
+        .map((meal, originalIndex) => ({ meal, originalIndex }))
+        .sort((a, b) =>
+            (mealOrder[a.meal.type] ?? 99) - (mealOrder[b.meal.type] ?? 99)
+        );
+
+    sortedMeals.forEach(({ meal, originalIndex }) => {
+
+        let box =
+        document.createElement("div");
+
+
+        box.className="meal";
+
+        box.style.setProperty("--accent", getMealTypeAccent(meal.type));
+
+
+        // Chips show full text on phones; in the narrow desktop columns the words are hidden (the title keeps them)
+        const peopleFull = t("people_count").replace("{n}", meal.people);
+        const peopleWord = t("people_count").replace("{n}", "").trim();
+        const leftoverChip = meal.usingLeftoversFrom
+            ? `<span class="meal-chip" title="${t("leftovers_badge_using")}">🔁<span class="meal-chip-lbl"> ${t("leftovers_badge_using")}</span></span>`
+            : (meal.leftoverPortions > 0 ? `<span class="meal-chip" title="${meal.leftoverPortions} ${t("leftovers_badge_portions")}">📦 ${meal.leftoverPortions}<span class="meal-chip-lbl"> ${t("leftovers_badge_portions")}</span></span>` : "");
+
+        box.innerHTML = `
+        <div class="meal-title" title="${meal.type}">${meal.type}</div>
+        <strong class="meal-name-clamp" title="${meal.name}">${meal.name}</strong>
+        <div class="meal-foot">
+            <span class="meal-chip" title="${peopleFull}">👥 ${meal.people}<span class="meal-chip-lbl"> ${peopleWord}</span></span>
+            ${leftoverChip}
+            <span class="meal-chevron" aria-hidden="true">›</span>
+        </div>
+        `;
+
+        // The whole card opens the meal (no separate View button)
+        box.setAttribute("data-open", "1");
+        box.setAttribute("role", "button");
+        box.setAttribute("tabindex", "0");
+        box.addEventListener("click", (e)=>{
+            if(pickedUpMeal || e.target.closest("button")) return;
+            openMealDetail(day, originalIndex);
+        });
+        box.addEventListener("keydown", (e)=>{
+            if((e.key === "Enter" || e.key === " ") && !pickedUpMeal){
+                e.preventDefault();
+                openMealDetail(day, originalIndex);
+            }
+        });
+
+
+        card.appendChild(box);
+
+        // Desktop: drag this meal onto another day to move it there
+        setupMealDragSource(box, day, originalIndex);
+
+        // Mobile: swipe left to delete
+        attachSwipeToDelete(box, () => deleteMeal(day, originalIndex));
+
+        // Mobile: long-press to pick up, then tap another day to move it there
+        attachLongPressToMove(box, day, originalIndex);
+
+
+    });
+
+
+}else{
+
+    let emptyMsg = document.createElement("p");
+    emptyMsg.className = "small";
+    emptyMsg.style.textAlign = "center";
+    emptyMsg.style.opacity = "0.7";
+    emptyMsg.innerText = t("planner_no_meals");
+
+    card.appendChild(emptyMsg);
+
+}
+
+
+week.appendChild(card);
+
+// Desktop: let this day accept a dragged meal from another day
+setupDayDropZone(card, day);
+
+// Mobile: tapping a day while a meal is picked up drops it there
+setupDayTapDropZone(card, day);
+
+});
+
+
+}
+
+
+function toggleMeal(day,index){
+
+    meals[day][index].expanded = !meals[day][index].expanded;
+
+    saveData();
+    render();
+
+}
+
+
+let mealDetailDay = null;
+let mealDetailIndex = null;
+
+function openMealDetail(day, index){
+
+let meal = meals[day] && meals[day][index];
+
+if(!meal) return;
+
+mealDetailDay = day;
+mealDetailIndex = index;
+
+document.getElementById("mealDetailTitle").innerText = meal.type + " — " + meal.name;
+
+let leftoverSectionHtml;
+
+if(meal.usingLeftoversFrom){
+
+    leftoverSectionHtml = `
+    <hr>
+    <div class="small">
+    🔁 ${t("using_leftovers_from")} ${describeMealRef(meal.usingLeftoversFrom)}
+    </div>
+    <button onclick="unlinkMealLeftovers()">
+    ${t("unlink_leftovers")}
+    </button>
+    `;
+
+}else{
+
+    leftoverSectionHtml = `
+    <hr>
+    <label style="display:block; margin-top:4px;">
+    <span class="small">📦 ${t("leftover_portions_label")}</span>
+    </label>
+    <div class="stepper">
+    <button type="button" onclick="adjustMealLeftoverPortions(-1)" data-i18n-aria-label="aria_decrease_servings" aria-label="${t("aria_decrease_servings")}">−</button>
+    <input id="mealLeftoverPortionsInput" type="number" min="0" value="${meal.leftoverPortions || 0}">
+    <button type="button" onclick="adjustMealLeftoverPortions(1)" data-i18n-aria-label="aria_increase_servings" aria-label="${t("aria_increase_servings")}">+</button>
+    </div>
+    <button data-primary onclick="saveMealLeftoverPortions()">
+    ${t("save_leftovers")}
+    </button>
+    `;
+
+}
+
+document.getElementById("mealDetailContent").innerHTML = `
+
+<div class="small">
+👥 ${t("people_count").replace("{n}", meal.people)}
+</div>
+
+${leftoverSectionHtml}
+
+`;
+
+let openRecipeBtn = document.getElementById("mealDetailOpenRecipeBtn");
+
+if(recipeIndexFor(meal.recipe) >= 0){
+    openRecipeBtn.style.display = "block";
+} else {
+    openRecipeBtn.style.display = "none";
+}
+
+document.getElementById("mealDetailModal").style.display = "flex";
+
+}
+
+function closeMealDetail(){
+
+document.getElementById("mealDetailModal").style.display = "none";
+
+mealDetailDay = null;
+mealDetailIndex = null;
+
+}
+
+function adjustMealLeftoverPortions(delta){
+
+let input = document.getElementById("mealLeftoverPortionsInput");
+if(!input) return;
+
+let val = Math.max(0, (parseInt(input.value, 10) || 0) + delta);
+input.value = val;
+
+}
+
+function saveMealLeftoverPortions(){
+
+if(mealDetailIndex === null) return;
+
+let input = document.getElementById("mealLeftoverPortionsInput");
+let val = Math.max(0, parseInt(input.value, 10) || 0);
+
+meals[mealDetailDay][mealDetailIndex].leftoverPortions = val;
+
+saveData();
+render();
+
+showToast(val > 0 ? t("leftovers_saved") : t("leftovers_cleared"));
+
+openMealDetail(mealDetailDay, mealDetailIndex);
+
+}
+
+function unlinkMealLeftovers(){
+
+if(mealDetailIndex === null) return;
+
+meals[mealDetailDay][mealDetailIndex].usingLeftoversFrom = null;
+
+saveData();
+render();
+
+openMealDetail(mealDetailDay, mealDetailIndex);
+
+}
+
+
+function openLeftoverPicker(){
+
+let available = getAvailableLeftovers(null);
+
+let list = document.getElementById("leftoverPickerList");
+
+let trackedHtml;
+
+if(available.length === 0){
+
+    trackedHtml = `<p class="small">${t("no_leftovers_available")}</p>`;
+
+}else{
+
+    trackedHtml = available.map(({weekKey, day, meal}) => `
+        <div class="meal" style="margin-top:8px;">
+            <strong>${meal.name}</strong>
+            <div class="small">${translateDayName(day)} · 📦 ${meal.leftoverPortions} ${t("portions_label")}</div>
+            <button onclick="chooseLeftoverSource('${weekKey}','${day}','${meal.id}')">
+            ${t("use_this_button")}
+            </button>
+        </div>
+    `).join("");
+
+}
+
+// Also always offer a plain, untracked "leftovers" option — for food
+// that didn't come from a meal logged here at all, e.g. a restaurant
+// doggy bag. This doesn't link to anything or use up any tracked
+// portions; it just marks the new meal as leftovers.
+let externalHtml = `
+    <div class="meal" style="margin-top:8px;">
+        <strong>${t("leftovers_external_label")}</strong>
+        <div class="small">${t("leftovers_external_description")}</div>
+        <button onclick="chooseExternalLeftovers()">
+        ${t("use_this_button")}
+        </button>
+    </div>
+`;
+
+list.innerHTML = trackedHtml + externalHtml;
+
+document.getElementById("leftoverPickerModal").style.display = "flex";
+
+}
+
+function closeLeftoverPicker(){
+
+document.getElementById("leftoverPickerModal").style.display = "none";
+
+}
+
+function chooseLeftoverSource(weekKey, day, mealId){
+
+let ref = { weekKey, day, mealId };
+let sourceMeal = findMealByRef(ref);
+
+if(!sourceMeal){
+    showToast(t("recipe_not_found"), { type:"error" });
+    return;
+}
+
+pendingLeftoverSource = ref;
+
+document.getElementById("mealType").value = sourceMeal.type;
+document.getElementById("mealName").value = sourceMeal.name;
+document.getElementById("people").value = sourceMeal.people;
+
+if(recipeIndexFor(sourceMeal.recipe) >= 0){
+    updateRecipeSelector();
+    document.getElementById("recipeSelect").value = recipeIndexFor(sourceMeal.recipe);
+}
+
+document.getElementById("useLeftoversBtn").style.display = "none";
+
+let status = document.getElementById("useLeftoversStatus");
+status.style.display = "block";
+status.innerHTML = `🔁 ${t("using_leftovers_from")} ${describeMealRef(ref)}
+    &nbsp; <button type="button" onclick="clearPendingLeftoverSource()">✕ ${t("cancel")}</button>`;
+
+closeLeftoverPicker();
+
+}
+
+// "Use Leftovers" picked as untracked/external — not linked to any
+// specific logged meal, so there's nothing to prefill and nothing to
+// mark as used up when this meal is saved.
+function chooseExternalLeftovers(){
+
+pendingLeftoverSource = { external:true };
+
+// Prefill the meal name so it shows up as something in the planner
+// right away — only if nothing's been typed yet, so this never
+// overwrites a name already entered.
+let mealNameInput = document.getElementById("mealName");
+if(mealNameInput && !mealNameInput.value.trim()){
+    mealNameInput.value = t("leftovers_default_meal_name");
+}
+
+document.getElementById("useLeftoversBtn").style.display = "none";
+
+let status = document.getElementById("useLeftoversStatus");
+status.style.display = "block";
+status.innerHTML = `🔁 ${describeMealRef(pendingLeftoverSource)}
+    &nbsp; <button type="button" onclick="clearPendingLeftoverSource()">✕ ${t("cancel")}</button>`;
+
+closeLeftoverPicker();
+
+}
+
+function clearPendingLeftoverSource(){
+
+pendingLeftoverSource = null;
+
+document.getElementById("useLeftoversBtn").style.display = "inline-block";
+
+let status = document.getElementById("useLeftoversStatus");
+status.style.display = "none";
+status.innerHTML = "";
+
+}
+
+function openRecipeFromMealDetail(){
+
+if(mealDetailIndex === null) return;
+
+let meal = meals[mealDetailDay][mealDetailIndex];
+
+closeMealDetail();
+
+if(recipeIndexFor(meal.recipe) >= 0){
+    viewMealRecipe(recipeIndexFor(meal.recipe), meal.people);
+}
+
+}
+
+function editMealFromDetail(){
+
+if(mealDetailIndex === null) return;
+
+let day = mealDetailDay;
+let idx = mealDetailIndex;
+
+closeMealDetail();
+editMeal(day, idx);
+
+}
+
+function deleteMealFromDetail(){
+
+if(mealDetailIndex === null) return;
+
+let day = mealDetailDay;
+let idx = mealDetailIndex;
+
+closeMealDetail();
+deleteMeal(day, idx);
+
+}
+
+
+
+
+
+
+function openModal(day){
+
+selectedDay = day;
+
+selectedMeal = null;
+
+
+document.getElementById("modalTitle")
+.innerText = t("modal_add_meal");
+
+
+document.getElementById("mealName")
+.value="";
+
+
+document.getElementById("people")
+.value=4;
+
+
+document.getElementById("recipeSelect")
+.value="";
+
+
+document.getElementById("recipeSearch")
+.value="";
+
+
+updateRecipeSelector();
+
+
+// Adding a new meal, so offer "Use Leftovers" and reset any
+// leftover-source pick from a previous time this modal was open.
+clearPendingLeftoverSource();
+
+document.getElementById("useLeftoversWrap")
+.style.display="block";
+
+
+document.getElementById("modal")
+.style.display="flex";
+
+}
+
+
+
+
+
+
+function editMeal(day,index){
+
+
+selectedDay=day;
+
+selectedMeal=index;
+
+
+let meal =
+meals[day][index];
+
+
+
+document.getElementById("modalTitle")
+.innerText =
+t("modal_edit_meal")
+
+
+// "Use Leftovers" only makes sense when creating a new meal entry —
+// an existing meal's leftover-tracking is managed from its "View" popup.
+pendingLeftoverSource = null;
+
+document.getElementById("useLeftoversWrap")
+.style.display="none";
+
+
+document.getElementById("mealType")
+.value =
+meal.type;
+
+
+updateRecipeSelector();
+
+
+document.getElementById("recipeSelect")
+.value =
+recipeIndexFor(meal.recipe) >= 0
+?
+recipeIndexFor(meal.recipe)
+:
+"";
+
+
+document.getElementById("mealName")
+.value =
+meal.name;
+
+
+
+document.getElementById("people")
+.value =
+meal.people;
+
+
+
+document.getElementById("modal")
+.style.display="flex";
+
+
+}
+
+
+
+
+
+
+
+function closeModal(){
+
+
+document.getElementById("modal")
+.style.display="none";
+
+
+}
+
+
+
+
+
+
+
+function saveMeal(){
+
+
+let selectedRecipeIndex =
+document.getElementById("recipeSelect").value;
+
+
+// Editing an existing meal keeps its id and leftover-tracking fields
+// (those are managed from the meal's "View" popup, not this form).
+let existing =
+(selectedMeal !== null && meals[selectedDay])
+? meals[selectedDay][selectedMeal]
+: null;
+
+
+let meal = {
+
+
+id:
+existing
+? existing.id
+: ("m" + Date.now().toString(36) + Math.random().toString(36).slice(2,8)),
+
+
+type:
+document.getElementById("mealType").value,
+
+
+name:
+document.getElementById("mealName").value,
+
+
+people:
+document.getElementById("people").value,
+
+
+recipe:
+selectedRecipeIndex !== ""
+? (recipeIdAt(Number(selectedRecipeIndex)) ?? null)
+: null,
+
+
+leftoverPortions:
+existing
+? (existing.leftoverPortions || 0)
+: 0,
+
+
+usingLeftoversFrom:
+existing
+? (existing.usingLeftoversFrom || null)
+: pendingLeftoverSource
+
+
+};
+
+
+
+if(!meal.name){
+
+showToast(t("enter_meal_name"), { type:"error" });
+
+return;
+
+}
+
+
+
+
+if(!meals[selectedDay]){
+
+meals[selectedDay]=[];
+
+}
+
+
+
+
+if(selectedMeal === null){
+
+
+meals[selectedDay].push(meal);
+
+
+// This new meal was created via "Use Leftovers" — mark the
+// source meal's leftovers as used up so they can't be linked twice.
+if(pendingLeftoverSource){
+
+    let sourceMeal = findMealByRef(pendingLeftoverSource);
+
+    if(sourceMeal){
+        sourceMeal.leftoverPortions = 0;
+    }
+
+}
+
+
+}else{
+
+
+meals[selectedDay][selectedMeal]=meal;
+
+
+}
+
+
+pendingLeftoverSource = null;
+
+
+saveData();
+
+
+closeModal();
+
+
+render();
+
+
+}
+
+
+
+
+
+
+
+// Clears every meal from every day of the currently viewed week in
+// one go, instead of deleting each one individually. Doesn't touch
+// any other week, and doesn't touch the week's name or notes.
+async function clearWeek(){
+
+let totalMeals = Object.values(meals)
+    .reduce((sum, dayMeals) => sum + (dayMeals ? dayMeals.length : 0), 0);
+
+if(totalMeals === 0){
+    showToast(t("clear_week_nothing_to_clear"));
+    return;
+}
+
+let ok = await customConfirm(
+    t("clear_week_message"),
+    t("clear_week_title")
+);
+
+if(!ok) return;
+
+let removedMealsByDay = JSON.parse(JSON.stringify(meals));
+
+days.forEach(day=>{
+    meals[day] = [];
+});
+
+saveData();
+render();
+renderShoppingList();
+
+showToast(t("clear_week_cleared"), {
+    actionLabel: t("undo"),
+    onAction: () => {
+
+        days.forEach(day=>{
+            meals[day] = removedMealsByDay[day] || [];
+        });
+
+        saveData();
+        render();
+        renderShoppingList();
+
+    }
+});
+
+}
+
+
+function deleteMeal(day,index){
+
+
+let removedMeal = meals[day][index];
+
+meals[day].splice(index,1);
+
+
+saveData();
+
+
+render();
+
+
+showToast(`${t("toast_removed")} "${removedMeal.name}"`, {
+    actionLabel: t("undo"),
+    onAction: () => {
+
+        if(!meals[day]){
+            meals[day] = [];
+        }
+
+        meals[day].push(removedMeal);
+
+        saveData();
+        render();
+
+    }
+});
+
+
+}
+
+
+// =======================
+// DAY MENU ACTIONS
+// =======================
+
+function markDayEatingOut(day){
+
+    let key = dayNoteKey(day);
+    let label = t("eating_out_note");
+    let current = (dayNotes[key] || "").trim();
+
+    if(current.includes(label)){
+        showToast(t("eating_out_already"));
+        return;
+    }
+
+    dayNotes[key] = current ? current + " · " + label : label;
+    saveDayNotes();
+    render();
+
+}
+
+
+async function clearDay(day){
+
+    if(!meals[day] || meals[day].length === 0){
+        showToast(t("clear_day_nothing"));
+        return;
+    }
+
+    let dayLabel = translateDayName(day);
+
+    let ok = await customConfirm(
+        t("clear_day_message").replace("{day}", dayLabel),
+        t("clear_day_title")
+    );
+
+    if(!ok) return;
+
+    let removed = meals[day];
+    meals[day] = [];
+
+    saveData();
+    render();
+    renderShoppingList();
+
+    showToast(t("clear_day_cleared").replace("{day}", dayLabel), {
+        actionLabel: t("undo"),
+        onAction: () => {
+            meals[day] = (meals[day] || []).concat(removed);
+            saveData();
+            render();
+            renderShoppingList();
+        }
+    });
+
+}
+
+
+function shopForDay(day){
+
+    let dateKey = addDaysToKey(currentWeekKey, days.indexOf(day));
+
+    shoppingRangeStart = dateKey;
+    shoppingRangeEnd = dateKey;
+
+    saveShoppingState();
+    showPage("shopping");
+
+}
+
+
+// ---- Move day ----
+let moveDaySource = null;
+
+function openMoveDayModal(day){
+
+    if(!meals[day] || meals[day].length === 0){
+        showToast(t("move_day_nothing").replace("{day}", translateDayName(day)), { type:"error" });
+        return;
+    }
+
+    moveDaySource = day;
+
+    document.getElementById("moveDaySourceLabel").innerText = translateDayName(day);
+
+    const option = (value, label) => `
+        <label style="display:flex;align-items:center;gap:8px;font-weight:normal;">
+            <input type="radio" name="moveDayTarget" class="moveDayTarget" value="${value}" style="width:auto;margin:0;">
+            ${label}
+        </label>`;
+
+    let html = days.filter(d => d !== day)
+        .map(d => option(d + "|0", translateDayName(d))).join("");
+
+    html += `<hr style="margin:8px 0;">`;
+    html += option(day + "|1", t("move_day_next_week") + " · " + translateDayName(day));
+    html += option(day + "|-1", t("move_day_prev_week") + " · " + translateDayName(day));
+
+    document.getElementById("moveDayTargets").innerHTML = html;
+
+    document.getElementById("moveDayModal").style.display = "flex";
+
+}
+
+
+function closeMoveDayModal(){
+
+    document.getElementById("moveDayModal").style.display = "none";
+
+}
+
+
+function confirmMoveDay(){
+
+    let picked = document.querySelector(".moveDayTarget:checked");
+
+    if(!picked){
+        showToast(t("move_day_pick"), { type:"error" });
+        return;
+    }
+
+    let [targetDay, offsetStr] = picked.value.split("|");
+    let offset = Number(offsetStr);
+
+    let sourceMeals = meals[moveDaySource] || [];
+
+    if(sourceMeals.length === 0){
+        closeMoveDayModal();
+        return;
+    }
+
+    let targetWeekKey = offset === 0 ? currentWeekKey : addDaysToKey(currentWeekKey, 7 * offset);
+    let targetWeek = ensureWeek(targetWeekKey);
+
+    if(!targetWeek[targetDay]){
+        targetWeek[targetDay] = [];
+    }
+
+    // Keep leftover links pointing at the meals that just moved
+    let movedIds = new Set(sourceMeals.map(m => m.id).filter(Boolean));
+
+    Object.values(weeks).forEach(week=>{
+        days.forEach(d=>{
+            (week[d] || []).forEach(m=>{
+                let ref = m.usingLeftoversFrom;
+                if(ref && !ref.external && movedIds.has(ref.mealId) &&
+                   ref.weekKey === currentWeekKey && ref.day === moveDaySource){
+                    ref.weekKey = targetWeekKey;
+                    ref.day = targetDay;
+                }
+            });
+        });
+    });
+
+    sourceMeals.forEach(m => targetWeek[targetDay].push(m));
+    meals[moveDaySource] = [];
+
+    // The day's note travels with its meals
+    let fromKey = dayNoteKey(moveDaySource);
+    let toKey = `${targetWeekKey}_${targetDay}`;
+    if(dayNotes[fromKey]){
+        dayNotes[toKey] = dayNotes[toKey] ? dayNotes[toKey] + " · " + dayNotes[fromKey] : dayNotes[fromKey];
+        delete dayNotes[fromKey];
+        saveDayNotes();
+    }
+
+    saveData();
+    closeMoveDayModal();
+    render();
+    renderShoppingList();
+
+    let targetLabel = translateDayName(targetDay) +
+        (offset === 1 ? " (" + t("move_day_next_week").toLowerCase() + ")" :
+         offset === -1 ? " (" + t("move_day_prev_week").toLowerCase() + ")" : "");
+
+    showToast(t("move_day_done").replace("{target}", targetLabel));
+
+}
+
+
+// =======================
+// FILL EMPTY DAYS (auto-plan from favorites)
+// =======================
+
+let autoPlanPool = [];
+let autoPlanUsingAll = false;
+let autoPlanProposal = [];   // [{ day, recipeId, include }]
+
+function autoPlanMealType(){
+
+    let found = mealCategories.find(c => /dinner|middag/i.test(c));
+
+    return found || mealCategories[mealCategories.length - 1] || "🍝 Dinner";
+
+}
+
+function openAutoPlan(){
+
+    if(recipes.length === 0){
+        showToast(t("autoplan_no_recipes"), { type:"error" });
+        return;
+    }
+
+    let emptyDays = days.filter(d => !meals[d] || meals[d].length === 0);
+
+    if(emptyDays.length === 0){
+        showToast(t("autoplan_nothing_empty"));
+        return;
+    }
+
+    autoPlanPool = recipes.filter(r => r.favorite);
+    autoPlanUsingAll = autoPlanPool.length === 0;
+
+    if(autoPlanUsingAll){
+        autoPlanPool = recipes.slice();
+    }
+
+    shuffleAutoPlan();
+
+    document.getElementById("autoPlanModal").style.display = "flex";
+
+}
+
+function closeAutoPlan(){
+
+    document.getElementById("autoPlanModal").style.display = "none";
+
+}
+
+function shuffleAutoPlan(){
+
+    let emptyDays = days.filter(d => !meals[d] || meals[d].length === 0);
+
+    // Prefer recipes that are not already planned somewhere this week
+    let usedIds = new Set();
+    days.forEach(d => (meals[d] || []).forEach(m => { if(m.recipe) usedIds.add(m.recipe); }));
+
+    const shuffled = arr => {
+        let a = arr.slice();
+        for(let i = a.length - 1; i > 0; i--){
+            let j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+    };
+
+    let fresh = shuffled(autoPlanPool.filter(r => !usedIds.has(r.id)));
+    let seen = shuffled(autoPlanPool.filter(r => usedIds.has(r.id)));
+    let order = fresh.concat(seen);
+
+    autoPlanProposal = emptyDays.map((day, i) => ({
+        day,
+        recipeId: order[i % order.length].id,
+        include: true
+    }));
+
+    renderAutoPlan();
+
+}
+
+function renderAutoPlan(){
+
+    document.getElementById("autoPlanIntro").innerText =
+        t(autoPlanUsingAll ? "autoplan_intro_all" : "autoplan_intro");
+
+    document.getElementById("autoPlanList").innerHTML = autoPlanProposal.map((row, i) => {
+
+        let r = recipes[recipeIndexFor(row.recipeId)];
+        let name = r ? r.name : "?";
+
+        return `
+        <label style="display:flex;align-items:center;gap:10px;font-weight:normal;padding:6px 0;">
+            <input type="checkbox" style="width:auto;margin:0;" ${row.include ? "checked" : ""}
+                   onchange="autoPlanProposal[${i}].include = this.checked">
+            <span style="flex:1;"><strong>${translateDayName(row.day)}</strong> — ${name.replace(/</g,"&lt;")}</span>
+        </label>`;
+
+    }).join("");
+
+}
+
+function confirmAutoPlan(){
+
+    let type = autoPlanMealType();
+    let added = 0;
+
+    autoPlanProposal.forEach(row=>{
+
+        if(!row.include) return;
+
+        let r = recipes[recipeIndexFor(row.recipeId)];
+        if(!r) return;
+
+        if(!meals[row.day]) meals[row.day] = [];
+
+        meals[row.day].push({
+            id: "m" + Date.now().toString(36) + Math.random().toString(36).slice(2,8),
+            type,
+            name: r.name,
+            people: String(r.servings || 4),
+            recipe: r.id,
+            leftoverPortions: 0,
+            usingLeftoversFrom: null
+        });
+
+        added++;
+
+    });
+
+    closeAutoPlan();
+
+    if(added === 0) return;
+
+    saveData();
+    render();
+    renderShoppingList();
+
+    showToast(t("autoplan_done").replace("{n}", added));
+
+}
+
+
+// =======================
+// COPY DAY
+// =======================
+
+let copyDaySource = null;
+
+
+function openCopyDayModal(day){
+
+    if(!meals[day] || meals[day].length === 0){
+
+        showToast(
+            t("no_meals_to_copy_prefix") + translateDayName(day) + t("no_meals_to_copy_suffix"),
+            { type:"error" }
+        );
+        return;
+
+    }
+
+    copyDaySource = day;
+
+    document.getElementById("copyDaySourceLabel")
+    .innerText = translateDayName(day);
+
+    let targets = days.filter(d => d !== day);
+
+    document.getElementById("copyDayTargets").innerHTML =
+        targets.map(d => `
+            <label style="display:flex;align-items:center;gap:8px;font-weight:normal;">
+                <input
+                    type="checkbox"
+                    class="copyDayTarget"
+                    value="${d}"
+                    style="width:auto;margin:0;"
+                >
+                ${translateDayName(d)}
+            </label>
+        `).join("");
+
+    document.getElementById("copyDayModal")
+    .style.display = "flex";
+
+}
+
+
+function closeCopyDayModal(){
+
+    document.getElementById("copyDayModal")
+    .style.display = "none";
+
+}
+
+
+function copyDayToTargets(){
+
+    let checkboxes =
+        document.querySelectorAll(".copyDayTarget:checked");
+
+    if(checkboxes.length === 0){
+
+        showToast(t("pick_day_to_copy"), { type:"error" });
+        return;
+
+    }
+
+    checkboxes.forEach(checkbox=>{
+
+        let targetDay = checkbox.value;
+
+        if(!meals[targetDay]){
+            meals[targetDay] = [];
+        }
+
+        meals[copyDaySource].forEach(meal=>{
+            meals[targetDay].push({ ...meal, expanded:false });
+        });
+
+    });
+
+    saveData();
+
+    closeCopyDayModal();
+
+    render();
+
+}
+
+
+
+
+function saveData(){
+
+
+localStorage.setItem(
+
+"foodflowWeeks",
+
+JSON.stringify(weeks)
+
+);
+
+
+}
+
+
+
+
+
+
+
+
+function toggleTheme(){
+
+
+document.body.classList.toggle("dark");
+
+
+
+localStorage.setItem(
+
+"foodflowTheme",
+
+document.body.classList.contains("dark")
+
+);
+
+
+}
+
+
+
+
+
+function applyTheme(){
+
+    let mode = localStorage.getItem("foodflowTheme") || "auto";
+
+    let shouldBeDark;
+
+    if(mode === "auto"){
+        shouldBeDark = window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches;
+    }else{
+        shouldBeDark = mode === "dark";
+    }
+
+    document.body.classList.toggle("dark", shouldBeDark);
+
+}
+
+applyTheme();
+
+// If set to Auto, follow the system's light/dark setting live —
+// e.g. if the phone switches to dark mode at sunset.
+if(window.matchMedia){
+
+    window.matchMedia("(prefers-color-scheme: dark)")
+        .addEventListener("change", ()=>{
+
+            if((localStorage.getItem("foodflowTheme") || "auto") === "auto"){
+                applyTheme();
+            }
+
+        });
+
+}
+
+
+// =======================
+// SETTINGS SYSTEM
+// =======================
+
+
+// Settings menu: only one section open at a time
+document.addEventListener("toggle", function(e){
+    let el = e.target;
+    if(!el.classList || !el.classList.contains("settings-section") || !el.open) return;
+    document.querySelectorAll(".settings-section[open]").forEach(o => { if(o !== el) o.open = false; });
+}, true);
+
+function openSettings(){
+
+document.getElementById("settingsModal")
+.style.display="flex";
+
+renderCategoryOrderSettings();
+
+renderCustomIngredientTranslations();
+
+let roundToggle = document.getElementById("roundShoppingToggle");
+if(roundToggle) roundToggle.checked = shoppingRoundingOn();
+
+}
+
+
+
+function closeSettings(){
+
+document.getElementById("settingsModal")
+.style.display="none";
+
+}
+
+
+
+
+function setTheme(mode){
+
+    localStorage.setItem("foodflowTheme", mode);
+
+    applyTheme();
+
+}
+
+
+// =======================
+// LANGUAGE SYSTEM
+// =======================
+
+function changeLanguage(lang){
+
+currentLanguage = lang;
+
+localStorage.setItem(
+"foodflowLanguage",
+lang
+);
+
+applyTranslations();
+
+render();
+renderRecipes();
+renderShoppingList();
+updateWeekLabel();
+
+showToast(t("language_changed"));
+
+}
+
+
+// =======================
+// BACKUP (EXPORT / IMPORT)
+// =======================
+
+// Every localStorage key FoodFlow uses, gathered into one file so it
+// can be saved elsewhere or moved to a different device/browser.
+const foodflowStorageKeys = [
+    "foodflowWeeks",
+    "foodflowRecipes",
+    "foodflowTheme",
+    "foodflowLanguage",
+    "foodflowPage",
+    "foodflowCategories",
+    "foodflowShoppingCheckedByWeek",
+    "foodflowShoppingRemoved",
+    "foodflowShoppingOverridesByWeek",
+    "foodflowShoppingExtrasByWeek",
+    "foodflowShoppingRangeStart",
+    "foodflowShoppingRangeEnd",
+    "foodflowCategoryOrder",
+    "foodflowCustomIngredientTranslations",
+    "foodflowCustomIngredientCategories",
+    "foodflowDayNotes",
+    "foodflowWeekTemplates",
+    "foodflowWeekNames"
+];
+
+
+function exportData(){
+
+    let data = {};
+
+    foodflowStorageKeys.forEach(key=>{
+        data[key] = localStorage.getItem(key);
+    });
+
+    let blob = new Blob(
+        [JSON.stringify(data, null, 2)],
+        { type: "application/json" }
+    );
+
+    let url = URL.createObjectURL(blob);
+
+    let a = document.createElement("a");
+    a.href = url;
+    a.download =
+        "foodflow-backup-" +
+        new Date().toISOString().slice(0,10) +
+        ".json";
+
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    URL.revokeObjectURL(url);
+
+}
+
+
+function triggerImport(){
+
+    document.getElementById("importFileInput").click();
+
+}
+
+
+async function importData(event){
+
+    let file = event.target.files[0];
+
+    if(!file){
+        return;
+    }
+
+    let ok = await customConfirm(
+        t("import_backup_message"),
+        t("import_backup_title")
+    );
+
+    if(!ok){
+
+        event.target.value = "";
+        return;
+
+    }
+
+    let reader = new FileReader();
+
+    reader.onload = function(e){
+
+        try{
+
+            let data = JSON.parse(e.target.result);
+
+            foodflowStorageKeys.forEach(key=>{
+
+                if(data[key] !== null && data[key] !== undefined){
+                    localStorage.setItem(key, data[key]);
+                }
+
+            });
+
+            showToast(t("import_complete"));
+
+            setTimeout(() => location.reload(), 900);
+
+        }catch(err){
+
+            showToast(
+                "Couldn't read that file — make sure it's a " +
+                "FoodFlow backup .json file.",
+                { type:"error" }
+            );
+
+        }
+
+    };
+
+    reader.readAsText(file);
+
+    event.target.value = "";
+
+}
+
+
+function openCategoryManager(){
+
+document.getElementById("categoryModal")
+.style.display="flex";
+
+renderCategoryList();
+
+}
+
+
+function renderCategoryList(){
+
+    let container = document.getElementById("categoryListDisplay");
+
+    if(!container) return;
+
+    container.innerHTML = mealCategories.map((cat, index) => `
+
+        <div class="meal" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;">
+            <span>${cat}</span>
+            <button
+                class="delete"
+                style="margin:0;padding:6px 10px;font-size:13px;"
+                onclick="deleteCategory(${index})"
+            >
+                🗑
+            </button>
+        </div>
+
+    `).join("");
+
+}
+
+
+async function deleteCategory(index){
+
+    if(mealCategories.length <= 1){
+
+        showToast(t("need_one_category"), { type:"error" });
+        return;
+
+    }
+
+    let ok = await customConfirm(
+        t("delete_category_message"),
+        t("delete_category_title")
+    );
+
+    if(!ok){
+        return;
+    }
+
+    mealCategories.splice(index, 1);
+
+    localStorage.setItem(
+        "foodflowCategories",
+        JSON.stringify(mealCategories)
+    );
+
+    renderMealTypeOptions();
+    renderCategoryList();
+    render();
+
+}
+
+
+function selectEmoji(emoji){
+
+document.getElementById("categoryEmoji")
+.value = emoji;
+
+}
+
+
+function closeCategoryManager(){
+
+document.getElementById("categoryModal")
+.style.display="none";
+
+pendingCategorySelectId = null;
+
+}
+
+
+
+
+function saveCategory(){
+
+
+let name =
+document.getElementById("categoryName").value.trim();
+
+
+let emoji =
+document.getElementById("categoryEmoji").value.trim() || "🍽️";
+
+
+
+if(!name){
+
+showToast(t("enter_category_name"), { type:"error" });
+
+return;
+
+}
+
+
+let newCategory = emoji + " " + name;
+
+if(mealCategories.includes(newCategory)){
+
+    showToast(t("category_exists"), { type:"error" });
+    return;
+
+}
+
+mealCategories.push(newCategory);
+
+localStorage.setItem(
+    "foodflowCategories",
+    JSON.stringify(mealCategories)
+);
+
+renderMealTypeOptions();
+renderCategoryList();
+
+if(pendingCategorySelectId){
+
+    let targetSelect = document.getElementById(pendingCategorySelectId);
+
+    if(targetSelect){
+        targetSelect.value = newCategory;
+    }
+
+    pendingCategorySelectId = null;
+
+}
+
+
+document.getElementById("categoryName").value = "";
+document.getElementById("categoryEmoji").value = "";
+
+
+showToast(
+t("category_saved_prefix")
++
+newCategory
+);
+
+
+
+closeCategoryManager();
+
+
+}
+
+
+
+// =======================
+// RECIPES
+// =======================
+
+
+function openRecipeModal(){
+
+selectedRecipe = null;
+
+
+document.getElementById("recipeName")
+.value="";
+
+
+document.getElementById("recipePeople")
+.value=4;
+
+
+document.getElementById("recipeTags")
+.value="";
+
+
+document.getElementById("recipeInstructions")
+.value="";
+
+
+document.getElementById("ingredientList")
+.innerHTML="";
+
+addIngredientRow();
+
+
+document.querySelector("#recipeModal h2")
+.innerText = t("modal_add_recipe");
+
+
+document.getElementById("recipeModal")
+.style.display="flex";
+
+
+document.getElementById("recipeName")
+.focus();
+
+}
+
+
+
+function closeRecipeModal(){
+
+document.getElementById("recipeModal")
+.style.display="none";
+
+}
+
+
+
+function saveRecipe(){
+
+let recipe = {
+
+id: (selectedRecipe !== null && recipes[selectedRecipe] && recipes[selectedRecipe].id) ? recipes[selectedRecipe].id : newRecipeId(),
+
+name: document.getElementById("recipeName").value,
+
+servings: Number(
+document.getElementById("recipePeople").value
+),
+
+ingredients:
+getIngredientsFromRows(),
+
+tags: document.getElementById("recipeTags").value
+.split(",")
+.map(tag => tag.trim())
+.filter(tag => tag !== ""),
+
+instructions: document.getElementById("recipeInstructions").value.trim(),
+
+expanded:false,
+
+favorite:false
+
+};
+
+
+if(recipe.name===""){
+
+showToast(t("enter_recipe_name"), { type:"error" });
+
+return;
+
+}
+
+
+if(selectedRecipe === null){
+
+recipes.push(recipe);
+
+}else{
+
+recipes[selectedRecipe] = {
+
+...recipe,
+
+expanded:
+recipes[selectedRecipe].expanded,
+
+favorite:
+recipes[selectedRecipe].favorite
+
+};
+
+}
+
+
+localStorage.setItem(
+"foodflowRecipes",
+JSON.stringify(recipes)
+);
+
+
+selectedRecipe = null;
+
+
+renderRecipes();
+
+closeRecipeModal();
+
+}
+
+// Moved out of renderRecipes() so they are globally reachable
+// (they're called from openModal() and from the recipeSelect's
+// onchange handler, both of which run outside renderRecipes' scope).
+function selectRecipeForMeal(){
+
+let index =
+document.getElementById("recipeSelect").value;
+
+
+if(index === ""){
+
+document.getElementById("mealName").value="";
+
+return;
+
+}
+
+
+let recipe =
+recipes[index];
+
+
+document.getElementById("mealName")
+.value =
+recipe.name;
+
+
+document.getElementById("people")
+.value =
+recipe.servings;
+
+}
+
+function updateRecipeSelector(){
+
+searchRecipesForMeal();
+
+}
+
+function searchRecipesForMeal(){
+
+let search =
+document.getElementById("recipeSearch")
+.value
+.toLowerCase();
+
+
+let list =
+document.getElementById("mealRecipeList");
+
+
+list.innerHTML="";
+
+
+recipes.forEach((recipe,index)=>{
+
+
+if(
+recipe.name.toLowerCase()
+.includes(search)
+){
+
+
+let item =
+document.createElement("div");
+
+
+item.className = "meal";
+item.style.marginTop = "6px";
+item.style.padding = "10px";
+
+item.innerHTML = `
+
+<strong>
+${recipe.name}
+</strong>
+
+<br>
+
+<button onclick="viewMealRecipe(${index})">
+${t("btn_view_recipe")}
+</button>
+
+
+<button onclick="selectMealRecipe(${index})">
+${t("btn_select")}
+</button>
+
+`;
+
+
+list.appendChild(item);
+
+
+}
+
+
+});
+
+
+}
+
+
+
+function selectMealRecipe(index){
+
+let recipe =
+recipes[index];
+
+
+document.getElementById("recipeSelect")
+.value=index;
+
+
+document.getElementById("mealName")
+.value=recipe.name;
+
+
+document.getElementById("people")
+.value=recipe.servings;
+
+
+}
+
+
+// Holds the state for whichever recipe is currently open in the
+// read-only "View Recipe" popup, so the "Show original" / "Show
+// scaled" link can re-render without needing fresh arguments.
+let viewRecipeState = null;
+
+function viewMealRecipe(index, peopleOverride){
+
+let recipe = recipes[index];
+
+if(!recipe){
+    showToast(t("recipe_not_found"), { type:"error" });
+    return;
+}
+
+viewRecipeState = {
+    index: index,
+    peopleOverride: peopleOverride || null,
+    showingOriginal: false
+};
+
+renderViewRecipeContent();
+
+document.getElementById("viewRecipeModal")
+.style.display="flex";
+
+}
+
+function toggleViewRecipeScale(){
+
+if(!viewRecipeState) return;
+
+viewRecipeState.showingOriginal = !viewRecipeState.showingOriginal;
+
+renderViewRecipeContent();
+
+}
+
+function renderViewRecipeContent(){
+
+if(!viewRecipeState) return;
+
+let recipe = recipes[viewRecipeState.index];
+if(!recipe) return;
+
+// When opened from a specific planner meal, scale every ingredient
+// to that meal's people count instead of the recipe's original
+// servings — same math the shopping list uses — unless the person
+// has flipped to "show original" to compare against the base recipe.
+let servings = Number(recipe.servings) || 1;
+let canScale = !!viewRecipeState.peopleOverride;
+let useScaled = canScale && !viewRecipeState.showingOriginal;
+
+let people = useScaled
+    ? (Number(viewRecipeState.peopleOverride) || servings)
+    : servings;
+
+let factor = people / servings;
+let isScaled = useScaled && people !== servings;
+
+
+document.getElementById("viewRecipeTitle")
+.innerText = recipe.name;
+
+
+document.getElementById("viewRecipeContent")
+.innerHTML = `
+
+<div class="small">
+👥 ${people} ${t("servings_label")}
+${isScaled ? ` <span style="opacity:0.7;">(${t("recipe_scaled_note").replace("{servings}", servings)})</span>` : ""}
+</div>
+
+${
+canScale
+? `<button type="button" onclick="toggleViewRecipeScale()" style="margin-top:6px;">
+    ${viewRecipeState.showingOriginal ? t("show_scaled_recipe") : t("show_original_recipe")}
+   </button>`
+: ""
+}
+
+<hr>
+
+<strong>
+${t("ingredients_heading")}
+</strong>
+
+<ul>
+
+${
+recipe.ingredients.map(item=>`
+
+<li>
+${
+item.amount
+? formatAmount(Number(item.amount) * factor)
+: ""
+}
+${item.unit || ""}
+${item.name}
+</li>
+
+`).join("")
+
+}
+
+</ul>
+
+${
+recipe.instructions
+? `<hr>
+<strong>${t("recipe_instructions_label_short")}</strong>
+<div style="white-space:pre-wrap; margin-top:6px;">${escapeHtml(recipe.instructions)}</div>`
+: ""
+}
+
+`;
+
+}
+
+
+// Minimal HTML escaping for free-text fields like recipe instructions,
+// which are far more likely than a short name to contain a stray
+// "<" or "&" (oven temps, "if <5 min left", etc).
+function escapeHtml(text){
+
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+}
+
+// "Edit" inside the recipe popup opened from the planner: jump straight into the recipe editor
+function editRecipeFromView(){
+
+if(!viewRecipeState) return;
+
+let idx = viewRecipeState.index;
+
+if(!recipes[idx]) return;
+
+closeViewRecipe();
+editRecipe(idx);
+
+}
+
+function closeViewRecipe(){
+
+document.getElementById("viewRecipeModal")
+.style.display="none";
+
+}    
+  
+
+function ingredientsCountText(n){
+    return n === 1 ? t("ingredient_one") : t("ingredients_count").replace("{n}", n);
+}
+
+function renderRecipes(){
+
+const list =
+document.getElementById("recipeList");
+
+list.innerHTML = "";
+
+let searchBox =
+document.getElementById("recipeSearchPage");
+
+let search =
+searchBox
+? searchBox.value.toLowerCase()
+: "";
+
+let allTags = Array.from(new Set(
+    recipes.flatMap(r => r.tags || [])
+)).sort();
+
+let tagBar = document.getElementById("recipeTagFilterBar");
+
+if(allTags.length === 0){
+
+    tagBar.style.display = "none";
+    tagBar.innerHTML = "";
+
+}else{
+
+    tagBar.style.display = "flex";
+
+    tagBar.innerHTML = allTags.map(tag => `
+        <button
+            onclick="toggleRecipeTagFilter('${tag.replace(/'/g,"\\'")}')"
+            style="
+                padding:4px 10px;
+                border-radius:999px;
+                font-size:0.85em;
+                background:${activeRecipeTagFilter === tag ? "var(--primary)" : "var(--card)"};
+                color:${activeRecipeTagFilter === tag ? "#fff" : "inherit"};
+                border:1px solid var(--primary);
+            "
+        >${tag}</button>
+    `).join("");
+
+}
+
+let sortSelect = document.getElementById("recipeSortSelect");
+if(sortSelect) sortSelect.value = recipeSortMode;
+
+let filteredRecipes = recipes
+    .map((recipe, index) => ({ recipe, index }))
+    .filter(({recipe}) => recipe.name.toLowerCase().includes(search))
+    .filter(({recipe}) => !activeRecipeTagFilter || (recipe.tags || []).includes(activeRecipeTagFilter))
+    .sort((a, b) => {
+
+        // Favorites are always pinned to the top, regardless of sort mode.
+        let favDiff = (b.recipe.favorite ? 1 : 0) - (a.recipe.favorite ? 1 : 0);
+        if(favDiff !== 0) return favDiff;
+
+        if(recipeSortMode === "alpha"){
+            return a.recipe.name.toLowerCase().localeCompare(b.recipe.name.toLowerCase());
+        }
+
+        // "recent": keep insertion order (Array#sort is stable)
+        return 0;
+
+    });
+
+if(filteredRecipes.length === 0){
+
+    let emptyMsg = document.createElement("p");
+    emptyMsg.className = "small";
+    emptyMsg.style.textAlign = "center";
+    emptyMsg.style.opacity = "0.7";
+
+    emptyMsg.innerText = recipes.length === 0
+        ? t("recipes_empty")
+        : `${t("recipes_no_match")} "${search}"`;
+
+    list.appendChild(emptyMsg);
+
+    return;
+
+}
+
+if(recipeSortMode === "tag"){
+
+    let groups = {};
+    let untaggedLabel = t("recipe_group_untagged");
+
+    filteredRecipes.forEach(item=>{
+
+        let groupName = (item.recipe.tags && item.recipe.tags.length > 0)
+            ? item.recipe.tags[0]
+            : untaggedLabel;
+
+        if(!groups[groupName]) groups[groupName] = [];
+
+        groups[groupName].push(item);
+
+    });
+
+    let groupNames = Object.keys(groups).sort((a, b)=>{
+
+        if(a === untaggedLabel) return 1;
+        if(b === untaggedLabel) return -1;
+
+        return a.toLowerCase().localeCompare(b.toLowerCase());
+
+    });
+
+    groupNames.forEach(groupName=>{
+
+        let heading = document.createElement("h3");
+        heading.textContent = groupName;
+        heading.style.marginTop = "18px";
+        heading.style.marginBottom = "4px";
+        heading.style.gridColumn = "1 / -1";
+
+        list.appendChild(heading);
+
+        groups[groupName].forEach(({recipe, index})=>{
+            list.appendChild(buildRecipeCard(recipe, index));
+        });
+
+    });
+
+}else{
+
+    filteredRecipes.forEach(({recipe, index})=>{
+        list.appendChild(buildRecipeCard(recipe, index));
+    });
+
+}
+
+}
+
+
+function buildRecipeCard(recipe, index){
+
+let card =
+document.createElement("div");
+
+
+card.className="meal";
+
+
+card.innerHTML = `
+
+<h3 class="meal-name-clamp">
+
+${recipe.favorite ? "⭐ " : ""}
+
+${recipe.name}
+
+</h3>
+
+${
+    (recipe.tags && recipe.tags.length > 0)
+    ? `<div style="display:flex; flex-wrap:wrap; gap:4px; margin:6px 0 4px;">` + recipe.tags.map(tag => `
+        <span style="
+            padding:2px 8px;
+            border-radius:999px;
+            font-size:0.75em;
+            background:var(--bg);
+            border:1px solid var(--primary);
+            opacity:0.85;
+        ">${tag}</span>
+    `).join("") + `</div>`
+    : ""
+    }
+
+<div class="small" style="margin-top:6px;">
+👥 ${t("servings_count").replace("{n}", recipe.servings)} &nbsp;·&nbsp; 🥕 ${ingredientsCountText(recipe.ingredients.length)}
+</div>
+
+`;
+
+// The whole card opens the recipe (no separate View button)
+card.setAttribute("data-open", "1");
+card.setAttribute("role", "button");
+card.setAttribute("tabindex", "0");
+card.addEventListener("click", (e)=>{
+    if(e.target.closest("button")) return;
+    openRecipeDetail(index);
+});
+card.addEventListener("keydown", (e)=>{
+    if(e.key === "Enter" || e.key === " "){
+        e.preventDefault();
+        openRecipeDetail(index);
+    }
+});
+
+return card;
+
+
+}
+
+
+let recipeDetailIndex = null;
+
+function openRecipeDetail(index){
+
+let recipe = recipes[index];
+
+if(!recipe){
+    showToast(t("recipe_not_found"), { type:"error" });
+    return;
+}
+
+recipeDetailIndex = index;
+
+document.getElementById("recipeDetailTitle").innerText =
+    (recipe.favorite ? "⭐ " : "") + recipe.name;
+
+document.getElementById("recipeDetailTags").innerHTML =
+    (recipe.tags && recipe.tags.length > 0)
+    ? `<div style="display:flex; flex-wrap:wrap; gap:4px; margin:4px 0 10px;">
+        ${recipe.tags.map(tag => `
+            <span style="
+                padding:2px 8px;
+                border-radius:999px;
+                font-size:0.75em;
+                background:var(--bg);
+                border:1px solid var(--primary);
+                opacity:0.85;
+            ">${tag}</span>
+        `).join("")}
+       </div>`
+    : "";
+
+document.getElementById("recipeDetailContent").innerHTML = `
+
+<div class="small">
+👥 ${t("servings_count").replace("{n}", recipe.servings)}
+</div>
+
+<div class="small">
+🥕 ${ingredientsCountText(recipe.ingredients.length)}
+</div>
+
+<hr>
+
+<strong>
+${t("ingredients_heading")}
+</strong>
+
+<ul>
+
+${recipe.ingredients.map(item=>`
+
+<li>${
+    typeof item === "string"
+    ? item
+    : `${item.amount || ""} ${item.unit || ""} ${item.name}`.trim()
+}</li>
+
+`).join("")}
+
+</ul>
+
+${
+recipe.instructions
+? `<hr>
+<strong>${t("recipe_instructions_label_short")}</strong>
+<div style="white-space:pre-wrap; margin-top:6px;">${escapeHtml(recipe.instructions)}</div>`
+: ""
+}
+
+`;
+
+document.getElementById("recipeDetailFavoriteBtn").innerText =
+    recipe.favorite ? t("fav_remove") : t("fav_add");
+
+document.getElementById("recipeDetailModal").style.display = "flex";
+
+}
+
+function closeRecipeDetail(){
+
+document.getElementById("recipeDetailModal").style.display = "none";
+
+recipeDetailIndex = null;
+
+}
+
+function toggleFavoriteFromDetail(){
+
+if(recipeDetailIndex === null) return;
+
+toggleFavorite(recipeDetailIndex);
+openRecipeDetail(recipeDetailIndex);
+
+}
+
+function editRecipeFromDetail(){
+
+if(recipeDetailIndex === null) return;
+
+let idx = recipeDetailIndex;
+closeRecipeDetail();
+editRecipe(idx);
+
+}
+
+function duplicateRecipeFromDetail(){
+
+if(recipeDetailIndex === null) return;
+
+let idx = recipeDetailIndex;
+closeRecipeDetail();
+duplicateRecipe(idx);
+
+}
+
+function openPlannerRecipeFromDetail(){
+
+if(recipeDetailIndex === null) return;
+
+let idx = recipeDetailIndex;
+closeRecipeDetail();
+openPlannerRecipe(idx);
+
+}
+
+function deleteRecipeFromDetail(){
+
+if(recipeDetailIndex === null) return;
+
+let idx = recipeDetailIndex;
+closeRecipeDetail();
+deleteRecipe(idx);
+
+}
+
+
+function toggleRecipeTagFilter(tag){
+
+activeRecipeTagFilter =
+(activeRecipeTagFilter === tag) ? null : tag;
+
+renderRecipes();
+
+}
+
+
+function duplicateRecipe(index){
+
+let original = recipes[index];
+
+let copy = {
+    ...original,
+    id: newRecipeId(),
+    name: `${original.name} (copy)`,
+    favorite: false,
+    expanded: false
+};
+
+recipes.splice(index + 1, 0, copy);
+
+localStorage.setItem(
+    "foodflowRecipes",
+    JSON.stringify(recipes)
+);
+
+renderRecipes();
+
+showToast(`${t("toast_duplicated_prefix")} "${original.name}"`);
+
+}
+
+
+function deleteRecipe(index){
+
+let removedRecipe = recipes[index];
+
+recipes.splice(index,1);
+
+localStorage.setItem(
+"foodflowRecipes",
+JSON.stringify(recipes)
+);
+
+renderRecipes();
+
+showToast(`${t("toast_removed")} "${removedRecipe.name}"`, {
+    actionLabel: t("undo"),
+    onAction: () => {
+
+        recipes.push(removedRecipe);
+
+        localStorage.setItem(
+            "foodflowRecipes",
+            JSON.stringify(recipes)
+        );
+
+        renderRecipes();
+
+    }
+});
+
+}
+
+function editRecipe(index){
+
+let recipe = recipes[index];
+
+
+selectedRecipe = index;
+
+
+document.getElementById("recipeName")
+.value = recipe.name;
+
+
+document.getElementById("recipePeople")
+.value = recipe.servings;
+
+
+document.getElementById("recipeTags")
+.value = (recipe.tags || []).join(", ");
+
+
+document.getElementById("recipeInstructions")
+.value = recipe.instructions || "";
+
+
+document.getElementById("ingredientList")
+.innerHTML="";
+
+recipe.ingredients.forEach(ingredient=>{
+
+    if(typeof ingredient === "string"){
+
+        addIngredientRow(ingredient, "", "");
+
+    }else{
+
+        addIngredientRow(
+            ingredient.name,
+            ingredient.amount,
+            ingredient.unit
+        );
+
+    }
+
+});
+
+if(recipe.ingredients.length === 0){
+
+    addIngredientRow();
+
+}
+
+
+document.querySelector("#recipeModal h2")
+.innerText = t("modal_edit_recipe");
+
+
+document.getElementById("recipeModal")
+.style.display="flex";
+
+}   
+
+function openPlannerRecipe(index){
+
+plannerRecipeIndex = index;
+
+
+document.getElementById("plannerRecipePeople")
+.value =
+recipes[index].servings;
+
+document.getElementById("plannerRecipeModal")
+.style.display="flex";
+
+}   
+
+function closePlannerRecipeModal(){
+
+document.getElementById("plannerRecipeModal")
+.style.display="none";
+
+}    
+
+function addRecipeToPlanner(){
+
+let recipe =
+recipes[plannerRecipeIndex];
+
+
+let day =
+document.getElementById("plannerRecipeDay")
+.value;
+
+
+let type =
+document.getElementById("plannerRecipeType")
+.value;
+
+
+let people =
+document.getElementById("plannerRecipePeople")
+.value;
+
+
+
+if(!meals[day]){
+
+meals[day]=[];
+
+}
+
+
+
+meals[day].push({
+
+type:type,
+
+name:recipe.name,
+
+people:people,
+
+recipe:recipeIdAt(plannerRecipeIndex)
+
+});
+
+
+saveData();
+
+
+render();
+
+
+closePlannerRecipeModal();
+
+}    
+
+function toggleRecipe(index){
+
+recipes[index].expanded =
+!recipes[index].expanded;
+
+localStorage.setItem(
+"foodflowRecipes",
+JSON.stringify(recipes)
+);
+
+renderRecipes();
+
+} 
+
+function toggleFavorite(index){
+
+recipes[index].favorite =
+!recipes[index].favorite;
+
+
+localStorage.setItem(
+"foodflowRecipes",
+JSON.stringify(recipes)
+);
+
+
+renderRecipes();
+
+}    
+
+
+// =======================
+// INGREDIENT ROWS
+// =======================
+
+
+function addIngredientRow(name="", amount="", unit=""){
+
+    const list =
+    document.getElementById("ingredientList");
+
+    const row =
+    document.createElement("div");
+
+    row.style.display="flex";
+    row.style.gap="8px";
+    row.style.marginBottom="8px";
+
+    row.innerHTML = `
+        <input
+            class="ingredientName"
+            placeholder="${t("ph_ingredient")}"
+            value="${name}"
+            style="flex:2;"
+        >
+
+        <input
+            class="ingredientAmount"
+            type="number"
+            placeholder="${t("ph_amount")}"
+            value="${amount}"
+            style="width:80px;"
+        >
+
+        <input
+            class="ingredientUnit"
+            placeholder="${t("ph_unit")}"
+            value="${unit}"
+            style="width:70px;"
+        >
+
+        <button
+            type="button"
+            class="delete"
+            title="${t("remove_ingredient")}"
+            onclick="this.parentElement.remove()"
+            style="flex-shrink:0;padding:8px 12px;margin:0;"
+        >
+            🗑
+        </button>
+    `;
+
+    list.appendChild(row);
+
+}
+
+
+function getIngredientsFromRows(){
+
+    const names =
+    document.querySelectorAll("#ingredientList .ingredientName");
+
+    const amounts =
+    document.querySelectorAll("#ingredientList .ingredientAmount");
+
+    const units =
+    document.querySelectorAll("#ingredientList .ingredientUnit");
+
+    let ingredients = [];
+
+    names.forEach((nameInput,index)=>{
+
+        let name = nameInput.value.trim();
+
+        if(name === ""){
+            return;
+        }
+
+        ingredients.push({
+            name: name,
+            amount: amounts[index].value,
+            unit: units[index].value
+        });
+
+    });
+
+    return ingredients;
+
+}
+
+function openMealRecipe(index){
+
+let recipe = recipes[index];
+
+
+if(!recipe){
+
+showToast(t("recipe_not_found"), { type:"error" });
+
+return;
+
+}
+
+
+selectedRecipe = index;
+
+
+editRecipe(index);
+
+
+}    
+
+// =======================
+// SHOPPING LIST
+// =======================
+
+// Maps Swedish and English spellings of common ingredients to one
+// shared canonical name, so "lök" and "onion" are recognized as the
+// same thing when combining the shopping list — no manual editing needed.
+const ingredientTranslations = {
+
+    // vegetables
+    "lök":"onion", "gul lök":"onion", "onion":"onion", "onions":"onion",
+    "rödlök":"red onion", "röd lök":"red onion", "red onion":"red onion",
+    "vitlök":"garlic", "vitlöksklyfta":"garlic", "vitlöksklyftor":"garlic", "garlic":"garlic",
+    "morot":"carrot", "morötter":"carrot", "carrot":"carrot", "carrots":"carrot",
+    "potatis":"potato", "potatisar":"potato", "potato":"potato", "potatoes":"potato",
+    "tomat":"tomato", "tomater":"tomato", "tomato":"tomato", "tomatoes":"tomato",
+    "paprika":"bell pepper", "paprikor":"bell pepper", "bell pepper":"bell pepper", "bell peppers":"bell pepper",
+    "purjolök":"leek", "leek":"leek",
+    "selleri":"celery", "celery":"celery",
+    "svamp":"mushroom", "champinjoner":"mushroom", "champinjon":"mushroom", "mushroom":"mushroom", "mushrooms":"mushroom",
+    "broccoli":"broccoli",
+    "blomkål":"cauliflower", "cauliflower":"cauliflower",
+    "sallad":"lettuce", "lettuce":"lettuce",
+    "gurka":"cucumber", "cucumber":"cucumber",
+    "citron":"lemon", "lemon":"lemon",
+    "lime":"lime",
+    "äpple":"apple", "äpplen":"apple", "apple":"apple", "apples":"apple",
+    "banan":"banana", "bananer":"banana", "banana":"banana", "bananas":"banana",
+    "kantareller":"chanterelle mushroom", "kantarell":"chanterelle mushroom",
+    "chanterelle":"chanterelle mushroom", "chanterelles":"chanterelle mushroom",
+    "schalottenlök":"shallot", "schalottenlökar":"shallot",
+    "bananschalottenlök":"shallot", "bananschalottenlökar":"shallot",
+    "shallot":"shallot", "shallots":"shallot",
+    "lökar":"onion",
+    "haricot verts":"green beans", "haricots verts":"green beans",
+    "gröna bönor":"green beans", "green beans":"green beans", "green bean":"green beans",
+    "isbergssallad":"lettuce",
+    "ärtor":"peas", "ärter":"peas", "peas":"peas", "pea":"peas",
+    "grönsaker":"vegetables", "vegetables":"vegetables", "vegetable":"vegetables",
+    "majs":"corn", "corn":"corn", "maize":"corn",
+    "kikärtor":"chickpeas", "kikärter":"chickpeas",
+    "chickpeas":"chickpeas", "chickpea":"chickpeas", "garbanzo beans":"chickpeas",
+    "bönor":"beans", "böna":"beans", "beans":"beans", "bean":"beans",
+    "rödbetssallad":"beet salad", "beet salad":"beet salad",
+    "wokmix":"wok mix", "wok mix":"wok mix",
+
+    // dairy & eggs
+    "mjölk":"milk", "milk":"milk",
+    "grädde":"cream", "vispgrädde":"cream", "cream":"cream",
+    "smör":"butter", "butter":"butter",
+    "ägg":"egg", "egg":"egg", "eggs":"egg",
+    "ost":"cheese", "cheese":"cheese",
+    "parmesan":"parmesan", "riven parmesan":"parmesan",
+    "yoghurt":"yogurt", "yogurt":"yogurt",
+    "crème fraiche":"creme fraiche", "creme fraiche":"creme fraiche", "crème fraîche":"creme fraiche",
+    "kokosmjölk":"coconut milk", "coconut milk":"coconut milk",
+
+    // meat & fish
+    "nötfärs":"ground beef", "ground beef":"ground beef",
+    "minced meat":"ground beef", "minced beef":"ground beef", "ground meat":"ground beef",
+    "hushållsfärs":"ground beef", "husfärs":"ground beef", "blandfärs":"ground beef",
+    "fläskfärs":"ground pork", "ground pork":"ground pork",
+    "kycklingfilé":"chicken breast", "kycklingfileer":"chicken breast", "chicken breast":"chicken breast", "chicken breasts":"chicken breast",
+    "kyckling":"chicken", "chicken":"chicken",
+    "fläskkotlett":"pork chop", "fläskkotletter":"pork chop", "pork chop":"pork chop", "pork chops":"pork chop",
+    "bacon":"bacon",
+    "lax":"salmon", "salmon":"salmon",
+    "torsk":"cod", "cod":"cod",
+    "räkor":"shrimp", "räka":"shrimp", "shrimp":"shrimp",
+    "falukorv":"falukorv",
+    "fiskfilé":"fish fillet", "fiskfile":"fish fillet",
+    "fish fillet":"fish fillet", "fish fillets":"fish fillet",
+    "fiskpinnar":"fish sticks", "fish sticks":"fish sticks", "fish fingers":"fish sticks",
+    "köttbullar":"meatballs", "meatballs":"meatballs", "meatball":"meatballs",
+    "kycklingfile":"chicken breast",
+    "rökt kalkon":"smoked turkey", "smoked turkey":"smoked turkey",
+    "kalkon":"turkey", "turkey":"turkey",
+
+    // pantry
+    "mjöl":"flour", "vetemjöl":"flour", "flour":"flour",
+    "socker":"sugar", "sugar":"sugar",
+    "salt":"salt",
+    "peppar":"pepper", "pepper":"pepper",
+    "svartpeppar":"pepper", "vitpeppar":"pepper",
+    "black pepper":"pepper", "white pepper":"pepper",
+    "ris":"rice", "rice":"rice",
+    "pasta":"pasta",
+    "spaghetti":"spaghetti",
+    "nudlar":"noodles", "noodles":"noodles",
+    "buljong":"broth", "buljongtärning":"broth", "buljongtärningar":"broth", "broth":"broth", "stock":"broth",
+    "kycklingbuljong":"chicken broth", "kycklingbuljongtärning":"chicken broth", "kycklingbuljongtärningar":"chicken broth",
+    "chicken broth":"chicken broth", "chicken stock":"chicken broth", "chicken bouillon":"chicken broth",
+    "nötbuljong":"beef broth", "köttbuljong":"beef broth", "köttbuljongtärning":"beef broth",
+    "beef broth":"beef broth", "beef stock":"beef broth", "beef bouillon":"beef broth",
+    "grönsaksbuljong":"vegetable broth", "grönsaksbuljongtärning":"vegetable broth",
+    "vegetable broth":"vegetable broth", "vegetable stock":"vegetable broth",
+    "olja":"oil", "matolja":"oil", "oil":"oil", "cooking oil":"oil",
+    "olivolja":"olive oil", "olive oil":"olive oil",
+    "vinäger":"vinegar", "vinegar":"vinegar",
+    "senap":"mustard", "mustard":"mustard",
+    "ketchup":"ketchup",
+    "majonnäs":"mayonnaise", "mayonnaise":"mayonnaise", "mayo":"mayonnaise",
+    "ströbröd":"breadcrumbs", "breadcrumbs":"breadcrumbs",
+    "bröd":"bread", "bread":"bread",
+    "soja":"soy sauce", "kinesisk soja":"soy sauce", "japansk soja":"soy sauce",
+    "soy sauce":"soy sauce", "soya sauce":"soy sauce",
+    "vatten":"water", "water":"water",
+    "vitt vin":"white wine", "white wine":"white wine",
+    "vitt matlagningsvin":"white wine", "matlagningsvin":"white wine",
+    "äggnudlar":"egg noodles", "egg noodles":"egg noodles", "egg noodle":"egg noodles",
+    "couscous":"couscous",
+    "fiskbuljong":"fish broth", "fiskbuljongtärning":"fish broth", "fiskbuljongtärningar":"fish broth",
+    "fish broth":"fish broth", "fish stock":"fish broth", "fish bouillon":"fish broth",
+    "maizena":"corn starch", "majsstärkelse":"corn starch",
+    "corn starch":"corn starch", "cornstarch":"corn starch",
+    "sambal oelek":"sambal oelek",
+    "snabbmakaroner":"macaroni", "makaroner":"macaroni", "macaroni":"macaroni",
+    "sriracha":"sriracha",
+    "sweet chili sås":"sweet chili sauce", "söt chilisås":"sweet chili sauce",
+    "sweet chili sauce":"sweet chili sauce",
+    "tomatpuré":"tomato puree", "tomatpure":"tomato puree",
+    "tomato puree":"tomato puree", "tomato paste":"tomato puree",
+    "lasagneplattor":"lasagna sheets", "lasagna sheets":"lasagna sheets", "lasagne sheets":"lasagna sheets",
+    "linser":"lentils", "lins":"lentils", "lentils":"lentils", "lentil":"lentils",
+
+    // herbs & spices
+    "persilja":"parsley", "parsley":"parsley",
+    "basilika":"basil", "basil":"basil",
+    "timjan":"thyme", "thyme":"thyme",
+    "oregano":"oregano",
+    "curry":"curry powder",
+    "kanel":"cinnamon", "cinnamon":"cinnamon",
+    "vanilj":"vanilla", "vanilla":"vanilla",
+    "dill":"dill",
+    "rosmarin":"rosemary", "rosemary":"rosemary",
+    "citronjuice":"lemon juice", "citron juice":"lemon juice", "lemon juice":"lemon juice",
+    "citronpeppar":"lemon pepper", "lemon pepper":"lemon pepper",
+    "allroundkrydda":"all-purpose seasoning",
+    "curry pulver":"curry powder", "currypulver":"curry powder", "curry powder":"curry powder",
+    "lökpulver":"onion powder", "onion powder":"onion powder",
+    "garlic powder":"garlic powder", "vitlökspulver":"garlic powder",
+    "cumin":"cumin", "spiskummin":"cumin",
+    "bay leaf":"bay leaves", "bay leaves":"bay leaves", "lagerblad":"bay leaves",
+    "chilisås":"chili sauce", "chili sauce":"chili sauce",
+    "taco spices":"taco seasoning", "tacokrydda":"taco seasoning", "taco seasoning":"taco seasoning",
+    "tacosås":"taco sauce", "taco sauce":"taco sauce",
+
+    // more vegetables
+    "cucumbers":"cucumber",
+    "isbergsallad":"lettuce",
+    "red cabbage":"red cabbage", "rödkål":"red cabbage",
+    "vitkål":"white cabbage", "white cabbage":"white cabbage",
+    "rucola":"arugula", "arugula":"arugula",
+    "pumpa":"pumpkin", "pumpkin":"pumpkin",
+    "beetroot":"beetroot", "beets":"beetroot", "beet":"beetroot", "rödbeta":"beetroot", "rödbetor":"beetroot",
+    "olives":"olives", "oliver":"olives", "olive":"olives",
+    "mais":"corn", "sweetcorn":"corn", "sweet corn":"corn",
+    "kidneybönor":"kidney beans", "kidney beans":"kidney beans", "kidney bean":"kidney beans",
+    "vita bönor":"white beans", "vita bönor i tomatsås":"white beans in tomato sauce", "white beans":"white beans",
+    "limes":"lime", "limejuice":"lime juice", "lime juice":"lime juice",
+
+    // more meat, fish & ready-made
+    "ham":"ham", "skinka":"ham",
+    "salami":"salami",
+    "kebab":"kebab",
+    "kebabsauce":"kebab sauce", "kebabsås":"kebab sauce", "kebab sauce":"kebab sauce",
+    "köttfärs":"ground beef",
+    "tuna":"tuna", "tonfisk":"tuna",
+    "breaded fish":"breaded fish", "panerad fisk":"breaded fish",
+    "falafel":"falafel",
+    "hummus":"hummus",
+    "guacamole":"guacamole",
+    "pesto":"pesto",
+    "pyttipanna":"pyttipanna",
+
+    // more dairy & bread
+    "mozzarella":"mozzarella",
+    "fetaost":"feta cheese", "feta cheese":"feta cheese", "feta":"feta cheese",
+    "mayonaise":"mayonnaise",
+    "pitabröd":"pita bread", "pita bread":"pita bread", "pitabread":"pita bread",
+    "tortillas":"tortilla", "tortilla":"tortilla",
+    "tortilla chips":"tortilla chips", "tortillachips":"tortilla chips",
+
+    // more pantry & sauces
+    "garlic clove":"garlic", "garlic cloves":"garlic",
+    "köttbuljongtärningar":"beef broth",
+    "grönsaksfond":"vegetable stock concentrate",
+    "oxfond":"beef stock concentrate", "oxfond med rödvin":"beef stock concentrate with red wine",
+    "rapsolja":"canola oil", "canola oil":"canola oil",
+    "balsamvinäger":"balsamic vinegar", "balsamic vinegar":"balsamic vinegar",
+    "vitvinäger":"white wine vinegar", "white wine vinegar":"white wine vinegar",
+    "worcestershire sauce":"worcestershire sauce", "worcestersås":"worcestershire sauce",
+    "soya":"soy sauce",
+    "farinsocker":"brown sugar", "brown sugar":"brown sugar",
+    "strösocker":"caster sugar", "caster sugar":"caster sugar",
+    "strödlök":"crispy fried onion", "strölök":"crispy fried onion",
+    "bulgur":"bulgur",
+    "mash potato powder":"instant mashed potato", "mashed potato powder":"instant mashed potato", "potatismospulver":"instant mashed potato",
+    "brunsås":"brown gravy", "powder brunsås":"brown gravy mix", "brunsås pulver":"brown gravy mix", "gravy mix":"brown gravy mix",
+    "lingonsylt":"lingonberry jam", "lignonsylt":"lingonberry jam", "lingonberry jam":"lingonberry jam",
+    "frozen peppers":"frozen bell peppers", "frysta paprikor":"frozen bell peppers",
+    "zucchini":"zucchini", "courgette":"zucchini",
+    "cabbage":"cabbage", "kål":"cabbage",
+    "ham package":"ham", "salami package":"salami",
+    "mos pulver":"instant mashed potato", "pulvermos":"instant mashed potato",
+    "potatismos":"instant mashed potato"
+
+};
+
+// Descriptive words stripped only for matching purposes (so "gul lök"
+// and "yellow onion" both reduce down to "lök" / "onion" before lookup).
+const ingredientStopwords = [
+    "gul","gult","gula","röd","rött","röda","vit","vitt","vita",
+    "grön","grönt","gröna","färsk","färskt","färska","torkad","torkat","torkade",
+    "stor","stort","stora","liten","litet","små","hel","helt","hela",
+    "riven","rivet","rivna","hackad","hackat","hackade",
+    "frysta","fryst","fruset","frusna",
+    "fresh","dried","yellow","red","white","green","large","small","whole","big","little",
+    "grated","shredded","chopped","diced","minced","frozen"
+];
+
+// Every canonical value used above, so we know when to show a
+// translated display name vs. keep the ingredient's original spelling.
+const canonicalIngredientNames =
+    new Set(Object.values(ingredientTranslations));
+
+
+// Which store-aisle-style section each canonical ingredient belongs
+// to, used to group the shopping list. Anything not listed here
+// falls into "Other".
+const ingredientCategories = {
+
+    "onion":"Produce", "red onion":"Produce", "garlic":"Produce",
+    "carrot":"Produce", "potato":"Produce", "tomato":"Produce",
+    "bell pepper":"Produce", "leek":"Produce", "celery":"Produce",
+    "mushroom":"Produce", "chanterelle mushroom":"Produce", "shallot":"Produce",
+    "broccoli":"Produce", "cauliflower":"Produce", "lettuce":"Produce",
+    "cucumber":"Produce", "lemon":"Produce", "lime":"Produce",
+    "apple":"Produce", "banana":"Produce", "parsley":"Produce",
+    "basil":"Produce", "green beans":"Produce", "peas":"Produce",
+    "vegetables":"Produce", "corn":"Produce", "chickpeas":"Produce",
+    "beans":"Produce", "beet salad":"Produce", "wok mix":"Produce",
+    "red cabbage":"Produce", "white cabbage":"Produce", "arugula":"Produce",
+    "pumpkin":"Produce", "beetroot":"Produce", "kidney beans":"Produce",
+    "white beans":"Produce", "frozen bell peppers":"Produce",
+    "zucchini":"Produce", "cabbage":"Produce", "olives":"Pantry",
+
+    "milk":"Dairy & Eggs", "cream":"Dairy & Eggs", "butter":"Dairy & Eggs",
+    "egg":"Dairy & Eggs", "cheese":"Dairy & Eggs", "yogurt":"Dairy & Eggs",
+    "creme fraiche":"Dairy & Eggs", "parmesan":"Dairy & Eggs",
+    "coconut milk":"Dairy & Eggs", "mozzarella":"Dairy & Eggs",
+    "feta cheese":"Dairy & Eggs", "hummus":"Dairy & Eggs", "guacamole":"Dairy & Eggs",
+
+    "ground beef":"Meat & Fish", "ground pork":"Meat & Fish",
+    "chicken breast":"Meat & Fish", "chicken":"Meat & Fish",
+    "pork chop":"Meat & Fish", "bacon":"Meat & Fish",
+    "salmon":"Meat & Fish", "cod":"Meat & Fish", "shrimp":"Meat & Fish",
+    "falukorv":"Meat & Fish", "fish fillet":"Meat & Fish", "fish sticks":"Meat & Fish",
+    "meatballs":"Meat & Fish", "smoked turkey":"Meat & Fish", "turkey":"Meat & Fish",
+    "ham":"Meat & Fish", "salami":"Meat & Fish", "kebab":"Meat & Fish",
+    "tuna":"Meat & Fish", "breaded fish":"Meat & Fish", "falafel":"Meat & Fish",
+    "pyttipanna":"Meat & Fish",
+
+    "flour":"Pantry", "sugar":"Pantry", "salt":"Pantry", "pepper":"Pantry",
+    "rice":"Pantry", "pasta":"Pantry", "spaghetti":"Pantry", "noodles":"Pantry",
+    "broth":"Pantry", "chicken broth":"Pantry", "beef broth":"Pantry", "vegetable broth":"Pantry",
+    "oil":"Pantry", "olive oil":"Pantry", "vinegar":"Pantry", "soy sauce":"Pantry", "water":"Pantry",
+    "mustard":"Pantry", "ketchup":"Pantry", "mayonnaise":"Pantry",
+    "breadcrumbs":"Pantry", "bread":"Pantry", "white wine":"Pantry",
+    "egg noodles":"Pantry", "couscous":"Pantry", "fish broth":"Pantry",
+    "corn starch":"Pantry", "sambal oelek":"Pantry", "macaroni":"Pantry",
+    "sriracha":"Pantry", "sweet chili sauce":"Pantry", "tomato puree":"Pantry",
+    "lasagna sheets":"Pantry", "lentils":"Pantry",
+    "chili sauce":"Pantry", "taco sauce":"Pantry", "kebab sauce":"Pantry",
+    "white beans in tomato sauce":"Pantry", "lime juice":"Pantry",
+    "pesto":"Pantry", "pita bread":"Pantry", "tortilla":"Pantry", "tortilla chips":"Pantry",
+    "vegetable stock concentrate":"Pantry", "beef stock concentrate":"Pantry",
+    "beef stock concentrate with red wine":"Pantry",
+    "canola oil":"Pantry", "balsamic vinegar":"Pantry", "white wine vinegar":"Pantry",
+    "worcestershire sauce":"Pantry", "brown sugar":"Pantry", "caster sugar":"Pantry",
+    "crispy fried onion":"Pantry", "bulgur":"Pantry", "instant mashed potato":"Pantry",
+    "brown gravy":"Pantry", "brown gravy mix":"Pantry", "lingonberry jam":"Pantry",
+
+    "thyme":"Herbs & Spices", "oregano":"Herbs & Spices",
+    "cinnamon":"Herbs & Spices", "vanilla":"Herbs & Spices",
+    "dill":"Herbs & Spices", "rosemary":"Herbs & Spices", "lemon juice":"Herbs & Spices",
+    "lemon pepper":"Herbs & Spices", "all-purpose seasoning":"Herbs & Spices",
+    "curry powder":"Herbs & Spices", "onion powder":"Herbs & Spices",
+    "garlic powder":"Herbs & Spices", "cumin":"Herbs & Spices",
+    "bay leaves":"Herbs & Spices", "taco seasoning":"Herbs & Spices"
+
+};
+
+// The order categories appear in on the shopping list.
+// The user can customize this order from Settings, so it's loaded
+// from localStorage when a valid saved order exists.
+const defaultCategoryOrder = [
+    "Produce", "Dairy & Eggs", "Meat & Fish",
+    "Pantry", "Herbs & Spices", "Other"
+];
+
+let categoryOrder = loadCategoryOrder();
+
+function loadCategoryOrder(){
+
+    let saved = localStorage.getItem("foodflowCategoryOrder");
+
+    if(!saved) return [...defaultCategoryOrder];
+
+    try{
+
+        let parsed = JSON.parse(saved);
+
+        let sameSet =
+            Array.isArray(parsed) &&
+            parsed.length === defaultCategoryOrder.length &&
+            defaultCategoryOrder.every(cat => parsed.includes(cat));
+
+        return sameSet ? parsed : [...defaultCategoryOrder];
+
+    }catch(e){
+
+        return [...defaultCategoryOrder];
+
+    }
+
+}
+
+function saveCategoryOrder(){
+
+    localStorage.setItem(
+        "foodflowCategoryOrder",
+        JSON.stringify(categoryOrder)
+    );
+
+}
+
+function moveCategoryOrder(index, direction){
+
+    let newIndex = index + direction;
+
+    if(newIndex < 0 || newIndex >= categoryOrder.length) return;
+
+    [categoryOrder[index], categoryOrder[newIndex]] =
+        [categoryOrder[newIndex], categoryOrder[index]];
+
+    saveCategoryOrder();
+
+    renderCategoryOrderSettings();
+
+    renderShoppingList();
+
+}
+
+function renderCategoryOrderSettings(){
+
+    let container = document.getElementById("categoryOrderList");
+
+    if(!container) return;
+
+    container.innerHTML = categoryOrder.map((cat, index) => `
+
+        <div style="
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:8px;
+            padding:6px 10px;
+            margin-bottom:4px;
+            border-radius:8px;
+            background:var(--bg);
+        ">
+            <span>${categoryIcons[cat] || "🛒"} ${categoryLabel(cat)}</span>
+
+            <span style="display:flex; gap:4px;">
+                <button
+                    onclick="moveCategoryOrder(${index}, -1)"
+                    ${index === 0 ? "disabled" : ""}
+                    aria-label="${t("aria_move_category_up")}: ${categoryLabel(cat)}"
+                    style="padding:2px 10px;"
+                >▲</button>
+
+                <button
+                    onclick="moveCategoryOrder(${index}, 1)"
+                    ${index === categoryOrder.length - 1 ? "disabled" : ""}
+                    aria-label="${t("aria_move_category_down")}: ${categoryLabel(cat)}"
+                    style="padding:2px 10px;"
+                >▼</button>
+            </span>
+        </div>
+
+    `).join("");
+
+}
+
+// Shown names for the shopping-list sections (the English names stay the
+// internal keys, so saved data and sorting keep working in both languages).
+const categoryLabelKeys = {
+    "Produce":"shop_cat_produce",
+    "Dairy & Eggs":"shop_cat_dairy",
+    "Meat & Fish":"shop_cat_meat",
+    "Pantry":"shop_cat_pantry",
+    "Herbs & Spices":"shop_cat_herbs",
+    "Other":"shop_cat_other"
+};
+
+function categoryLabel(cat){
+    return categoryLabelKeys[cat] ? t(categoryLabelKeys[cat]) : cat;
+}
+
+const categoryIcons = {
+    "Produce":"🥕",
+    "Dairy & Eggs":"🥛",
+    "Meat & Fish":"🥩",
+    "Pantry":"🧂",
+    "Herbs & Spices":"🌿",
+    "Other":"🛒"
+};
+
+// A distinct accent color per store-section, for the same at-a-glance
+// scannability as the meal-type colors in the planner.
+const categoryAccents = {
+    "Produce":"#4caf50",
+    "Dairy & Eggs":"#2196f3",
+    "Meat & Fish":"#e53935",
+    "Pantry":"#ff9800",
+    "Herbs & Spices":"#8bc34a",
+    "Other":"#9e9e9e"
+};
+
+
+function getIngredientCategory(normalizedName){
+    return customIngredientCategories[normalizedName]
+        || ingredientCategories[normalizedName]
+        || "Other";
+}
+
+
+// Converts an amount up to a bigger unit once it gets unwieldy —
+// e.g. 1200 g -> 1.2 kg, 12 dl -> 1.2 l — so the list stays readable.
+// Units that are just different scales of the same underlying
+// measurement — these get converted to one common base unit before
+// combining, so "1.5 kg" and "1500 g" of the same ingredient are
+// correctly recognized as the same amount instead of two separate
+// shopping-list lines. Base units: grams for weight, milliliters
+// for volume (millimeter-scale-y things like msk/tsk stay separate,
+// since spoon measurements aren't usually meant to merge with dl/l).
+const unitFamilies = {
+    "g":  { family:"weight", toBase:1 },
+    "kg": { family:"weight", toBase:1000 },
+    "ml": { family:"volume", toBase:1 },
+    "l":  { family:"volume", toBase:1000 },
+    "dl": { family:"volume", toBase:100 },
+    "cl": { family:"volume", toBase:10 }
+};
+
+
+// Converts an amount+unit into the family's base unit for combining
+// (e.g. "1.5 kg" -> 1500 in the "weight" family). Units outside a
+// known family (st, msk, tsk, kruka, etc.) pass through unchanged,
+// keyed by their own lowercase unit text as before.
+function toCombinableUnit(amount, unit){
+
+    let info = unitFamilies[(unit || "").toLowerCase()];
+
+    if(!info){
+        return { amount, unitKey: (unit || "").trim().toLowerCase() };
+    }
+
+    return {
+        amount: amount * info.toBase,
+        unitKey: "family:" + info.family
+    };
+
+}
+
+
+// =======================
+// SHOPPING LIST: round amounts up to buyable quantities
+// (shopping list only - planner and recipes keep exact amounts)
+// =======================
+function shoppingRoundingOn(){
+    try{ return localStorage.getItem("foodflowRoundShopping") !== "0"; }
+    catch(e){ return true; }
+}
+
+function toggleShoppingRounding(on){
+    try{ localStorage.setItem("foodflowRoundShopping", on ? "1" : "0"); }catch(e){}
+    renderShoppingList();
+}
+
+const roundableCountUnits = new Set([
+    "", "st", "piece", "clove", "klyfta", "slice", "skiva", "can",
+    "package", "bag", "bottle", "jar", "box", "bunch", "head", "stick", "portion"
+]);
+
+// Rounds a combined base amount (g or ml) UP to a buyable step.
+function roundUpBase(amount){
+    let step;
+    if(amount < 50)        step = 10;
+    else if(amount < 500)  step = 50;
+    else if(amount < 1000) step = 100;
+    else                   step = 500;
+    return Math.ceil(amount / step - 1e-9) * step;
+}
+
+// Converts a combined base-unit amount back into a sensible display
+// unit — e.g. 1500 (grams) -> "1.5 kg", 250 (ml) -> "2.5 dl". Units
+// outside a known family are shown exactly as originally combined.
+function simplifyUnit(amount, unitKey){
+
+    if(unitKey === "family:weight"){
+
+        if(amount >= 1000){
+            return { amount: amount / 1000, unit:"kg" };
+        }
+
+        return { amount, unit:"g" };
+
+    }
+
+    if(unitKey === "family:volume"){
+
+        if(amount >= 1000){
+            return { amount: amount / 1000, unit:"l" };
+        }
+
+        return { amount: amount / 100, unit:"dl" };
+
+    }
+
+    return { amount, unit: unitKey };
+
+}
+
+
+// User-added ingredient translations/aliases, saved from Settings.
+// Checked before the built-in dictionary so a user override always wins.
+let customIngredientTranslations = loadCustomIngredientTranslations();
+
+// Which shopping-list section each user-added translation's target
+// word belongs to (keyed by the translation's target, e.g. "ham"),
+// so a new word the built-in dictionary doesn't know can still be
+// sorted into Produce/Dairy & Eggs/etc. instead of always landing
+// in "Other".
+let customIngredientCategories = loadCustomIngredientCategories();
+
+function loadCustomIngredientCategories(){
+
+    try{
+
+        let saved = localStorage.getItem("foodflowCustomIngredientCategories");
+
+        return saved ? JSON.parse(saved) : {};
+
+    }catch(e){
+
+        return {};
+
+    }
+
+}
+
+function saveCustomIngredientCategories(){
+
+    localStorage.setItem(
+        "foodflowCustomIngredientCategories",
+        JSON.stringify(customIngredientCategories)
+    );
+
+}
+
+// Fills the "Shopping list section" dropdown in the Custom Ingredient
+// Translations form with every real category (everything except
+// "Other", which is already the default when nothing is picked).
+function populateCustomTranslationCategorySelect(){
+
+    let select = document.getElementById("customTranslationCategory");
+
+    if(!select) return;
+
+    let current = select.value;
+
+    select.innerHTML =
+        `<option value="">${categoryIcons["Other"] || "🛒"} ${t("category_auto_other")}</option>` +
+        categoryOrder
+            .filter(cat => cat !== "Other")
+            .map(cat => `<option value="${cat}">${categoryIcons[cat] || "🛒"} ${categoryLabel(cat)}</option>`)
+            .join("");
+
+    select.value = current;
+
+}
+
+function loadCustomIngredientTranslations(){
+
+    try{
+
+        let saved = localStorage.getItem("foodflowCustomIngredientTranslations");
+
+        return saved ? JSON.parse(saved) : {};
+
+    }catch(e){
+
+        return {};
+
+    }
+
+}
+
+function saveCustomIngredientTranslations(){
+
+    localStorage.setItem(
+        "foodflowCustomIngredientTranslations",
+        JSON.stringify(customIngredientTranslations)
+    );
+
+}
+
+function addCustomIngredientTranslation(){
+
+    let aliasInput = document.getElementById("customTranslationAlias");
+    let targetInput = document.getElementById("customTranslationTarget");
+    let categorySelect = document.getElementById("customTranslationCategory");
+
+    let alias = aliasInput.value.trim().toLowerCase();
+    let target = targetInput.value.trim().toLowerCase();
+    let category = categorySelect ? categorySelect.value : "";
+
+    if(alias === "" || target === ""){
+
+        showToast(t("enter_both_translation_fields"), { type:"error" });
+
+        return;
+
+    }
+
+    customIngredientTranslations[alias] = target;
+
+    if(category){
+        customIngredientCategories[target] = category;
+    }else{
+        delete customIngredientCategories[target];
+    }
+
+    saveCustomIngredientTranslations();
+    saveCustomIngredientCategories();
+
+    aliasInput.value = "";
+    targetInput.value = "";
+    if(categorySelect) categorySelect.value = "";
+
+    renderCustomIngredientTranslations();
+
+    renderShoppingList();
+
+    showToast(t("translation_saved"));
+
+}
+
+function deleteCustomIngredientTranslation(alias){
+
+    let target = customIngredientTranslations[alias];
+
+    delete customIngredientTranslations[alias];
+
+    // Only drop the category for that target word if no other saved
+    // translation still points to it.
+    let stillUsed = Object.values(customIngredientTranslations).includes(target);
+
+    if(!stillUsed){
+        delete customIngredientCategories[target];
+    }
+
+    saveCustomIngredientTranslations();
+    saveCustomIngredientCategories();
+
+    renderCustomIngredientTranslations();
+
+    renderShoppingList();
+
+}
+
+function renderCustomIngredientTranslations(){
+
+    let container = document.getElementById("customTranslationList");
+
+    populateCustomTranslationCategorySelect();
+
+    if(!container) return;
+
+    let entries = Object.entries(customIngredientTranslations);
+
+    if(entries.length === 0){
+
+        container.innerHTML = `<p class="small" style="opacity:0.7;">${t("no_custom_translations_yet")}</p>`;
+
+        return;
+
+    }
+
+    container.innerHTML = entries.map(([alias, target]) => {
+
+        let category = customIngredientCategories[target];
+        let categoryLabel = category
+            ? ` · ${categoryIcons[category] || "🛒"} ${categoryLabel(category)}`
+            : "";
+
+        return `
+
+        <div style="
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:8px;
+            padding:6px 10px;
+            margin-bottom:4px;
+            border-radius:8px;
+            background:var(--bg);
+        ">
+            <span>${alias} → ${target}${categoryLabel}</span>
+
+            <button
+                onclick="deleteCustomIngredientTranslation('${alias.replace(/'/g,"\\'")}')"
+                aria-label="${t("aria_delete_translation")}: ${alias}"
+                style="padding:2px 10px;"
+            >🗑</button>
+        </div>
+
+    `;
+
+    }).join("");
+
+}
+
+
+function normalizeIngredientName(name){
+
+    let base = name
+        .toLowerCase()
+        .trim()
+        .replace(/\([^)]*\)/g, "")   // strip parenthetical asides
+        .replace(/[.,;:!?]+$/g, "")  // strip trailing punctuation
+        .trim()
+        .replace(/\s+/g, " ")
+        // Strip a trailing "in water/oil/tomato sauce/brine" style
+        // descriptor (common on canned fish) — without this, the
+        // last-word fallback below would grab "vatten"/"water" itself
+        // and mislabel e.g. "tonfisk i vatten" (tuna in water) as
+        // plain "water".
+        .replace(/\s+(i|in)\s+(vatten|olja|tomatsås|saltlake|spad|lag|water|oil|tomato sauce|brine)$/, "");
+
+    // Custom user translations take priority over the built-in dictionary.
+    if(customIngredientTranslations[base]){
+        return customIngredientTranslations[base];
+    }
+
+    // Try the full phrase first, before stripping any descriptive
+    // words — otherwise a dictionary entry like "minced meat" would
+    // never match, since "minced" also doubles as a stopword.
+    if(ingredientTranslations[base]){
+        return ingredientTranslations[base];
+    }
+
+    let cleaned = base
+        .split(" ")
+        .filter(word => !ingredientStopwords.includes(word))
+        .join(" ");
+
+    if(customIngredientTranslations[cleaned]){
+        return customIngredientTranslations[cleaned];
+    }
+
+    if(ingredientTranslations[cleaned]){
+        return ingredientTranslations[cleaned];
+    }
+
+    // Try just the last word — catches things like "diced onion"
+    // or "gul lök" -> "lök" after "gul" was already stripped above.
+    let words = cleaned.split(" ");
+    let lastWord = words[words.length - 1];
+
+    if(customIngredientTranslations[lastWord]){
+        return customIngredientTranslations[lastWord];
+    }
+
+    if(ingredientTranslations[lastWord]){
+        return ingredientTranslations[lastWord];
+    }
+
+    // Not in the dictionary — fall back to the cleaned name itself,
+    // so at least identical spellings still combine as before.
+    return cleaned;
+
+}
+
+
+function generateShoppingList(){
+
+    let items = {};
+    let manualMeals = [];
+
+    let rangeDays = getDateRangeDays(shoppingRangeStart, shoppingRangeEnd);
+
+    rangeDays.forEach(({ weekKey, day })=>{
+
+        let weekMeals = weeks[weekKey] ? weeks[weekKey][day] : null;
+
+        if(!weekMeals) return;
+
+        weekMeals.forEach(meal=>{
+
+            let mealRecipeIndex = recipeIndexFor(meal.recipe);
+            let hasRecipe = mealRecipeIndex >= 0;
+
+            if(hasRecipe){
+
+                let recipe = recipes[mealRecipeIndex];
+
+                // How the recipe was written vs. how many people
+                // this specific planner meal is feeding.
+                let servings = Number(recipe.servings) || 1;
+                let people = Number(meal.people) || servings;
+                let factor = people / servings;
+
+                recipe.ingredients.forEach(ingredient=>{
+
+                    let rawName = (ingredient.name || "").trim();
+
+                    if(rawName === ""){
+                        return;
+                    }
+
+                    let unit = normalizeUnit(ingredient.unit || "");
+                    let amount = Number(ingredient.amount) || 0;
+                    let scaled = amount * factor;
+
+                    let normalizedName = normalizeIngredientName(rawName);
+
+                    // Show a clean translated label for known ingredients,
+                    // otherwise keep whatever the person originally typed.
+                    let displayName = canonicalIngredientNames.has(normalizedName)
+                        ? normalizedName.charAt(0).toUpperCase() + normalizedName.slice(1)
+                        : rawName;
+
+                    // Convert to a common base unit first (e.g. kg -> g)
+                    // so equivalent units always combine, regardless of
+                    // which one each recipe happened to use.
+                    let combinable = toCombinableUnit(scaled, unit);
+
+                    // Same ingredient (regardless of language) + same
+                    // unit family gets combined together.
+                    let key =
+                        normalizedName + "|" + combinable.unitKey;
+
+                    if(items[key]){
+
+                        items[key].amount += combinable.amount;
+
+                    }else{
+
+                        items[key] = {
+                            name: displayName,
+                            // Family units (weight/volume) get resolved
+                            // to a real display unit later; other units
+                            // keep their original casing as typed.
+                            unit: combinable.unitKey.startsWith("family:")
+                                ? combinable.unitKey
+                                : unit,
+                            amount: combinable.amount,
+                            category: getIngredientCategory(normalizedName),
+                            // Which recipe(s) this ingredient is pulled
+                            // from, keyed by recipe index to de-dupe —
+                            // converted to a plain array further down.
+                            sourcesByIndex: {}
+                        };
+
+                    }
+
+                    // Record this recipe as a source, whether the item
+                    // is brand new or combining into an existing one.
+                    items[key].sourcesByIndex[mealRecipeIndex] = recipe.name;
+
+                });
+
+            }else{
+
+                // Manual meals (typed by hand, no recipe attached)
+                // have no ingredients to pull from.
+                manualMeals.push(meal.name);
+
+            }
+
+        });
+
+    });
+
+    // Hide ingredients the person has marked as already-have
+    // (e.g. pantry staples like salt or sugar).
+    Object.keys(shoppingRemoved).forEach(key=>{
+        delete items[key];
+    });
+
+    // Round up to a bigger, cleaner unit where it makes sense
+    // (1200 g -> 1.2 kg), but only for items the person hasn't
+    // manually corrected themselves.
+    Object.keys(items).forEach(key=>{
+
+        if(shoppingOverrides[key]){
+            return;
+        }
+
+        let exactSimplified = simplifyUnit(items[key].amount, items[key].unit);
+        let baseAmount = items[key].amount;
+        let unitKey = items[key].unit;
+
+        if(shoppingRoundingOn() && baseAmount > 0){
+
+            let rounded = null;
+
+            if(unitKey === "family:weight" || unitKey === "family:volume"){
+                rounded = roundUpBase(baseAmount);
+            }else if(roundableCountUnits.has((unitKey || "").toLowerCase())){
+                rounded = Math.ceil(baseAmount - 1e-9);
+            }
+
+            if(rounded !== null && Math.abs(rounded - baseAmount) > 1e-6){
+
+                let r = simplifyUnit(rounded, unitKey);
+
+                items[key].amount = r.amount;
+                items[key].unit = r.unit;
+                items[key].needText =
+                    formatAmount(exactSimplified.amount) +
+                    (exactSimplified.unit ? " " + exactSimplified.unit : "");
+
+                return;
+
+            }
+
+        }
+
+        items[key].amount = exactSimplified.amount;
+        items[key].unit = exactSimplified.unit;
+
+    });
+
+    // Apply any manual corrections to amount/unit/name
+    Object.keys(shoppingOverrides).forEach(key=>{
+
+        if(items[key]){
+
+            items[key] = {
+                ...items[key],
+                ...shoppingOverrides[key]
+            };
+
+        }
+
+    });
+
+    let list = Object.keys(items)
+        .map(key => {
+
+            let { sourcesByIndex, ...rest } = items[key];
+
+            let sources = Object.entries(sourcesByIndex || {})
+                .map(([index, name]) => ({ index: Number(index), name }));
+
+            return { key, ...rest, sources, isExtra:false };
+
+        })
+        .concat(
+            shoppingExtras.map(extra => {
+
+                let normalizedName = normalizeIngredientName(extra.name);
+
+                return {
+                    key: "extra:" + extra.id,
+                    name: extra.name,
+                    unit: extra.unit,
+                    amount: Number(extra.amount) || 0,
+                    category: getIngredientCategory(normalizedName),
+                    sources: [],
+                    isExtra: true
+                };
+
+            })
+        )
+        .sort((a,b) => a.name.localeCompare(b.name));
+
+    return { list, manualMeals };
+
+}
+
+
+function formatAmount(num){
+
+    let rounded = Math.round(num * 100) / 100;
+
+    if(rounded % 1 === 0){
+        return rounded.toString();
+    }
+
+    return rounded
+        .toFixed(2)
+        .replace(/0+$/,"")
+        .replace(/\.$/,"");
+
+}
+
+
+function renderShoppingItemRow(item){
+
+    let safeKey = item.key.replace(/'/g,"\\'");
+    let accent = categoryAccents[item.category] || categoryAccents["Other"];
+
+    let amountText = item.amount > 0
+        ? `${formatAmount(item.amount)}${item.unit ? " " + item.unit : ""} `
+        : "";
+
+    if(shoppingSelectionMode){
+
+        let selected = shoppingSelectedKeys.has(item.key);
+
+        return `
+            <div
+                class="meal"
+                style="--accent:${accent};display:flex;align-items:center;gap:10px;flex-wrap:wrap;cursor:pointer;${selected ? "outline:2px solid var(--primary);" : ""}"
+                onclick="toggleItemSelection('${safeKey}')"
+            >
+                <input
+                    type="checkbox"
+                    style="width:auto;margin:0;pointer-events:none;"
+                    ${selected ? "checked" : ""}
+                >
+                <span style="flex:1;">
+                    ${amountText}${item.name}
+                    ${item.isExtra ? `<span class="small">(added by you)</span>` : ""}
+                </span>
+            </div>
+        `;
+
+    }
+
+    let checked = shoppingChecked[item.key] ? "checked" : "";
+    let hasSources = item.sources && item.sources.length > 0;
+
+    return `
+        <div class="meal" data-swipe-key="${safeKey}" style="--accent:${accent};display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <input
+                type="checkbox"
+                style="width:auto;margin:0;"
+                ${checked}
+                onchange="toggleShoppingItem('${safeKey}')"
+            >
+            <span
+                style="flex:1;${checked ? "opacity:.5;text-decoration:line-through;" : ""}${hasSources ? "cursor:pointer;" : ""}"
+                ${hasSources ? `onclick="showIngredientSources('${safeKey}')"` : ""}
+            >
+                ${amountText}${item.name}
+                ${item.needText ? `<span class="small" style="opacity:.55;">(${t("need_exact")} ${item.needText})</span>` : ""}
+                ${item.isExtra ? `<span class="small">(added by you)</span>` : ""}
+                ${hasSources ? `<span class="small" style="opacity:0.6;"> 📖</span>` : ""}
+            </span>
+            <button
+                class="edit"
+                style="margin:0;padding:6px 10px;font-size:13px;"
+                onclick="editShoppingItem('${safeKey}')"
+            >
+                ✏️
+            </button>
+            <button
+                class="delete"
+                style="margin:0;padding:6px 10px;font-size:13px;"
+                onclick="deleteShoppingItem('${safeKey}')"
+            >
+                🗑
+            </button>
+        </div>
+    `;
+
+}
+
+
+// Shows which recipe(s) a shopping list ingredient was pulled from.
+// Tapping a recipe in the list jumps straight to that recipe's detail
+// popup, same as opening it from the Recipes page.
+function showIngredientSources(key){
+
+    let item = lastShoppingList.find(i => i.key === key);
+
+    if(!item) return;
+
+    document.getElementById("ingredientSourcesTitle").innerText =
+        "📖 " + item.name;
+
+    let list = document.getElementById("ingredientSourcesList");
+
+    if(!item.sources || item.sources.length === 0){
+
+        list.innerHTML = `<p class="small">${t("ingredient_sources_none")}</p>`;
+
+    }else{
+
+        list.innerHTML = `
+            <p class="small">${t("ingredient_sources_intro")}</p>
+            <div class="action-list">
+            ${item.sources.map(source => `
+                <button onclick="closeIngredientSources(); openRecipeDetail(${source.index});">
+                📖 ${source.name}
+                </button>
+            `).join("")}
+            </div>
+        `;
+
+    }
+
+    document.getElementById("ingredientSourcesModal").style.display = "flex";
+
+}
+
+function closeIngredientSources(){
+
+    document.getElementById("ingredientSourcesModal").style.display = "none";
+
+}
+
+
+function groupItemsByCategory(list){
+
+    let groups = {};
+
+    list.forEach(item=>{
+
+        let cat = item.category || "Other";
+
+        if(!groups[cat]){
+            groups[cat] = [];
+        }
+
+        groups[cat].push(item);
+
+    });
+
+    return groups;
+
+}
+
+
+function updateShoppingRangeInputs(){
+
+    let startInput = document.getElementById("shoppingRangeStartInput");
+    let endInput = document.getElementById("shoppingRangeEndInput");
+
+    if(startInput){
+        startInput.value = shoppingRangeStart;
+    }
+
+    if(endInput){
+        endInput.value = shoppingRangeEnd;
+    }
+
+    let summary = document.getElementById("shoppingRangeSummary");
+
+    if(summary){
+
+        let count = getDateRangeDays(shoppingRangeStart, shoppingRangeEnd).length;
+
+        summary.innerText = count === 1
+            ? t("day_selected_one")
+            : t("day_selected_other").replace("{n}", count);
+
+    }
+
+}
+
+
+function onShoppingRangeChange(){
+
+    let startInput = document.getElementById("shoppingRangeStartInput");
+    let endInput = document.getElementById("shoppingRangeEndInput");
+
+    let newStart = startInput.value;
+    let newEnd = endInput.value;
+
+    if(!newStart || !newEnd){
+        return;
+    }
+
+    if(parseDateKey(newStart).getTime() > parseDateKey(newEnd).getTime()){
+
+        showToast(t("start_before_end"), { type:"error" });
+        updateShoppingRangeInputs();
+
+        return;
+
+    }
+
+    shoppingRangeStart = newStart;
+    shoppingRangeEnd = newEnd;
+
+    saveShoppingState();
+
+    updateShoppingRangeInputs();
+    renderShoppingList();
+
+}
+
+
+function setShoppingRangePreset(preset){
+
+    let today = new Date();
+
+    if(preset === "thisWeek"){
+
+        // The Monday-to-Sunday of today's actual current week.
+        // Deliberately recomputed from `today` here rather than using
+        // the `currentWeekKey` variable, which is only set once when
+        // the app first loads — if the tab's been open since before
+        // midnight, that would still point at yesterday's week.
+        let todayWeekKey = getMondayKey(today);
+
+        shoppingRangeStart = todayWeekKey;
+        shoppingRangeEnd = addDaysToKey(todayWeekKey, 6);
+
+    }else if(preset === "restOfWeek"){
+
+        // From today through the end of today's actual week —
+        // useful for a mid-week shopping trip.
+        let todayKey = formatDateKey(today);
+        let todayWeekKey = getMondayKey(today);
+
+        shoppingRangeStart = todayKey;
+        shoppingRangeEnd = addDaysToKey(todayWeekKey, 6);
+
+    }else if(preset === "next7"){
+
+        // A rolling 7-day window starting today — can span across
+        // into next week.
+        let todayKey = formatDateKey(today);
+
+        shoppingRangeStart = todayKey;
+        shoppingRangeEnd = addDaysToKey(todayKey, 6);
+
+    }
+
+    saveShoppingState();
+
+    updateShoppingRangeInputs();
+    renderShoppingList();
+
+}
+
+
+// The most recently rendered shopping list, kept around so tapping an
+// item's name can look up which recipe(s) it came from without
+// regenerating the whole list again.
+let lastShoppingList = [];
+
+function renderShoppingList(){
+
+    updateShoppingRangeInputs();
+    renderShoppingSelectionBar();
+
+    const { list: fullList, manualMeals } = generateShoppingList();
+
+    lastShoppingList = fullList;
+
+    const container = document.getElementById("shoppingList");
+    const notes = document.getElementById("shoppingNotes");
+
+    let searchBox = document.getElementById("shoppingSearch");
+    let search = searchBox ? searchBox.value.trim().toLowerCase() : "";
+
+    let list = search
+        ? fullList.filter(item => item.name.toLowerCase().includes(search))
+        : fullList;
+
+    // Progress bar reflects the FULL list (not just search results),
+    // so it stays a true picture of the whole shopping trip.
+    let progressText = document.getElementById("shoppingProgressText");
+    let progressBar = document.getElementById("shoppingProgressBar");
+
+    if(progressText && progressBar){
+
+        let total = fullList.length;
+        let checkedCount = fullList.filter(item => shoppingChecked[item.key]).length;
+        let percent = total > 0 ? Math.round((checkedCount / total) * 100) : 0;
+
+        progressText.innerText = total > 0
+            ? t("progress_checked").replace("{checked}", checkedCount).replace("{total}", total)
+            : "";
+
+        progressBar.style.width = percent + "%";
+
+    }
+
+    if(fullList.length === 0){
+
+        container.innerHTML = `
+            <p class="small">
+            ${t("shopping_empty")}
+            </p>
+        `;
+
+    }else if(list.length === 0){
+
+        container.innerHTML = `
+            <p class="small">
+            ${t("shopping_no_match")} "${search}".
+            </p>
+        `;
+
+    }else{
+
+        let groups = groupItemsByCategory(list);
+
+        container.innerHTML = categoryOrder
+            .filter(cat => groups[cat] && groups[cat].length > 0)
+            .map(cat => `
+                <h3 style="margin:20px 0 8px;">
+                    ${categoryIcons[cat] || ""} ${categoryLabel(cat)}
+                </h3>
+                ${groups[cat].map(renderShoppingItemRow).join("")}
+            `)
+            .join("");
+
+        // Mobile: swipe left on an item to delete it
+        container.querySelectorAll("[data-swipe-key]").forEach(row=>{
+
+            let key = row.getAttribute("data-swipe-key");
+
+            attachSwipeToDelete(row, () => deleteShoppingItem(key));
+
+        });
+
+    }
+
+    if(manualMeals.length > 0){
+
+        notes.innerHTML = `
+            <p class="small">
+            ℹ️ ${t("shopping_not_included").replace("{list}", manualMeals.join(", "))}
+            </p>
+        `;
+
+    }else{
+
+        notes.innerHTML = "";
+
+    }
+
+}
+
+
+function toggleShoppingItem(key){
+
+    shoppingChecked[key] = !shoppingChecked[key];
+
+    if(shoppingChecked[key]){
+        hapticFeedback();
+    }
+
+    saveShoppingState();
+
+    renderShoppingList();
+
+}
+
+
+function clearCheckedItems(){
+
+    shoppingChecked = {};
+
+    saveShoppingState();
+
+    renderShoppingList();
+
+}
+
+
+// Tracks which item is being edited while the modal is open.
+// null key = adding a brand new item.
+let editingShoppingKey = null;
+let editingShoppingIsExtra = false;
+
+
+// =======================
+// SHOPPING LIST MULTI-SELECT
+// =======================
+
+let shoppingSelectionMode = false;
+let shoppingSelectedKeys = new Set();
+
+
+function toggleShoppingSelectionMode(){
+
+    shoppingSelectionMode = !shoppingSelectionMode;
+    shoppingSelectedKeys.clear();
+
+    renderShoppingList();
+
+}
+
+
+function toggleItemSelection(key){
+
+    if(shoppingSelectedKeys.has(key)){
+        shoppingSelectedKeys.delete(key);
+    }else{
+        shoppingSelectedKeys.add(key);
+    }
+
+    renderShoppingSelectionBar();
+    renderShoppingList();
+
+}
+
+
+function renderShoppingSelectionBar(){
+
+    let bar = document.getElementById("shoppingSelectionBar");
+
+    if(!bar){
+        return;
+    }
+
+    if(!shoppingSelectionMode){
+        bar.style.display = "none";
+        return;
+    }
+
+    bar.style.display = "flex";
+
+    bar.innerHTML = `
+        <span class="small">${t("selected_count").replace("{n}", shoppingSelectedKeys.size)}</span>
+        <button onclick="bulkCheckSelected()" style="font-size:13px;padding:6px 10px;">${t("sel_check")}</button>
+        <button class="delete" onclick="bulkDeleteSelected()" style="font-size:13px;padding:6px 10px;">${t("btn_delete")}</button>
+        <button onclick="toggleShoppingSelectionMode()" style="font-size:13px;padding:6px 10px;">${t("sel_cancel")}</button>
+    `;
+
+}
+
+
+function bulkCheckSelected(){
+
+    if(shoppingSelectedKeys.size === 0){
+        return;
+    }
+
+    shoppingSelectedKeys.forEach(key=>{
+        shoppingChecked[key] = true;
+    });
+
+    let count = shoppingSelectedKeys.size;
+
+    saveShoppingState();
+
+    shoppingSelectionMode = false;
+    shoppingSelectedKeys.clear();
+
+    renderShoppingList();
+
+    showToast(t("checked_off_items").replace("{n}", count));
+
+}
+
+
+async function bulkDeleteSelected(){
+
+    if(shoppingSelectedKeys.size === 0){
+        return;
+    }
+
+    let count = shoppingSelectedKeys.size;
+
+    let confirmed = await customConfirm(
+        t("delete_items_message").replace("{n}", count),
+        t("delete_items_title")
+    );
+
+    if(!confirmed){
+        return;
+    }
+
+    const { list } = generateShoppingList();
+
+    shoppingSelectedKeys.forEach(key=>{
+
+        let item = list.find(i => i.key === key);
+
+        if(!item){
+            return;
+        }
+
+        if(item.isExtra){
+
+            let id = key.replace("extra:","");
+            shoppingExtras = shoppingExtras.filter(e => e.id !== id);
+
+        }else{
+
+            shoppingRemoved[key] = true;
+            delete shoppingOverrides[key];
+
+        }
+
+    });
+
+    saveShoppingState();
+
+    shoppingSelectionMode = false;
+    shoppingSelectedKeys.clear();
+
+    renderShoppingList();
+
+    showToast(t("deleted_items").replace("{n}", count));
+
+}
+
+
+function openShoppingItemModal(title, name, amount, unit){
+
+    document.getElementById("shoppingItemModalTitle")
+    .innerText = title;
+
+    document.getElementById("shoppingItemName")
+    .value = name;
+
+    document.getElementById("shoppingItemAmount")
+    .value = amount;
+
+    document.getElementById("shoppingItemUnit")
+    .value = unit;
+
+    document.getElementById("shoppingItemModal")
+    .style.display = "flex";
+
+}
+
+
+function closeShoppingItemModal(){
+
+    document.getElementById("shoppingItemModal")
+    .style.display = "none";
+
+}
+
+
+function editShoppingItem(key){
+
+    const { list } = generateShoppingList();
+    let item = list.find(i => i.key === key);
+
+    if(!item){
+        return;
+    }
+
+    editingShoppingKey = key;
+    editingShoppingIsExtra = item.isExtra;
+
+    openShoppingItemModal(
+        t("edit_item_title"),
+        item.name,
+        item.amount > 0 ? formatAmount(item.amount) : "",
+        item.unit || ""
+    );
+
+}
+
+
+function saveShoppingItem(){
+
+    let name =
+        document.getElementById("shoppingItemName").value.trim();
+
+    let amountRaw =
+        document.getElementById("shoppingItemAmount").value;
+
+    let unit =
+        document.getElementById("shoppingItemUnit").value.trim();
+
+    if(!name){
+        showToast(t("enter_item_name"), { type:"error" });
+        return;
+    }
+
+    let amount =
+        Number(String(amountRaw).replace(",",".")) || 0;
+
+    if(editingShoppingKey === null){
+
+        // Brand new manually-added item
+        shoppingExtras.push({
+            id: "x" + Date.now() + Math.floor(Math.random() * 1000),
+            name: name,
+            amount: amount,
+            unit: unit
+        });
+
+    }else if(editingShoppingIsExtra){
+
+        let id = editingShoppingKey.replace("extra:","");
+        let extra = shoppingExtras.find(e => e.id === id);
+
+        if(extra){
+
+            extra.name = name;
+            extra.amount = amount;
+            extra.unit = unit;
+
+        }
+
+    }else{
+
+        shoppingOverrides[editingShoppingKey] = {
+            name: name,
+            amount: amount,
+            unit: unit
+        };
+
+    }
+
+    saveShoppingState();
+
+    editingShoppingKey = null;
+
+    closeShoppingItemModal();
+
+    renderShoppingList();
+
+}
+
+
+function deleteShoppingItem(key){
+
+    const { list } = generateShoppingList();
+    let item = list.find(i => i.key === key);
+
+    if(!item) return;
+
+    if(item.isExtra){
+
+        let id = key.replace("extra:","");
+        let removedExtra = shoppingExtras.find(e => e.id === id);
+
+        shoppingExtras = shoppingExtras.filter(e => e.id !== id);
+
+        saveShoppingState();
+        renderShoppingList();
+
+        showToast(`${t("toast_removed")} "${item.name}"`, {
+            actionLabel: t("undo"),
+            onAction: () => {
+
+                if(removedExtra){
+                    shoppingExtras.push(removedExtra);
+                    saveShoppingState();
+                    renderShoppingList();
+                }
+
+            }
+        });
+
+    }else{
+
+        // Remember any prior override so Undo can restore it exactly
+        let previousOverride = shoppingOverrides[key];
+
+        // Persist the removal so it stays hidden next time the
+        // list is regenerated — handy for pantry staples. This one
+        // applies to every week, not just the one you're viewing.
+        shoppingRemoved[key] = true;
+
+        // Any earlier manual edit for this key no longer applies
+        delete shoppingOverrides[key];
+
+        saveShoppingState();
+        renderShoppingList();
+
+        showToast(`${t("toast_removed")} "${item.name}"`, {
+            actionLabel: t("undo"),
+            onAction: () => {
+
+                delete shoppingRemoved[key];
+
+                if(previousOverride){
+                    shoppingOverrides[key] = previousOverride;
+                }
+
+                saveShoppingState();
+                renderShoppingList();
+
+            }
+        });
+
+    }
+
+}
+
+
+function openAddShoppingItem(){
+
+    editingShoppingKey = null;
+    editingShoppingIsExtra = true;
+
+    openShoppingItemModal(t("add_item_title"), "", "", "");
+
+}
+
+
+function openShoppingMoreMenu(){
+
+    document.getElementById("shoppingMoreMenu")
+    .style.display = "flex";
+
+}
+
+
+function closeShoppingMoreMenu(){
+
+    document.getElementById("shoppingMoreMenu")
+    .style.display = "none";
+
+}
+
+
+async function resetShoppingEdits(){
+
+    let confirmed = await customConfirm(
+        t("undo_edits_message"),
+        t("undo_edits_title")
+    );
+
+    if(!confirmed){
+        return;
+    }
+
+    shoppingRemoved = {};
+    shoppingOverrides = {};
+
+    saveShoppingState();
+
+    renderShoppingList();
+
+}
+
+
+// Builds a plain-text version of the current list (grouped by
+// category, same as everywhere else) for sharing or copying.
+function buildShoppingListText(){
+
+    const { list } = generateShoppingList();
+
+    if(list.length === 0){
+        return "Shopping list is empty.";
+    }
+
+    let groups = groupItemsByCategory(list);
+
+    let lines = ["🛒 Shopping List", ""];
+
+    categoryOrder
+        .filter(cat => groups[cat] && groups[cat].length > 0)
+        .forEach(cat=>{
+
+            lines.push(`${categoryIcons[cat] || ""} ${categoryLabel(cat)}`);
+
+            groups[cat].forEach(item=>{
+
+                let amountText = item.amount > 0
+                    ? `${formatAmount(item.amount)}${item.unit ? " " + item.unit : ""} `
+                    : "";
+
+                let box = shoppingChecked[item.key] ? "[x]" : "[ ]";
+
+                lines.push(`${box} ${amountText}${item.name}`);
+
+            });
+
+            lines.push("");
+
+        });
+
+    return lines.join("\n").trim();
+
+}
+
+
+async function shareShoppingList(){
+
+    let text = buildShoppingListText();
+
+    if(navigator.share){
+
+        try{
+
+            await navigator.share({
+                title: "Shopping List",
+                text: text
+            });
+
+        }catch(err){
+
+            // AbortError just means the person cancelled the share
+            // sheet — nothing to do or report in that case.
+            if(err && err.name !== "AbortError"){
+                showToast(t("couldnt_share"), { type:"error" });
+            }
+
+        }
+
+    }else if(navigator.clipboard){
+
+        try{
+
+            await navigator.clipboard.writeText(text);
+            showToast(t("copied_to_clipboard"));
+
+        }catch(err){
+
+            showToast(t("couldnt_copy_list"), { type:"error" });
+
+        }
+
+    }else{
+
+        showToast(t("sharing_not_supported"), { type:"error" });
+
+    }
+
+}
+
+
+function printShoppingList(){
+
+    const { list } = generateShoppingList();
+
+    let dateStr = new Date().toLocaleDateString();
+
+    let itemsHtml;
+
+    if(list.length === 0){
+
+        itemsHtml = `<p>No items on the list.</p>`;
+
+    }else{
+
+        let groups = groupItemsByCategory(list);
+
+        itemsHtml = categoryOrder
+            .filter(cat => groups[cat] && groups[cat].length > 0)
+            .map(cat => {
+
+                let rows = groups[cat].map(item=>{
+
+                    let amountText = item.amount > 0
+                        ? `${formatAmount(item.amount)}${item.unit ? " " + item.unit : ""} — `
+                        : "";
+
+                    let checked = shoppingChecked[item.key] ? "print-checked" : "";
+                    let box = shoppingChecked[item.key] ? "☑" : "☐";
+
+                    return `
+                        <div class="print-item ${checked}">
+                            ${box} &nbsp; ${amountText}${item.name}
+                        </div>
+                    `;
+
+                }).join("");
+
+                return `
+                    <h3>${categoryIcons[cat] || ""} ${categoryLabel(cat)}</h3>
+                    ${rows}
+                `;
+
+            })
+            .join("");
+
+    }
+
+    document.getElementById("printArea").innerHTML = `
+        <h1>🍃 FoodFlow — Shopping List</h1>
+        <p style="color:#555;margin-top:0;">${dateStr}</p>
+        ${itemsHtml}
+    `;
+
+    window.print();
+
+}
+
+
+function printMealPlanner(){
+
+    let start = parseDateKey(currentWeekKey);
+    let end = parseDateKey(currentWeekKey);
+    end.setDate(end.getDate() + 6);
+
+    let locale = currentLanguage === "sv" ? "sv-SE" : "en-US";
+    let options = { month:"long", day:"numeric" };
+    let startStr = start.toLocaleDateString(locale, options);
+    let endStr = end.toLocaleDateString(locale, { ...options, year:"numeric" });
+
+    let mealOrder = getMealOrder();
+
+    let dayColumns = days.map(day=>{
+
+        let dayMeals = meals[day] || [];
+
+        let sortedMeals = [...dayMeals].sort((a,b)=>
+            (mealOrder[a.type] ?? 99) - (mealOrder[b.type] ?? 99)
+        );
+
+        let mealsHtml = sortedMeals.length > 0
+
+            ? sortedMeals.map(meal => `
+                <div class="print-planner-meal">
+                    <div class="print-planner-meal-type">${meal.type}</div>
+                    <div class="print-planner-meal-name">${meal.name}</div>
+                    <div class="print-planner-meal-people">👥 ${meal.people}</div>
+                </div>
+            `).join("")
+
+            : `<div class="print-planner-empty">${t("print_no_meals_day")}</div>`;
+
+        let note = dayNotes[dayNoteKey(day)];
+
+        let noteHtml = note
+            ? `<div class="print-planner-note">📝 ${note}</div>`
+            : "";
+
+        return `
+            <div class="print-planner-day">
+                <div class="print-planner-day-name">${translateDayName(day)}</div>
+                ${noteHtml}
+                ${mealsHtml}
+            </div>
+        `;
+
+    }).join("");
+
+    document.getElementById("printArea").innerHTML = `
+        <h1>${t("meal_plan_title")}${weekNames[currentWeekKey] ? " — " + weekNames[currentWeekKey] : ""}</h1>
+        <p class="print-planner-subtitle">${startStr} – ${endStr}</p>
+        <div class="print-planner-grid">
+            ${dayColumns}
+        </div>
+    `;
+
+    window.print();
+
+}
+
+
+// =======================
+// PASTE RECIPE FROM WEB
+// =======================
+
+// Units commonly used in Swedish recipes (like ica.se)
+const knownUnits = [
+    "g","kg","dl","msk","tsk","st","ml","l","cl","liter",
+    "förp","förpackning","burk","burkar","klyfta","klyftor",
+    "kruka","skiva","skivor","bunt","nypa","kryddmått","krm","paket","påse",
+    "port","portion","portioner","potions","personer",
+
+    // English units — metric/weight/volume
+    "oz","ounce","ounces","lb","lbs","pound","pounds",
+    "tbsp","tbsps","tablespoon","tablespoons",
+    "tsp","tsps","teaspoon","teaspoons",
+    "cup","cups","pinch","pinches",
+
+    // English/general count-style units
+    "can","cans","package","packages","pkg","pkgs",
+    "bag","bags","bottle","bottles","jar","jars",
+    "box","boxes","clove","cloves","slice","slices",
+    "piece","pieces","bunch","bunches","head","heads",
+    "stick","sticks",
+    "block","blocks","pack","packs","packet","packets",
+    "loaf","loaves","limpa","limpor","l/kg","kg/l",
+    "bulb","bulbs","litre","litres","liters"
+];
+
+// Common unit synonyms/plurals that should all combine on the
+// shopping list as the same unit, regardless of which form a
+// recipe (or a pasted web recipe) happened to use.
+const unitAliases = {
+    "ounce":"oz", "ounces":"oz",
+    "pound":"lb", "pounds":"lb", "lbs":"lb",
+    "tbsps":"tbsp", "tablespoon":"tbsp", "tablespoons":"tbsp",
+    "tsps":"tsp", "teaspoon":"tsp", "teaspoons":"tsp",
+    "cups":"cup",
+    "pinches":"pinch",
+    "cans":"can",
+    "packages":"package", "pkg":"package", "pkgs":"package",
+    "bags":"bag",
+    "bottles":"bottle",
+    "jars":"jar",
+    "boxes":"box",
+    "cloves":"clove",
+    "slices":"slice",
+    "pieces":"piece",
+    "bunches":"bunch",
+    "heads":"head",
+    "sticks":"stick",
+    "blocks":"block",
+    "pack":"package", "packs":"package", "packet":"package", "packets":"package",
+    "loaves":"loaf", "limpor":"limpa",
+    "bulbs":"bulb",
+    "litre":"l", "litres":"l", "liters":"l",
+    // Swedish "burk"/"burkar" means the same thing as English "can" —
+    // combine them so e.g. "5 burk tonfisk" and "2 cans tuna" add up
+    // on the same shopping list line instead of staying separate.
+    "burk":"can", "burkar":"can",
+    "klyftor":"klyfta",
+    "skivor":"skiva",
+    "liter":"l",
+    "krm":"kryddmått",
+    "potions":"portion",
+    // Swedish spoon measures are the same units as their English
+    // names, just spelled differently — "msk" (matsked) = tablespoon,
+    // "tsk" (tesked) = teaspoon. Without this, "2 msk" and "2 tbsp"
+    // of the same ingredient showed as two separate lines.
+    "msk":"tbsp",
+    "tsk":"tsp"
+};
+
+// Normalizes a unit word to its canonical form so "cans"/"can",
+// "tablespoons"/"tbsp" etc. all combine as the same unit.
+function normalizeUnit(unit){
+
+    let lower = (unit || "").trim().toLowerCase();
+
+    if(lower === "") return "";
+
+    return unitAliases[lower] || lower;
+
+}
+
+const fractionMap = {
+    "½": 0.5,
+    "¼": 0.25,
+    "¾": 0.75,
+    "⅓": 1/3,
+    "⅔": 2/3
+};
+
+
+function openPasteModal(){
+
+    document.getElementById("pasteText").value = "";
+
+    document.getElementById("pasteModal")
+    .style.display = "flex";
+
+}
+
+
+function closePasteModal(){
+
+    document.getElementById("pasteModal")
+    .style.display = "none";
+
+}
+
+
+function parseQuantityToken(token){
+
+    if(fractionMap[token] !== undefined){
+        return fractionMap[token];
+    }
+
+    if(token.includes("/")){
+
+        let parts = token.split("/");
+        return Number(parts[0]) / Number(parts[1]);
+
+    }
+
+    // "1½" / "2¼": a whole number glued to a fraction character
+    let mixed = token.match(/^(\d+)([½¼¾⅓⅔])$/);
+    if(mixed){
+        return Number(mixed[1]) + fractionMap[mixed[2]];
+    }
+
+    return Number(token.replace(",","."));
+
+}
+
+
+// Removes list markers pasted from notes apps / chats: "* ", "- ", "• ", "☐ ", "[ ] " …
+function stripListMarker(line){
+    return line.replace(/^\s*(?:[*•·▪◦‣⁃☐☑✓✔□■▢-]+|\[[ xX]?\]|[–—])\s+/, "").trim();
+}
+
+function parseIngredientLine(line){
+
+    line = stripListMarker(line.trim());
+
+    if(!line){
+        return null;
+    }
+
+    // "Pork - 1.5" / "Ramen noodles - 1 kg" / "Eggs: 9": the amount comes AFTER
+    // the name, separated by a dash or colon. Turn it into "1.5 Pork".
+    line = line.replace(/\s*[-–—:]\s*$/, "");
+    let dashAmount = line.match(/^(.+?)\s*[-–—:]\s+(\d[\d.,\/½¼¾⅓⅔]*(?:\s*(?:-|–|—|to)\s*\d[\d.,]*)?.*)$/i);
+    if(dashAmount && !/^\d/.test(line)){
+        line = dashAmount[2].trim() + " " + dashAmount[1].trim();
+    }else{
+        // "Salt - to taste": keep just the name when the note is short
+        let dashNote = line.match(/^(.+?)\s+[-–—]\s+([^\d]+)$/);
+        if(dashNote && dashNote[2].trim().split(/\s+/).length <= 3){
+            line = dashNote[1].trim();
+        }
+    }
+
+    // "2x carrots" / "2 x carrots": a multiplier, not a unit
+    line = line.replace(/^(\d+(?:[.,]\d+)?)\s*[x×]\s+(?=\S)/i, "$1 ");
+
+    // A range such as "2-3 loaves" or "3 to 4.5 L": use the higher number,
+    // so the shopping list never ends up short.
+    line = line.replace(
+        /^(\d+(?:[.,]\d+)?)\s*(?:-|–|—|to|till|eller)\s*(\d+(?:[.,]\d+)?)(?=\s|[a-zA-ZåäöÅÄÖ]|$)/i,
+        (m, a, b) => b
+    );
+
+    // Drop conversion notes like "(3 st motsvarar ca 100 g)" — they're
+    // not part of the ingredient name, just a helpful aside.
+    line = line
+        .replace(/\([^)]*\)/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    // Drop leading "ca"/"cirka"/"about" so "ca 1 liter X" still reads
+    // its quantity as 1, not as text with no number at all.
+    line = line.replace(
+        /^(ca\.?|cirka|ungefär|about|approx\.?|approximately)\s+/i,
+        ""
+    );
+
+    if(!line){
+        return null;
+    }
+
+    // Leading quantity: a plain fraction (1/2), a whole number or
+    // decimal (500, 1,5), or a unicode fraction (½) — optionally
+    // followed by a second fraction token for mixed numbers like "1 1/2"
+    let match = line.match(
+        /^(\d+\/\d+|[\d½¼¾⅓⅔]+(?:[.,]\d+)?)(?:\s+(\d+\/\d+|½|¼|¾|⅓|⅔))?\s*(.*)$/
+    );
+
+    if(!match || !/[\d½¼¾⅓⅔]/.test(match[1])){
+
+        // No leading number — some recipes write the amount and unit
+        // AFTER the ingredient name instead ("Sugar 2 tbsp"). Try that
+        // before giving up and treating the whole line as just a name.
+        let trailingWithUnit = line.match(
+            /^(.+?)\s+(\d+\/\d+|[\d½¼¾⅓⅔]+(?:[.,]\d+)?)\s*([a-zA-ZåäöÅÄÖ.]+)$/
+        );
+
+        if(trailingWithUnit){
+
+            let unitWord = trailingWithUnit[3].replace(/\.$/, "").toLowerCase();
+
+            if(knownUnits.includes(unitWord)){
+
+                return {
+                    amount: parseQuantityToken(trailingWithUnit[2]) || "",
+                    unit: normalizeUnit(unitWord),
+                    name: trailingWithUnit[1].trim()
+                };
+
+            }
+
+        }
+
+        // Trailing amount with no unit word ("Eggs 3").
+        let trailingNoUnit = line.match(
+            /^(.+?)\s+(\d+\/\d+|[\d½¼¾⅓⅔]+(?:[.,]\d+)?)$/
+        );
+
+        if(trailingNoUnit){
+
+            return {
+                amount: parseQuantityToken(trailingNoUnit[2]) || "",
+                unit: "",
+                name: trailingNoUnit[1].trim()
+            };
+
+        }
+
+        // No number found anywhere — treat whole line as name only
+        return { amount:"", unit:"", name: line };
+
+    }
+
+    let amount = parseQuantityToken(match[1]);
+
+    if(match[2]){
+        amount += parseQuantityToken(match[2]);
+    }
+
+    let rest = (match[3] || "").trim();
+    let restTokens = rest.split(/\s+/);
+    let unit = "";
+
+    // "1 small bottle of oil": skip a size word in front of the unit
+    if(
+        restTokens.length > 1 &&
+        /^(small|medium|large|big|liten|litet|stor|stort|medelstor)$/i.test(restTokens[0]) &&
+        knownUnits.includes(restTokens[1].toLowerCase())
+    ){
+        restTokens.shift();
+    }
+
+    if(
+        restTokens.length &&
+        knownUnits.includes(restTokens[0].toLowerCase())
+    ){
+
+        unit = normalizeUnit(restTokens.shift());
+        // "kg/L" or "l/kg" (either unit would do): take the first one
+        if(unit.includes("/")) unit = unit.split("/")[0];
+        rest = restTokens.join(" ");
+
+        // "2 loaves of bread" / "1 pack of butter": drop the filler word
+        rest = rest.replace(/^(?:of|av)\s+/i, "");
+
+    }
+
+    return {
+        amount: amount || "",
+        unit: unit,
+        name: rest
+    };
+
+}
+
+
+function parsePastedRecipe(){
+
+    let raw = document.getElementById("pasteText").value;
+
+    // a range broken over two lines ("3-" then "4 litres") is joined back up
+    raw = raw.replace(/(\d)\s*[-–—]\s*\r?\n\s*(?=\d)/g, "$1-");
+
+    if(!raw.trim()){
+
+        showToast(t("paste_text_first"), { type:"error" });
+        return;
+
+    }
+
+    let lines = raw
+        .split("\n")
+        .map(l => stripListMarker(l.trim()))
+        .filter(l => l !== "");
+
+    // Guess servings — covers Swedish ("4 portioner", "4 port", "4
+    // personer") and common English/shorthand forms ("10x", "10p",
+    // "10 people", "serves 4", "4 servings").
+    let servings = 4;
+
+    // ("10x" / "10p" only count when they stand alone on a line, so "2x carrots" isn't read as servings)
+    let servingsLine = lines.find(l => /^\d+\s*(?:x|p)\.?$/i.test(l));
+    let servingsMatch =
+        (servingsLine && servingsLine.match(/(\d+)/)) ||
+        raw.match(/(\d+)\s*(?:people|persons?|portioner|port\.?|personer|servings?|serves)\b/i) ||
+        raw.match(/(?:serves|serving size)\s*:?\s*(\d+)/i);
+
+    if(servingsMatch){
+        servings = Number(servingsMatch[1]);
+    }
+
+    // Skip obvious section headers, non-ingredient lines, servings
+    // lines, and numbered instruction steps like "1. Blanda ihop..."
+    let skipPattern =
+        /^(ingredienser|gör så här|tillagning|instruktioner|steg|servering|tips)\b/i;
+
+    // Only matches a line that is JUST the serving count on its own
+    // (e.g. "4 portioner", "10x", "10p", "10 people", "serves 4") —
+    // not "4 portioner pasta ...", where "portioner" is actually
+    // describing the pasta itself.
+    let servingsLinePattern =
+        /^\d+\s*(?:x|p(?:eople|ersons?)?|portioner|port\.?|personer|servings?|serves)\.?$/i;
+
+    let servingsLinePatternReversed =
+        /^(?:serves|serving size)\s*:?\s*\d+\.?$/i;
+
+    let numberedStepPattern =
+        /^\d+[.)]\s/;
+
+    // Guess title = first line that isn't a number, servings line, or header
+    let title = "";
+    let titleIndex = -1;
+
+    for(let i = 0; i < lines.length; i++){
+
+        let line = lines[i];
+
+        if(/^\d/.test(line)) continue;
+        if(skipPattern.test(line)) continue;
+        if(servingsLinePattern.test(line)) continue;
+        if(servingsLinePatternReversed.test(line)) continue;
+        { let pl = parseIngredientLine(line); if(pl && pl.amount !== "" && pl.unit !== "") continue; }
+
+        title = line;
+        titleIndex = i;
+        break;
+
+    }
+
+    let ingredientLines = [];
+
+    lines.forEach((line, index)=>{
+
+        // The recipe's title line is never itself an ingredient —
+        // without this, a short title (e.g. "Chicken Curry") could
+        // slip through the same "short, no-quantity line" check
+        // used below for things like "salt".
+        if(index === titleIndex){
+            return;
+        }
+
+        if(skipPattern.test(line)){
+            return;
+        }
+
+        if(servingsLinePattern.test(line)){
+            return;
+        }
+
+        if(servingsLinePatternReversed.test(line)){
+            return;
+        }
+
+        if(numberedStepPattern.test(line)){
+            return;
+        }
+
+        let parsed = parseIngredientLine(line);
+
+        if(parsed){
+
+            // Guard against instruction steps that happen to start
+            // with a number, e.g. "1. Sätt ugnen på 200 grader..."
+            let wordCount =
+                parsed.name.split(/\s+/).filter(w => w !== "").length;
+
+            let hasQuantity = parsed.amount !== "";
+
+            let looksLikeIngredient =
+                (hasQuantity && wordCount > 0 && wordCount <= 6) ||
+                // No quantity given at all (e.g. "salt", "svartpeppar")
+                // — only keep it if it's short and not a full sentence.
+                (!hasQuantity &&
+                    wordCount > 0 &&
+                    wordCount <= 3 &&
+                    !line.trim().endsWith("."));
+
+            if(looksLikeIngredient){
+                ingredientLines.push(parsed);
+            }
+
+        }
+
+    });
+
+    if(ingredientLines.length === 0){
+
+        showToast(
+            "Couldn't find any ingredient lines in that text — try " +
+            "pasting just the ingredient list, then fill things in " +
+            "by hand in the form that opens.",
+            { type:"error", duration:6000 }
+        );
+
+    }
+
+    // Populate the Add Recipe form so the person can review before saving
+    selectedRecipe = null;
+
+    document.getElementById("recipeName").value = title;
+    document.getElementById("recipePeople").value = servings;
+    document.getElementById("recipeTags").value = "";
+
+    document.getElementById("ingredientList").innerHTML = "";
+
+    if(ingredientLines.length > 0){
+
+        ingredientLines.forEach(item=>{
+            addIngredientRow(item.name, item.amount, item.unit);
+        });
+
+    }else{
+
+        addIngredientRow();
+
+    }
+
+    document.querySelector("#recipeModal h2")
+    .innerText = t("modal_add_recipe");
+
+    closePasteModal();
+
+    document.getElementById("recipeModal")
+    .style.display = "flex";
+
+}
+
+
+// =======================
+// PAGE NAVIGATION
+// =======================
+
+
+function recipesOutOfDate(){
+
+    try{
+
+        let stored = JSON.parse(localStorage.getItem("foodflowRecipes") || "[]");
+
+        if(!Array.isArray(stored)) return false;
+        if(stored.length !== recipes.length) return true;
+
+        return stored.some((r, i) => !recipes[i] || r.name !== recipes[i].name);
+
+    }catch(e){
+
+        return false;
+
+    }
+
+}
+
+
+function showPage(page){
+
+localStorage.setItem(
+"foodflowPage",
+page
+);
+
+
+document.querySelectorAll("#navbar button").forEach(btn=>{
+    btn.classList.remove("nav-active");
+});
+
+let activeNavBtn = document.getElementById(
+    "navBtn" + page.charAt(0).toUpperCase() + page.slice(1)
+);
+
+if(activeNavBtn){
+    activeNavBtn.classList.add("nav-active");
+}
+
+
+document.getElementById("plannerPage")
+.style.display="none";
+
+
+document.getElementById("recipesPage")
+.style.display="none";
+
+
+document.getElementById("shoppingPage")
+.style.display="none";
+
+
+
+if(page==="planner"){
+
+document.getElementById("plannerPage")
+.style.display="block";
+
+}
+
+
+
+if(page==="recipes"){
+
+document.getElementById("recipesPage")
+.style.display="block";
+
+// Safety net: if the saved recipes no longer match what this page has
+// in memory (e.g. a synced change landed in storage but the page has
+// not refreshed yet), reload once so the list is always complete.
+if(recipesOutOfDate()){
+    try{
+        let last = Number(sessionStorage.getItem("ff_recipe_reload") || 0);
+        if(Date.now() - last > 15000){
+            sessionStorage.setItem("ff_recipe_reload", String(Date.now()));
+            location.reload();
+            return;
+        }
+    }catch(e){}
+}
+
+}
+
+
+
+if(page==="shopping"){
+
+document.getElementById("shoppingPage")
+.style.display="block";
+
+renderShoppingList();
+
+}
+
+
+let quickAddFab = document.getElementById("quickAddFab");
+
+if(quickAddFab){
+    quickAddFab.classList.toggle("show-fab", page === "planner");
+}
+
+
+}
+
+function setupPWAManifest(){
+
+// A single HTML file can't host a real manifest.json on its own URL,
+// so we build one in memory and point a <link> at it as a Blob URL.
+let manifest = {
+    name: "FoodFlow",
+    short_name: "FoodFlow",
+    start_url: ".",
+    display: "standalone",
+    background_color: "#f4f6f4",
+    theme_color: "#4caf50",
+    icons: [
+        {
+            src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%234caf50' rx='20'/%3E%3Ctext x='50' y='68' font-size='55' text-anchor='middle'%3E%F0%9F%8D%83%3C/text%3E%3C/svg%3E",
+            sizes: "100x100",
+            type: "image/svg+xml"
+        }
+    ]
+};
+
+let blob = new Blob(
+    [JSON.stringify(manifest)],
+    { type: "application/manifest+json" }
+);
+
+let manifestUrl = URL.createObjectURL(blob);
+
+let link = document.createElement("link");
+link.rel = "manifest";
+link.href = manifestUrl;
+
+document.head.appendChild(link);
+
+}
+
+
+setupPWAManifest();
+
+
+// Lets the app open (and keep working) even with no signal, once it's
+// been loaded at least once — useful since this is often added to a
+// phone's home screen like a regular app. Registering sw.js is wrapped
+// in a feature check and a catch, so browsers or hosting setups without
+// it (or without HTTPS) just silently skip this and the app works the
+// same as before, only without the offline fallback.
+if("serviceWorker" in navigator){
+    window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").catch(() => {});
+    });
+}
+
+
+let savedPage =
+localStorage.getItem("foodflowPage")
+|| "planner";
+
+
+applyTranslations();
+
+showPage(savedPage);
+
+renderMealTypeOptions();
+
+updateWeekLabel();
+
+render();
+
+renderRecipes();
+
+renderShoppingList();
+
+
+</script>
+
+<script type="module">
+// =======================
+// HOUSEHOLD SYNC (Firebase Firestore, free Spark plan)
+// =======================
+// Your data still lives in localStorage and the app works exactly as
+// before. When a household code is set, every change is also copied to
+// Firestore (split into small documents so people editing different
+// things don't overwrite each other) and changes from others are copied
+// back in and shown live.
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {
+    initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+    collection, doc, getDoc, getDocs, setDoc, writeBatch, runTransaction, onSnapshot, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCbtUYkhZUxF3iZZeDe40S1qlyi5c5bNtM",
+    authDomain: "foodflow-84bf9.firebaseapp.com",
+    projectId: "foodflow-84bf9",
+    storageBucket: "foodflow-84bf9.firebasestorage.app",
+    messagingSenderId: "760720420185",
+    appId: "1:760720420185:web:929f3e308dd9c193a7f048"
+};
+
+const CODE_KEY = "foodflowHouseholdCode";
+const BASE_KEY = "foodflowSyncBase";
+
+// Which localStorage keys are shared. "map" keys hold an object whose
+// entries (a week, a day note, a translation…) each become their own
+// document; "whole" keys are stored as one document.
+const SYNC_KEYS = {
+    foodflowWeeks: "map",
+    foodflowShoppingCheckedByWeek: "map",
+    foodflowShoppingOverridesByWeek: "map",
+    foodflowShoppingExtrasByWeek: "map",
+    foodflowDayNotes: "map",
+    foodflowWeekNames: "map",
+    foodflowCustomIngredientTranslations: "map",
+    foodflowCustomIngredientCategories: "map",
+    foodflowRecipes: "whole",
+    foodflowCategories: "whole",
+    foodflowCategoryOrder: "whole",
+    foodflowWeekTemplates: "whole"
+};
+const WS_KEY = "foodflowWorkspaces";
+const WS_PREFIX = "foodflowWS_";
+let switching = false;
+const SHORT = k => k.replace(/^foodflow/, "");
+
+const origSet = Storage.prototype.setItem;
+const origRemove = Storage.prototype.removeItem;
+const ls = {
+    get: k => localStorage.getItem(k),
+    set: (k, v) => origSet.call(localStorage, k, v),
+    del: k => origRemove.call(localStorage, k)
+};
+
+let db = null, auth = null, unsub = null, code = ls.get(CODE_KEY) || "";
+let status = code ? "connecting" : "off";
+let ready = false;
+let pushTimer = null, reloadTimer = null, pendingReload = false, forceReload = false;
+let base = {};
+try { base = JSON.parse(ls.get(BASE_KEY) || "{}"); } catch(e){ base = {}; }
+const saveBase = () => { try { ls.set(BASE_KEY, JSON.stringify(base)); } catch(e){} };
+
+const tr = k => (typeof t === "function" ? t(k) : k);
+const toast = (m, o) => { if (typeof showToast === "function") showToast(m, o); };
+
+function parse(v){ try { return v ? JSON.parse(v) : null; } catch(e){ return null; } }
+const isObj = x => x && typeof x === "object" && !Array.isArray(x);
+const docId = (k, e) => e === null ? SHORT(k) : SHORT(k) + "~" + encodeURIComponent(e);
+
+// Everything shared, as { docId: {k, e, v} } where v is a JSON string.
+function localDocs(){
+    const out = {};
+    for(const k of Object.keys(SYNC_KEYS)){
+        const raw = ls.get(k);
+        if(raw === null) continue;
+        const val = parse(raw);
+        if(SYNC_KEYS[k] === "map" && isObj(val)){
+            for(const e of Object.keys(val)){
+                out[docId(k, e)] = { k, e, v: JSON.stringify(val[e]) };
+            }
+        }else if(val !== null){
+            out[docId(k, null)] = { k, e: null, v: JSON.stringify(val) };
+        }
+    }
+    return out;
+}
+
+function applyRemote(k, e, v){
+    const val = JSON.parse(v);
+    if(e === null){ ls.set(k, JSON.stringify(val)); return; }
+    let cur = parse(ls.get(k));
+    if(!isObj(cur)) cur = {};
+    cur[e] = val;
+    ls.set(k, JSON.stringify(cur));
+}
+function removeRemote(k, e){
+    if(e === null) return;
+    const cur = parse(ls.get(k));
+    if(isObj(cur) && e in cur){ delete cur[e]; ls.set(k, JSON.stringify(cur)); }
+}
+
+// ---- pushing local changes up ----
+function schedulePush(){
+    if(!code || !db || !ready || switching) return;
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(pushLocal, 700);
+}
+
+// Three-way merge: "base" is what both sides started from, "theirs" is the
+// other device's version, "mine" is ours. Changes made on only one side are
+// kept, and changes made on both sides are combined instead of one replacing
+// the other (lists are merged item by item, objects key by key).
+function merge3(b, t, m){
+    const S = JSON.stringify;
+    if(S(m) === S(b)) return t;
+    if(S(t) === S(b)) return m;
+    if(S(m) === S(t)) return m;
+    if(Array.isArray(t) && Array.isArray(m)){
+        const bb = Array.isArray(b) ? b : [];
+        // Lists of things that have an id (recipes, meals): match them up by id, so the
+        // same recipe edited on two devices is merged field by field, not duplicated.
+        const keyed = a => a.every(x => isObj(x) && typeof x.id === "string") && new Set(a.map(x => x.id)).size === a.length;
+        if(keyed(t) && keyed(m) && keyed(bb)){
+            const bm = new Map(bb.map(x => [x.id, x])), tm = new Map(t.map(x => [x.id, x])), mm = new Map(m.map(x => [x.id, x]));
+            const out = [];
+            m.forEach(x => {
+                const bx = bm.get(x.id), tx = tm.get(x.id);
+                if(tx === undefined){ if(bx !== undefined && S(bx) === S(x)) return; out.push(x); }   // other side deleted it (unless I changed it)
+                else if(bx === undefined) out.push(S(tx) === S(x) ? x : merge3({}, tx, x));          // both added the same id
+                else out.push(merge3(bx, tx, x));
+            });
+            t.forEach(x => {
+                if(mm.has(x.id)) return;
+                if(!bm.has(x.id) || S(bm.get(x.id)) !== S(x)) out.push(x);   // added by the other side, or edited by them after I deleted it
+            });
+            return out;
+        }
+        const bs = new Set(bb.map(S)), ts = new Set(t.map(S)), ms = new Set(m.map(S));
+        const out = m.filter(x => !(bs.has(S(x)) && !ts.has(S(x))));     // drop items the other side removed
+        const seen = new Set(out.map(S));
+        t.forEach(x => { const k = S(x); if(!bs.has(k) && !ms.has(k) && !seen.has(k)){ out.push(x); seen.add(k); } });  // add items the other side added
+        return out;
+    }
+    if(isObj(t) && isObj(m)){
+        const bb = isObj(b) ? b : {};
+        const out = {};
+        new Set([...Object.keys(bb), ...Object.keys(t), ...Object.keys(m)]).forEach(k => {
+            const v = merge3(bb[k], t[k], m[k]);
+            if(v !== undefined) out[k] = v;
+        });
+        return out;
+    }
+    return m;
+}
+
+let pushing = false, pushAgain = false, retryTimer = null;
+
+async function pushLocal(){
+    if(!code || !db || !ready) return;
+    if(pushing){ pushAgain = true; return; }
+    pushing = true;
+    let changedLocal = false, failed = false;
+    try{
+        const local = localDocs();
+        const col = collection(db, "households", code, "docs");
+        let batch = writeBatch(db), n = 0;
+        const pendingFlush = [];
+        const flush = async () => { if(n){ const bt = batch; batch = writeBatch(db); n = 0; await bt.commit(); } };
+        const updates = [], fresh = [], baseDels = [];
+        for(const [id, d] of Object.entries(local)){
+            if(base[id] === d.v) continue;
+            // An empty list/object that was never synced is just an app default
+            // written at startup - never let it overwrite the household's data.
+            if(!(id in base) && (d.v === "[]" || d.v === "{}" || d.v === "null")) continue;
+            if(id in base){ updates.push([id, d]); continue; }
+            fresh.push([id, d]);
+        }
+        // A few brand-new documents go through the merge transaction too, in case
+        // someone else created the same one (e.g. the same new week) a moment ago.
+        // A big first upload is written in bulk.
+        const bulk = fresh.length > 40;
+        if(bulk) fresh.forEach(([id, d]) => { batch.set(doc(col, id), { k: d.k, e: d.e, v: d.v, t: serverTimestamp() }); if(++n >= 400) pendingFlush.push(flush()); });
+        else fresh.forEach(f => updates.push(f));
+        for(const id of Object.keys(base)){
+            if(!(id in local)){
+                batch.delete(doc(col, id));
+                baseDels.push(id);
+                if(++n >= 400) pendingFlush.push(flush());
+            }
+        }
+        await Promise.all(pendingFlush);
+        await flush();
+        // only now that the upload went through do we remember it as uploaded
+        if(bulk) fresh.forEach(([id, d]) => { base[id] = d.v; });
+        baseDels.forEach(id => { delete base[id]; });
+        saveBase();
+
+        // Changes to existing documents: read the cloud copy first and merge, so
+        // another person's change made in the meantime is combined with ours
+        // instead of being overwritten.
+        for(const [id, d0] of updates){
+            // someone else's change may have arrived (and been merged into local data)
+            // while earlier documents were uploading, so use the current copy
+            const d = localDocs()[id];
+            if(!d || base[id] === d.v) continue;
+            const ref = doc(col, id);
+            const b0 = base[id];                       // the version both sides started from
+            const tx = runTransaction(db, async t => {
+                const snap = await t.get(ref);
+                let v = d.v;
+                if(snap.exists()){
+                    const c = snap.data().v;
+                    if(typeof c === "string" && c !== b0 && c !== d.v){
+                        v = JSON.stringify(merge3(parse(b0), parse(c), parse(d.v)));
+                    }
+                }
+                t.set(ref, { k: d.k, e: d.e, v, t: serverTimestamp() });
+                return v;
+            });
+            const written = await Promise.race([tx, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 10000))]);
+            base[id] = written;
+            saveBase();
+            if(written !== d.v){
+                // bring the merged result into local data, keeping anything typed in the meantime
+                const nowLocal = (localDocs()[id] || {}).v;
+                const next = nowLocal === undefined ? written : JSON.stringify(merge3(parse(d.v), parse(written), parse(nowLocal)));
+                if(next !== nowLocal){ applyRemote(d.k, d.e, next); changedLocal = true; }
+            }
+        }
+        if(status === "error") setStatus("on");
+    }catch(err){
+        // typically offline: keep the changes locally and try again later
+        console.warn("FoodFlow sync push failed", err);
+        failed = true;
+        setStatus("error");
+    }
+    pushing = false;
+    if(failed){
+        clearTimeout(retryTimer);
+        retryTimer = setTimeout(schedulePush, 8000);
+    }else if(pushAgain){
+        pushAgain = false;
+        schedulePush();
+    }
+    if(changedLocal) scheduleReload();
+}
+
+// What the open page itself currently holds (it only re-reads storage on reload).
+// When someone else's change has been saved to storage but the page hasn't
+// refreshed yet, a save from this page is merged with it instead of overwriting it.
+let appView = {};
+(function(){ const l = localDocs(); for(const id of Object.keys(l)) appView[id] = l[id].v; })();
+
+function mergeWithRemote(key, value){
+    let mine;
+    try{ mine = JSON.parse(value); }catch(e){ return value; }
+    const kind = SYNC_KEYS[key];
+    const cur = parse(ls.get(key));
+    const S = JSON.stringify;
+    const doMerge = !!code && !switching;
+    const av = id => appView[id] === undefined ? undefined : JSON.parse(appView[id]);
+
+    if(kind === "map" && isObj(mine) && (cur === null || isObj(cur))){
+        const c = cur || {};
+        const out = {};
+        let differs = false;
+        new Set([...Object.keys(mine), ...Object.keys(c)]).forEach(e => {
+            const id = docId(key, e);
+            const merged = doMerge ? merge3(av(id), c[e], mine[e]) : mine[e];
+            if(merged !== undefined) out[e] = merged;
+            if(S(merged) !== S(mine[e])) differs = true;
+            if(mine[e] !== undefined) appView[id] = S(mine[e]); else delete appView[id];
+        });
+        if(differs) scheduleReload();
+        return S(out);
+    }
+    const id = docId(key, null);
+    const merged = doMerge && cur !== null ? merge3(av(id), cur, mine) : mine;
+    appView[id] = S(mine);
+    if(S(merged) !== S(mine)){ scheduleReload(); return S(merged); }
+    return value;
+}
+
+// Any write to a shared key from the app triggers a push.
+Storage.prototype.setItem = function(key, value){
+    if(this === localStorage && key in SYNC_KEYS) value = mergeWithRemote(key, value);
+    origSet.call(this, key, value);
+    if(this === localStorage && key in SYNC_KEYS) schedulePush();
+};
+Storage.prototype.removeItem = function(key){
+    origRemove.call(this, key);
+    if(this === localStorage && key in SYNC_KEYS) schedulePush();
+};
+
+// ---- pulling remote changes down ----
+function modalOpenOrTyping(){
+    const a = document.activeElement;
+    if(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return true;
+    return [...document.querySelectorAll(".modal")].some(m => getComputedStyle(m).display !== "none");
+}
+
+function scheduleReload(){
+    pendingReload = true;
+    clearTimeout(reloadTimer);
+    const tick = () => {
+        if(!pendingReload) return;
+        if(!forceReload && modalOpenOrTyping()){ reloadTimer = setTimeout(tick, 2000); return; }
+        try { sessionStorage.setItem("ff_scroll", String(window.scrollY)); sessionStorage.setItem("ff_synced", "1"); if(typeof currentWeekKey === "string") sessionStorage.setItem("ff_week", currentWeekKey); } catch(e){}
+        location.reload();
+    };
+    reloadTimer = setTimeout(tick, 600);
+}
+
+function onSnapshotData(snap){
+    let changed = false;
+    const local = localDocs();
+    const remoteIds = new Set();
+
+    snap.forEach(d => { if(d.id !== "meta") remoteIds.add(d.id); });
+
+    snap.docChanges().forEach(ch => {
+        const id = ch.doc.id;
+        if(id === "meta") return;
+        if(ch.doc.metadata.hasPendingWrites) return;      // our own write echoing back
+        const data = ch.doc.data();
+        if(ch.type === "removed"){
+            if(local[id] && local[id].v === base[id]){
+                removeRemote(data.k, data.e); delete base[id]; changed = true;
+            }
+            return;
+        }
+        if(!data || typeof data.v !== "string") return;
+        if(base[id] === data.v) return;                    // already in sync
+        const localIsEmptyDefault = local[id] && !(id in base) && (local[id].v === "[]" || local[id].v === "{}");
+        if(local[id] && local[id].v !== base[id] && !localIsEmptyDefault){
+            // both sides changed it: combine the two versions instead of picking one
+            const merged = JSON.stringify(merge3(parse(base[id]), parse(data.v), parse(local[id].v)));
+            base[id] = data.v;
+            if(merged !== local[id].v){ try{ applyRemote(data.k, data.e, merged); changed = true; }catch(e){} }
+            schedulePush();
+            return;
+        }
+        if(local[id] && local[id].v === data.v){ base[id] = data.v; return; }
+        if(local[id] && base[id] === undefined && (data.v === "[]" || data.v === "{}")){ return; } // never replace real data with an empty doc
+        try{ applyRemote(data.k, data.e, data.v); base[id] = data.v; changed = true; }catch(e){}
+    });
+
+    // First server-confirmed snapshot: connection is live. (We never delete
+    // local data from this snapshot - only explicit live deletions by others.)
+    if(!snap.metadata.fromCache && !onSnapshotData.done){
+        onSnapshotData.done = true;
+        ready = true;
+        setStatus("on");
+        schedulePush();
+    }
+    saveBase();
+    if(changed) scheduleReload();
+}
+
+function attach(){
+    if(unsub){ unsub(); unsub = null; }
+    // safety net: if the server can't be confirmed within 10s (slow or offline),
+    // start queueing uploads anyway - Firestore sends them when the connection is back.
+    setTimeout(() => { if(code && !ready){ ready = true; setStatus("on"); schedulePush(); } }, 10000);
+    onSnapshotData.done = false;
+    // includeMetadataChanges: we need the "now in sync with the server" event
+    // even when no documents changed, otherwise this device never starts uploading.
+    unsub = onSnapshot(
+        collection(db, "households", code, "docs"),
+        { includeMetadataChanges: true },
+        onSnapshotData,
+        err => { console.warn("FoodFlow sync listener error", err); setStatus("error"); }
+    );
+}
+
+async function ensureReady(){
+    if(!db){
+        const app = initializeApp(firebaseConfig);
+        try{
+            db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+        }catch(e){
+            db = initializeFirestore(app, {});
+        }
+        auth = getAuth(app);
+    }
+    if(!auth.currentUser) await signInAnonymously(auth);
+}
+
+async function start(){
+    if(!code) return;
+    try{
+        await ensureReady();
+        attach();
+    }catch(err){
+        console.warn("FoodFlow sync start failed", err);
+        setStatus("error");
+    }
+}
+
+// ---- several planners on one device ----
+// The active planner's data lives in the normal localStorage keys (so the rest of
+// the app doesn't need to know). Inactive planners are stored as snapshots.
+const WS_DATA_KEYS = [...Object.keys(SYNC_KEYS), "foodflowShoppingRemoved", "foodflowShoppingRangeStart", "foodflowShoppingRangeEnd", BASE_KEY];
+
+function saveWS(w){ ls.set(WS_KEY, JSON.stringify(w)); }
+function loadWS(){
+    let w = parse(ls.get(WS_KEY));
+    if(!w || !Array.isArray(w.list) || !w.list.length){
+        w = { active: "main", list: [{ id: "main", name: null, code: code || null }] };
+    }
+    let a = w.list.find(x => x.id === w.active);
+    if(!a){ a = w.list[0]; w.active = a.id; }
+    a.code = code || null;
+    saveWS(w);
+    return w;
+}
+function updateActiveWsCode(){ loadWS(); renderSyncSettings(); }
+const wsName = x => x.name || tr("ws_default_name");
+
+async function switchTo(id){
+    const w = loadWS();
+    if(id === w.active) return;
+    const target = w.list.find(x => x.id === id);
+    if(!target) return;
+    switching = true;
+    clearTimeout(pushTimer);
+    try{ if(code && db && ready) await Promise.race([pushLocal(), new Promise(r => setTimeout(r, 3000))]); }catch(e){}
+    const snap = {};
+    for(const k of WS_DATA_KEYS){ const v = ls.get(k); if(v !== null) snap[k] = v; }
+    ls.set(WS_PREFIX + w.active, JSON.stringify(snap));
+    if(unsub){ unsub(); unsub = null; }
+    for(const k of WS_DATA_KEYS) ls.del(k);
+    const ts = parse(ls.get(WS_PREFIX + id)) || {};
+    for(const k of Object.keys(ts)) ls.set(k, ts[k]);
+    if(target.code) ls.set(CODE_KEY, target.code); else ls.del(CODE_KEY);
+    w.active = id; saveWS(w);
+    try { sessionStorage.removeItem("ff_week"); sessionStorage.removeItem("ff_scroll"); } catch(e){}
+    location.reload();
+}
+
+window.ffWsSwitch = id => switchTo(id);
+
+window.ffWsNew = async function(){
+    const input = document.getElementById("wsNewName");
+    const name = (input.value || "").trim() || tr("ws_new_default_name");
+    const w = loadWS();
+    const id = "ws" + Date.now().toString(36);
+    w.list.push({ id, name, code: null });
+    saveWS(w);
+    ls.set(WS_PREFIX + id, "{}");
+    input.value = "";
+    await switchTo(id);
+};
+
+window.ffWsRename = function(id){
+    const w = loadWS();
+    const x = w.list.find(y => y.id === id);
+    if(!x) return;
+    const n = prompt(tr("ws_rename_prompt"), wsName(x));
+    if(n === null) return;
+    x.name = n.trim() || null;
+    saveWS(w);
+    renderSyncSettings();
+};
+
+window.ffWsDelete = async function(id){
+    const w = loadWS();
+    if(id === w.active){ toast(tr("ws_cannot_delete_active"), { type: "error" }); return; }
+    if(w.list.length <= 1) return;
+    const ok = await customConfirm(tr("ws_delete_message"), tr("ws_delete_title"));
+    if(!ok) return;
+    w.list = w.list.filter(x => x.id !== id);
+    saveWS(w);
+    ls.del(WS_PREFIX + id);
+    renderSyncSettings();
+};
+
+function renderWorkspaces(){
+    const box = document.getElementById("wsList");
+    const label = document.getElementById("wsLabel");
+    if(!box) return;
+    const w = loadWS();
+    box.textContent = "";
+    w.list.forEach(x => {
+        const row = document.createElement("div");
+        row.style.cssText = "display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0;";
+        const nm = document.createElement("strong");
+        nm.textContent = (x.id === w.active ? "✓ " : "") + wsName(x);
+        const tag = document.createElement("span");
+        tag.className = "small";
+        tag.textContent = x.code ? "👨‍👩‍👧 " + tr("ws_shared_tag") : "💻 " + tr("ws_local_tag");
+        row.append(nm, tag);
+        const mk = (txt, fn, cls) => { const b = document.createElement("button"); b.textContent = txt; if(cls) b.className = cls; b.onclick = fn; row.append(b); };
+        if(x.id !== w.active) mk(tr("ws_switch"), () => switchTo(x.id));
+        mk("✏️", () => window.ffWsRename(x.id));
+        if(x.id !== w.active && w.list.length > 1) mk("🗑️", () => window.ffWsDelete(x.id), "delete");
+        box.append(row);
+    });
+    if(label){
+        const a = w.list.find(x => x.id === w.active);
+        label.style.display = "";
+        label.textContent = "";
+        const nm = document.createElement("span");
+        nm.className = "ws-name";
+        nm.textContent = " " + wsName(a);
+        label.append("📅", nm, " ▾");
+        label.title = wsName(a);
+        label.setAttribute("aria-label", wsName(a));
+    }
+}
+
+// Quick switcher under the app title: tap the planner name to jump between
+// your private planner and any households.
+window.ffWsMenu = function(anchor){
+    if(typeof closeDayMenu === "function") closeDayMenu();
+    const old = document.getElementById("dayMenu");
+    if(old) old.remove();
+    const w = loadWS();
+    const menu = document.createElement("div");
+    menu.id = "dayMenu";
+    menu.setAttribute("role", "menu");
+    let first = null;
+    const close = () => { menu.remove(); document.removeEventListener("click", away, true); document.removeEventListener("keydown", esc, true); };
+    const away = e => { if(!menu.contains(e.target) && e.target !== anchor) close(); };
+    const esc = e => { if(e.key === "Escape") close(); };
+    const item = (label, fn) => {
+        const b = document.createElement("button");
+        b.setAttribute("role", "menuitem");
+        b.textContent = label;
+        b.onclick = () => { close(); fn(); };
+        menu.appendChild(b);
+        if(!first) first = b;
+    };
+    w.list.forEach(x => {
+        const on = x.id === w.active;
+        item((on ? "✓ " : "\u2003") + (x.code ? "👨‍👩‍👧 " : "💻 ") + wsName(x), () => { if(!on) switchTo(x.id); });
+        if(on) menu.lastChild.style.fontWeight = "700";
+    });
+    menu.appendChild(document.createElement("hr"));
+    item(tr("ws_menu_manage"), () => {
+        if(typeof openSettings === "function") openSettings();
+        setTimeout(() => { const el = document.getElementById("wsNewName"); if(el) el.scrollIntoView({ block: "center", behavior: "smooth" }); }, 150);
+    });
+    document.body.appendChild(menu);
+    const r = anchor.getBoundingClientRect(), mw = menu.offsetWidth;
+    menu.style.top = (window.scrollY + r.bottom + 4) + "px";
+    menu.style.left = Math.max(8, Math.min(window.scrollX + r.left + r.width / 2 - mw / 2, window.scrollX + document.documentElement.clientWidth - mw - 8)) + "px";
+    setTimeout(() => { document.addEventListener("click", away, true); document.addEventListener("keydown", esc, true); }, 0);
+    if(first) first.focus();
+};
+
+// ---- settings UI ----
+const fmt = c => c.replace(/(.{4})(?=.)/g, "$1-");
+const normalize = s => (s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+function setStatus(s){ status = s; renderSyncSettings(); }
+
+function renderSyncSettings(){
+    const st = document.getElementById("syncStatus");
+    if(!st) return;
+    renderWorkspaces();
+    const on = !!code;
+    document.getElementById("syncOffBlock").style.display = on ? "none" : "";
+    document.getElementById("syncOnBlock").style.display = on ? "" : "none";
+    document.getElementById("syncCodeDisplay").textContent = on ? fmt(code) : "";
+    st.textContent =
+        !on ? tr("sync_status_off") :
+        status === "error" ? tr("sync_status_error") :
+        status === "connecting" ? tr("sync_status_connecting") :
+        tr("sync_status_on");
+}
+window.renderSyncSettings = renderSyncSettings;
+
+function newCode(){
+    const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const b = new Uint8Array(12);
+    crypto.getRandomValues(b);
+    return [...b].map(x => A[x % A.length]).join("");
+}
+
+window.ffSyncCreate = async function(){
+    try{
+        await ensureReady();
+        const c = newCode();
+        const bk = {};
+        for(const k of Object.keys(SYNC_KEYS)) bk[k] = ls.get(k);
+        ls.set("foodflowPreJoinBackup", JSON.stringify(bk));
+        await setDoc(doc(db, "households", c, "docs", "meta"), { created: serverTimestamp() });
+        code = c; ls.set(CODE_KEY, c); base = {}; saveBase(); updateActiveWsCode();
+        setStatus("connecting");
+        ready = true;
+        attach(); await pushLocal();
+        toast(tr("sync_created"));
+    }catch(err){
+        console.warn(err); toast(tr("sync_status_error"), { type: "error" });
+    }
+};
+
+window.ffSyncJoin = async function(){
+    const c = normalize(document.getElementById("syncJoinCode").value);
+    if(c.length !== 12){ toast(tr("sync_invalid_code"), { type: "error" }); return; }
+    try{
+        const w = loadWS();
+        const existing = w.list.find(x => x.code === c);
+        if(existing){ toast(tr("ws_already_joined"), { type: "error" }); return; }
+        await ensureReady();
+        const snap = await getDoc(doc(db, "households", c, "docs", "meta"));
+        if(!snap.exists()){ toast(tr("sync_not_found"), { type: "error" }); return; }
+        // download the household's data into a brand-new planner, leaving the current one untouched
+        const all = await getDocs(collection(db, "households", c, "docs"));
+        const data = {}, newBase = {};
+        all.forEach(d => {
+            if(d.id === "meta") return;
+            const x = d.data();
+            if(!x || typeof x.v !== "string") return;
+            try{
+                const val = JSON.parse(x.v);
+                if(x.e === null) data[x.k] = JSON.stringify(val);
+                else { const cur = parse(data[x.k]) || {}; cur[x.e] = val; data[x.k] = JSON.stringify(cur); }
+                newBase[d.id] = x.v;
+            }catch(e){}
+        });
+        data[BASE_KEY] = JSON.stringify(newBase);
+        const id = "ws" + Date.now().toString(36);
+        ls.set(WS_PREFIX + id, JSON.stringify(data));
+        w.list.push({ id, name: tr("ws_household_default_name") + " " + fmt(c).slice(0, 4), code: c });
+        saveWS(w);
+        document.getElementById("syncJoinCode").value = "";
+        toast(tr("sync_joined"));
+        await switchTo(id);
+    }catch(err){
+        console.warn(err); toast(tr("sync_status_error"), { type: "error" });
+    }
+};
+
+window.ffSyncLeave = async function(){
+    const ok = await customConfirm(tr("sync_leave_message"), tr("sync_leave_title"));
+    if(!ok) return;
+    if(unsub){ unsub(); unsub = null; }
+    code = ""; ls.del(CODE_KEY); ls.del(BASE_KEY); base = {}; updateActiveWsCode();
+    setStatus("off");
+    toast(tr("sync_left"));
+};
+
+window.ffSyncRestore = async function(){
+    const raw = ls.get("foodflowPreJoinBackup");
+    if(!raw){ toast(tr("sync_no_backup"), { type: "error" }); return; }
+    const ok = await customConfirm(tr("sync_restore_message"), tr("sync_restore_title"));
+    if(!ok) return;
+    const bk = parse(raw) || {};
+    for(const k of Object.keys(bk)){ if(bk[k] !== null) ls.set(k, bk[k]); }
+    // make the restored data count as new local edits so it syncs back up
+    base = {}; saveBase();
+    if(code) schedulePush();
+    toast(tr("sync_restored"));
+    setTimeout(() => location.reload(), 900);
+};
+
+window.ffSyncCopy = async function(){
+    try{ await navigator.clipboard.writeText(fmt(code)); toast(tr("sync_copied")); }
+    catch(e){ prompt("", fmt(code)); }
+};
+
+window.ffSyncShare = async function(){
+    if(!code) return;
+    const url = location.origin + location.pathname + "?join=" + code;
+    if(navigator.share){
+        try{ await navigator.share({ title: "FoodFlow", text: tr("sync_share_text"), url }); return; }
+        catch(e){ if(e && e.name === "AbortError") return; }
+    }
+    try{ await navigator.clipboard.writeText(url); toast(tr("sync_link_copied")); }
+    catch(e){ prompt("", url); }
+};
+
+// Moves this household to a brand-new code (e.g. if the code got shared by mistake).
+// Everyone who should stay needs the new code; the old copy of the data is left
+// untouched, so nobody's data is wiped from their device.
+window.ffSyncChangeCode = async function(){
+    if(!code) return;
+    const ok = await customConfirm(tr("sync_change_message"), tr("sync_change_title"));
+    if(!ok) return;
+    try{
+        await ensureReady();
+        const c = newCode();
+        await setDoc(doc(db, "households", c, "docs", "meta"), { created: serverTimestamp() });
+        if(unsub){ unsub(); unsub = null; }
+        clearTimeout(pushTimer);
+        code = c; ls.set(CODE_KEY, c); base = {}; saveBase(); updateActiveWsCode();
+        setStatus("connecting");
+        ready = true;
+        attach(); await pushLocal();
+        toast(tr("sync_code_changed"));
+    }catch(err){
+        console.warn(err); toast(tr("sync_status_error"), { type: "error" });
+    }
+};
+
+// Opening an invite link (?join=CODE) offers to join that household
+try{
+    const u = new URL(location.href);
+    const j = u.searchParams.get("join");
+    if(j){
+        u.searchParams.delete("join");
+        history.replaceState(null, "", u.pathname + u.search + u.hash);
+        const c = normalize(j);
+        if(c.length === 12){
+            setTimeout(async () => {
+                const ok = await customConfirm(tr("sync_invite_message").replace("{code}", fmt(c)), tr("sync_invite_title"));
+                if(ok){ document.getElementById("syncJoinCode").value = fmt(c); window.ffSyncJoin(); }
+            }, 700);
+        }
+    }
+}catch(e){}
+
+// restore scroll after a sync-triggered reload
+try{
+    const y = sessionStorage.getItem("ff_scroll");
+    if(y !== null){
+        sessionStorage.removeItem("ff_scroll");
+        requestAnimationFrame(() => window.scrollTo(0, Number(y)));
+    }
+    if(sessionStorage.getItem("ff_synced")){
+        sessionStorage.removeItem("ff_synced");
+        setTimeout(() => toast(tr("sync_updated")), 400);
+    }
+}catch(e){}
+
+loadWS();
+renderSyncSettings();
+start();
+window.addEventListener("online", () => { if(code) schedulePush(); });
+</script>
+
+</body>
+
+</html>
