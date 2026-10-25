@@ -11158,7 +11158,9 @@ const knownUnits = [
     "bag","bags","bottle","bottles","jar","jars",
     "box","boxes","clove","cloves","slice","slices",
     "piece","pieces","bunch","bunches","head","heads",
-    "stick","sticks"
+    "stick","sticks",
+    "block","blocks","pack","packs","packet","packets",
+    "loaf","loaves","limpa","limpor","l/kg","kg/l"
 ];
 
 // Common unit synonyms/plurals that should all combine on the
@@ -11183,6 +11185,9 @@ const unitAliases = {
     "bunches":"bunch",
     "heads":"head",
     "sticks":"stick",
+    "blocks":"block",
+    "pack":"package", "packs":"package", "packet":"package", "packets":"package",
+    "loaves":"loaf", "limpor":"limpa",
     // Swedish "burk"/"burkar" means the same thing as English "can" —
     // combine them so e.g. "5 burk tonfisk" and "2 cans tuna" add up
     // on the same shopping list line instead of staying separate.
@@ -11257,13 +11262,25 @@ function parseQuantityToken(token){
 }
 
 
+// Removes list markers pasted from notes apps / chats: "* ", "- ", "• ", "☐ ", "[ ] " …
+function stripListMarker(line){
+    return line.replace(/^\s*(?:[*•·▪◦‣⁃☐☑✓✔□■▢-]+|\[[ xX]?\]|[–—])\s+/, "").trim();
+}
+
 function parseIngredientLine(line){
 
-    line = line.trim();
+    line = stripListMarker(line.trim());
 
     if(!line){
         return null;
     }
+
+    // A range such as "2-3 loaves" or "3 to 4.5 L": use the higher number,
+    // so the shopping list never ends up short.
+    line = line.replace(
+        /^(\d+(?:[.,]\d+)?)\s*(?:-|–|—|to|till|eller)\s*(\d+(?:[.,]\d+)?)(?=\s|[a-zA-ZåäöÅÄÖ]|$)/i,
+        (m, a, b) => b
+    );
 
     // Drop conversion notes like "(3 st motsvarar ca 100 g)" — they're
     // not part of the ingredient name, just a helpful aside.
@@ -11351,7 +11368,12 @@ function parseIngredientLine(line){
     ){
 
         unit = normalizeUnit(restTokens.shift());
+        // "kg/L" or "l/kg" (either unit would do): take the first one
+        if(unit.includes("/")) unit = unit.split("/")[0];
         rest = restTokens.join(" ");
+
+        // "2 loaves of bread" / "1 pack of butter": drop the filler word
+        rest = rest.replace(/^(?:of|av)\s+/i, "");
 
     }
 
@@ -11377,7 +11399,7 @@ function parsePastedRecipe(){
 
     let lines = raw
         .split("\n")
-        .map(l => l.trim())
+        .map(l => stripListMarker(l.trim()))
         .filter(l => l !== "");
 
     // Guess servings — covers Swedish ("4 portioner", "4 port", "4
