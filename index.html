@@ -11257,6 +11257,12 @@ function parseQuantityToken(token){
 
     }
 
+    // "1½" / "2¼": a whole number glued to a fraction character
+    let mixed = token.match(/^(\d+)([½¼¾⅓⅔])$/);
+    if(mixed){
+        return Number(mixed[1]) + fractionMap[mixed[2]];
+    }
+
     return Number(token.replace(",","."));
 
 }
@@ -11274,6 +11280,9 @@ function parseIngredientLine(line){
     if(!line){
         return null;
     }
+
+    // "2x carrots" / "2 x carrots": a multiplier, not a unit
+    line = line.replace(/^(\d+(?:[.,]\d+)?)\s*[x×]\s+(?=\S)/i, "$1 ");
 
     // A range such as "2-3 loaves" or "3 to 4.5 L": use the higher number,
     // so the shopping list never ends up short.
@@ -11313,7 +11322,7 @@ function parseIngredientLine(line){
         // AFTER the ingredient name instead ("Sugar 2 tbsp"). Try that
         // before giving up and treating the whole line as just a name.
         let trailingWithUnit = line.match(
-            /^(.+?)\s+(\d+\/\d+|[\d½¼¾⅓⅔]+(?:[.,]\d+)?)\s+([a-zA-ZåäöÅÄÖ.]+)$/
+            /^(.+?)\s+(\d+\/\d+|[\d½¼¾⅓⅔]+(?:[.,]\d+)?)\s*([a-zA-ZåäöÅÄÖ.]+)$/
         );
 
         if(trailingWithUnit){
@@ -11407,8 +11416,11 @@ function parsePastedRecipe(){
     // "10 people", "serves 4", "4 servings").
     let servings = 4;
 
+    // ("10x" / "10p" only count when they stand alone on a line, so "2x carrots" isn't read as servings)
+    let servingsLine = lines.find(l => /^\d+\s*(?:x|p)\.?$/i.test(l));
     let servingsMatch =
-        raw.match(/(\d+)\s*(?:x|p(?:eople|ersons?)?|portioner|port\.?|personer|servings?|serves)\b/i) ||
+        (servingsLine && servingsLine.match(/(\d+)/)) ||
+        raw.match(/(\d+)\s*(?:people|persons?|portioner|port\.?|personer|servings?|serves)\b/i) ||
         raw.match(/(?:serves|serving size)\s*:?\s*(\d+)/i);
 
     if(servingsMatch){
@@ -11445,6 +11457,7 @@ function parsePastedRecipe(){
         if(skipPattern.test(line)) continue;
         if(servingsLinePattern.test(line)) continue;
         if(servingsLinePatternReversed.test(line)) continue;
+        { let pl = parseIngredientLine(line); if(pl && pl.amount !== "" && pl.unit !== "") continue; }
 
         title = line;
         titleIndex = i;
