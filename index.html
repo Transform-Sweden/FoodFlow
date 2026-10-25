@@ -11171,7 +11171,8 @@ const knownUnits = [
     "piece","pieces","bunch","bunches","head","heads",
     "stick","sticks",
     "block","blocks","pack","packs","packet","packets",
-    "loaf","loaves","limpa","limpor","l/kg","kg/l"
+    "loaf","loaves","limpa","limpor","l/kg","kg/l",
+    "bulb","bulbs","litre","litres","liters"
 ];
 
 // Common unit synonyms/plurals that should all combine on the
@@ -11199,6 +11200,8 @@ const unitAliases = {
     "blocks":"block",
     "pack":"package", "packs":"package", "packet":"package", "packets":"package",
     "loaves":"loaf", "limpor":"limpa",
+    "bulbs":"bulb",
+    "litre":"l", "litres":"l", "liters":"l",
     // Swedish "burk"/"burkar" means the same thing as English "can" —
     // combine them so e.g. "5 burk tonfisk" and "2 cans tuna" add up
     // on the same shopping list line instead of staying separate.
@@ -11292,6 +11295,20 @@ function parseIngredientLine(line){
         return null;
     }
 
+    // "Pork - 1.5" / "Ramen noodles - 1 kg" / "Eggs: 9": the amount comes AFTER
+    // the name, separated by a dash or colon. Turn it into "1.5 Pork".
+    line = line.replace(/\s*[-–—:]\s*$/, "");
+    let dashAmount = line.match(/^(.+?)\s*[-–—:]\s+(\d[\d.,\/½¼¾⅓⅔]*(?:\s*(?:-|–|—|to)\s*\d[\d.,]*)?.*)$/i);
+    if(dashAmount && !/^\d/.test(line)){
+        line = dashAmount[2].trim() + " " + dashAmount[1].trim();
+    }else{
+        // "Salt - to taste": keep just the name when the note is short
+        let dashNote = line.match(/^(.+?)\s+[-–—]\s+([^\d]+)$/);
+        if(dashNote && dashNote[2].trim().split(/\s+/).length <= 3){
+            line = dashNote[1].trim();
+        }
+    }
+
     // "2x carrots" / "2 x carrots": a multiplier, not a unit
     line = line.replace(/^(\d+(?:[.,]\d+)?)\s*[x×]\s+(?=\S)/i, "$1 ");
 
@@ -11382,6 +11399,15 @@ function parseIngredientLine(line){
     let restTokens = rest.split(/\s+/);
     let unit = "";
 
+    // "1 small bottle of oil": skip a size word in front of the unit
+    if(
+        restTokens.length > 1 &&
+        /^(small|medium|large|big|liten|litet|stor|stort|medelstor)$/i.test(restTokens[0]) &&
+        knownUnits.includes(restTokens[1].toLowerCase())
+    ){
+        restTokens.shift();
+    }
+
     if(
         restTokens.length &&
         knownUnits.includes(restTokens[0].toLowerCase())
@@ -11409,6 +11435,9 @@ function parseIngredientLine(line){
 function parsePastedRecipe(){
 
     let raw = document.getElementById("pasteText").value;
+
+    // a range broken over two lines ("3-" then "4 litres") is joined back up
+    raw = raw.replace(/(\d)\s*[-–—]\s*\r?\n\s*(?=\d)/g, "$1-");
 
     if(!raw.trim()){
 
