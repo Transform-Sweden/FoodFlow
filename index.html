@@ -11835,6 +11835,24 @@ function merge3(b, t, m){
     if(S(m) === S(t)) return m;
     if(Array.isArray(t) && Array.isArray(m)){
         const bb = Array.isArray(b) ? b : [];
+        // Lists of things that have an id (recipes, meals): match them up by id, so the
+        // same recipe edited on two devices is merged field by field, not duplicated.
+        const keyed = a => a.every(x => isObj(x) && typeof x.id === "string") && new Set(a.map(x => x.id)).size === a.length;
+        if(keyed(t) && keyed(m) && keyed(bb)){
+            const bm = new Map(bb.map(x => [x.id, x])), tm = new Map(t.map(x => [x.id, x])), mm = new Map(m.map(x => [x.id, x]));
+            const out = [];
+            m.forEach(x => {
+                const bx = bm.get(x.id), tx = tm.get(x.id);
+                if(tx === undefined){ if(bx !== undefined && S(bx) === S(x)) return; out.push(x); }   // other side deleted it (unless I changed it)
+                else if(bx === undefined) out.push(S(tx) === S(x) ? x : merge3({}, tx, x));          // both added the same id
+                else out.push(merge3(bx, tx, x));
+            });
+            t.forEach(x => {
+                if(mm.has(x.id)) return;
+                if(!bm.has(x.id) || S(bm.get(x.id)) !== S(x)) out.push(x);   // added by the other side, or edited by them after I deleted it
+            });
+            return out;
+        }
         const bs = new Set(bb.map(S)), ts = new Set(t.map(S)), ms = new Set(m.map(S));
         const out = m.filter(x => !(bs.has(S(x)) && !ts.has(S(x))));     // drop items the other side removed
         const seen = new Set(out.map(S));
@@ -11864,32 +11882,45 @@ async function pushLocal(){
         const local = localDocs();
         const col = collection(db, "households", code, "docs");
         let batch = writeBatch(db), n = 0;
+        const pendingFlush = [];
         const flush = async () => { if(n){ const bt = batch; batch = writeBatch(db); n = 0; await bt.commit(); } };
-        const updates = [];
+        const updates = [], fresh = [], baseDels = [];
         for(const [id, d] of Object.entries(local)){
             if(base[id] === d.v) continue;
             // An empty list/object that was never synced is just an app default
             // written at startup - never let it overwrite the household's data.
             if(!(id in base) && (d.v === "[]" || d.v === "{}" || d.v === "null")) continue;
             if(id in base){ updates.push([id, d]); continue; }
-            batch.set(doc(col, id), { k: d.k, e: d.e, v: d.v, t: serverTimestamp() });
-            base[id] = d.v;
-            if(++n >= 400) await flush();
+            fresh.push([id, d]);
         }
+        // A few brand-new documents go through the merge transaction too, in case
+        // someone else created the same one (e.g. the same new week) a moment ago.
+        // A big first upload is written in bulk.
+        const bulk = fresh.length > 40;
+        if(bulk) fresh.forEach(([id, d]) => { batch.set(doc(col, id), { k: d.k, e: d.e, v: d.v, t: serverTimestamp() }); if(++n >= 400) pendingFlush.push(flush()); });
+        else fresh.forEach(f => updates.push(f));
         for(const id of Object.keys(base)){
             if(!(id in local)){
                 batch.delete(doc(col, id));
-                delete base[id];
-                if(++n >= 400) await flush();
+                baseDels.push(id);
+                if(++n >= 400) pendingFlush.push(flush());
             }
         }
-        saveBase();
+        await Promise.all(pendingFlush);
         await flush();
+        // only now that the upload went through do we remember it as uploaded
+        if(bulk) fresh.forEach(([id, d]) => { base[id] = d.v; });
+        baseDels.forEach(id => { delete base[id]; });
+        saveBase();
 
         // Changes to existing documents: read the cloud copy first and merge, so
         // another person's change made in the meantime is combined with ours
         // instead of being overwritten.
-        for(const [id, d] of updates){
+        for(const [id, d0] of updates){
+            // someone else's change may have arrived (and been merged into local data)
+            // while earlier documents were uploading, so use the current copy
+            const d = localDocs()[id];
+            if(!d || base[id] === d.v) continue;
             const ref = doc(col, id);
             const b0 = base[id];                       // the version both sides started from
             const tx = runTransaction(db, async t => {
