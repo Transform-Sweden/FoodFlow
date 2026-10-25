@@ -830,7 +830,7 @@ color:var(--text); font-size:14px; font-weight:500; border-radius:8px; transform
 #plannerPage .meal .meal-foot { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:8px; }
 #plannerPage .meal .meal-chip { font-size:12.5px; line-height:1; padding:4px 9px; border-radius:999px; background:var(--card); border:1px solid rgba(120,120,120,.22); color:var(--text); white-space:nowrap; }
 #plannerPage .meal .meal-chevron { margin-left:auto; font-size:22px; line-height:1; color:var(--text-soft); opacity:.55; padding-left:6px; }
-@media(min-width:700px){ #plannerPage .meal { padding:10px 9px 10px 10px; } #plannerPage .meal .meal-chevron { display:none; } #plannerPage .meal .meal-foot { min-height:50px; align-content:flex-start; } #plannerPage .meal .meal-name-clamp { font-size:1em; overflow-wrap:anywhere; word-break:normal; } }
+@media(min-width:700px){ #plannerPage .meal { padding:10px 9px 10px 10px; } #plannerPage .meal .meal-chevron { display:none; } #plannerPage .meal .meal-chip-lbl { display:none; } #plannerPage .meal .meal-foot { gap:4px; flex-wrap:nowrap; } #plannerPage .meal .meal-chip { padding:4px 7px; font-size:12px; } #plannerPage .meal .meal-name-clamp { font-size:1em; overflow-wrap:anywhere; word-break:normal; } }
 @media(hover:hover){ #plannerPage .meal:hover .meal-chevron { color:var(--brand); opacity:1; } }
 
 /* MEAL PLANNER – month view */
@@ -6549,15 +6549,18 @@ if(meals[day] && meals[day].length > 0){
         box.style.setProperty("--accent", getMealTypeAccent(meal.type));
 
 
+        // Chips show full text on phones; in the narrow desktop columns the words are hidden (the title keeps them)
+        const peopleFull = t("people_count").replace("{n}", meal.people);
+        const peopleWord = t("people_count").replace("{n}", "").trim();
         const leftoverChip = meal.usingLeftoversFrom
-            ? `<span class="meal-chip">🔁 ${t("leftovers_badge_using")}</span>`
-            : (meal.leftoverPortions > 0 ? `<span class="meal-chip">📦 ${meal.leftoverPortions} ${t("leftovers_badge_portions")}</span>` : "");
+            ? `<span class="meal-chip" title="${t("leftovers_badge_using")}">🔁<span class="meal-chip-lbl"> ${t("leftovers_badge_using")}</span></span>`
+            : (meal.leftoverPortions > 0 ? `<span class="meal-chip" title="${meal.leftoverPortions} ${t("leftovers_badge_portions")}">📦 ${meal.leftoverPortions}<span class="meal-chip-lbl"> ${t("leftovers_badge_portions")}</span></span>` : "");
 
         box.innerHTML = `
         <div class="meal-title" title="${meal.type}">${meal.type}</div>
         <strong class="meal-name-clamp" title="${meal.name}">${meal.name}</strong>
         <div class="meal-foot">
-            <span class="meal-chip">👥 ${t("people_count").replace("{n}", meal.people)}</span>
+            <span class="meal-chip" title="${peopleFull}">👥 ${meal.people}<span class="meal-chip-lbl"> ${peopleWord}</span></span>
             ${leftoverChip}
             <span class="meal-chevron" aria-hidden="true">›</span>
         </div>
