@@ -1638,6 +1638,17 @@ color:var(--text);
 border-radius:12px;
 }
 
+/* planner switcher: top right corner, mirroring the menu button */
+#wsLabel {
+position:absolute; top:63px; right:max(12px, calc((100% - 1200px) / 2 + 12px));
+height:44px; margin:0; padding:0 8px; box-sizing:border-box;
+display:flex; align-items:center; gap:2px;
+max-width:60px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
+font-size:12.5px; line-height:1; color:var(--text-soft); border-radius:12px;
+}
+#wsLabel:hover, #wsLabel:focus-visible { background:rgba(120,120,120,.16); color:var(--text); }
+#wsLabel .ws-name { display:none; }
+@media(min-width:700px){ #wsLabel { max-width:200px; font-size:13.5px; } #wsLabel .ws-name { display:inline; overflow:hidden; text-overflow:ellipsis; } }
 .menu-btn:hover { background:rgba(120,120,120,.16); background-image:none; box-shadow:none; filter:none; }
 .menu-btn:active { background:rgba(120,120,120,.26); }
 
@@ -12254,7 +12265,13 @@ function renderWorkspaces(){
     if(label){
         const a = w.list.find(x => x.id === w.active);
         label.style.display = "";
-        label.textContent = "📅 " + wsName(a) + " ▾";
+        label.textContent = "";
+        const nm = document.createElement("span");
+        nm.className = "ws-name";
+        nm.textContent = " " + wsName(a);
+        label.append("📅", nm, " ▾");
+        label.title = wsName(a);
+        label.setAttribute("aria-label", wsName(a));
     }
 }
 
