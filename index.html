@@ -822,6 +822,17 @@ color:var(--text); font-size:14px; font-weight:500; border-radius:8px; transform
 }
 #dayMenu button:hover, #dayMenu button:focus-visible { background:rgba(120,120,120,.12); filter:none; transform:none; }
 
+/* Planner meal cards: type as a small colored label, name as the headline,
+   people / leftovers as chips, and a chevron showing the card opens */
+#plannerPage .meal { padding:11px 14px 11px 12px; }
+#plannerPage .meal .meal-title { font-size:.72em; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--accent, var(--text-soft)); margin-bottom:3px; }
+#plannerPage .meal .meal-name-clamp { min-height:0; font-size:1.05em; font-weight:700; line-height:1.3em; }
+#plannerPage .meal .meal-foot { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:8px; }
+#plannerPage .meal .meal-chip { font-size:12.5px; line-height:1; padding:4px 9px; border-radius:999px; background:var(--card); border:1px solid rgba(120,120,120,.22); color:var(--text); white-space:nowrap; }
+#plannerPage .meal .meal-chevron { margin-left:auto; font-size:22px; line-height:1; color:var(--text-soft); opacity:.55; padding-left:6px; }
+@media(min-width:700px){ #plannerPage .meal { padding:10px 9px 10px 10px; } #plannerPage .meal .meal-chevron { display:none; } #plannerPage .meal .meal-name-clamp { font-size:1em; overflow-wrap:anywhere; word-break:normal; } }
+@media(hover:hover){ #plannerPage .meal:hover .meal-chevron { color:var(--brand); opacity:1; } }
+
 /* MEAL PLANNER – month view */
 .view-toggle { display:flex; justify-content:center; gap:6px; margin:10px 0 16px; }
 .view-toggle button {
@@ -6538,32 +6549,18 @@ if(meals[day] && meals[day].length > 0){
         box.style.setProperty("--accent", getMealTypeAccent(meal.type));
 
 
+        const leftoverChip = meal.usingLeftoversFrom
+            ? `<span class="meal-chip">🔁 ${t("leftovers_badge_using")}</span>`
+            : (meal.leftoverPortions > 0 ? `<span class="meal-chip">📦 ${meal.leftoverPortions} ${t("leftovers_badge_portions")}</span>` : "");
+
         box.innerHTML = `
-
-        <div class="meal-title" title="${meal.type}">
-
-        ${meal.type}
-
+        <div class="meal-title" title="${meal.type}">${meal.type}</div>
+        <strong class="meal-name-clamp" title="${meal.name}">${meal.name}</strong>
+        <div class="meal-foot">
+            <span class="meal-chip">👥 ${t("people_count").replace("{n}", meal.people)}</span>
+            ${leftoverChip}
+            <span class="meal-chevron" aria-hidden="true">›</span>
         </div>
-
-
-        <strong class="meal-name-clamp" title="${meal.name}">
-        ${meal.name}
-        </strong>
-
-
-        <div class="small">
-        👥 ${t("people_count").replace("{n}", meal.people)}
-        </div>
-
-        <div class="small" style="min-height:1.3em; line-height:1.3em; opacity:0.85; white-space:nowrap;">
-        ${
-            meal.usingLeftoversFrom
-            ? "🔁 " + t("leftovers_badge_using")
-            : (meal.leftoverPortions > 0 ? "📦 " + meal.leftoverPortions + " " + t("leftovers_badge_portions") : "")
-        }
-        </div>
-
         `;
 
         // The whole card opens the meal (no separate View button)
