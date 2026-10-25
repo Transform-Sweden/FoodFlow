@@ -1767,7 +1767,7 @@ input[type="radio"] { width:18px; height:18px; }
 
 <p data-i18n="app_tagline">Plan • Shop • Cook</p>
 
-<p id="wsLabel" class="small" style="display:none;cursor:pointer;" onclick="openSettings()"></p>
+<p id="wsLabel" class="small" role="button" tabindex="0" style="display:none;cursor:pointer;" onclick="ffWsMenu(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();ffWsMenu(this)}"></p>
 
 
 
@@ -3235,6 +3235,7 @@ const translations = {
         ws_new: "➕ New planner",
         ws_new_placeholder: "Name of new planner",
         ws_switch: "Switch",
+        ws_menu_manage: "➕ New planner or join household…",
         ws_local_tag: "this device only",
         ws_shared_tag: "shared",
         ws_rename_prompt: "Name of this planner:",
@@ -3623,6 +3624,7 @@ const translations = {
         ws_new: "➕ Ny planering",
         ws_new_placeholder: "Namn på ny planering",
         ws_switch: "Byt",
+        ws_menu_manage: "➕ Ny planering eller gå med i hushåll…",
         ws_local_tag: "bara den här enheten",
         ws_shared_tag: "delad",
         ws_rename_prompt: "Namn på den här planeringen:",
@@ -12216,10 +12218,50 @@ function renderWorkspaces(){
     });
     if(label){
         const a = w.list.find(x => x.id === w.active);
-        label.style.display = w.list.length > 1 ? "" : "none";
-        label.textContent = "📅 " + wsName(a);
+        label.style.display = "";
+        label.textContent = "📅 " + wsName(a) + " ▾";
     }
 }
+
+// Quick switcher under the app title: tap the planner name to jump between
+// your private planner and any households.
+window.ffWsMenu = function(anchor){
+    if(typeof closeDayMenu === "function") closeDayMenu();
+    const old = document.getElementById("dayMenu");
+    if(old) old.remove();
+    const w = loadWS();
+    const menu = document.createElement("div");
+    menu.id = "dayMenu";
+    menu.setAttribute("role", "menu");
+    let first = null;
+    const close = () => { menu.remove(); document.removeEventListener("click", away, true); document.removeEventListener("keydown", esc, true); };
+    const away = e => { if(!menu.contains(e.target) && e.target !== anchor) close(); };
+    const esc = e => { if(e.key === "Escape") close(); };
+    const item = (label, fn) => {
+        const b = document.createElement("button");
+        b.setAttribute("role", "menuitem");
+        b.textContent = label;
+        b.onclick = () => { close(); fn(); };
+        menu.appendChild(b);
+        if(!first) first = b;
+    };
+    w.list.forEach(x => {
+        const on = x.id === w.active;
+        item((on ? "✓ " : "\u2003") + (x.code ? "👨‍👩‍👧 " : "💻 ") + wsName(x), () => { if(!on) switchTo(x.id); });
+        if(on) menu.lastChild.style.fontWeight = "700";
+    });
+    menu.appendChild(document.createElement("hr"));
+    item(tr("ws_menu_manage"), () => {
+        if(typeof openSettings === "function") openSettings();
+        setTimeout(() => { const el = document.getElementById("wsNewName"); if(el) el.scrollIntoView({ block: "center", behavior: "smooth" }); }, 150);
+    });
+    document.body.appendChild(menu);
+    const r = anchor.getBoundingClientRect(), mw = menu.offsetWidth;
+    menu.style.top = (window.scrollY + r.bottom + 4) + "px";
+    menu.style.left = Math.max(8, Math.min(window.scrollX + r.left + r.width / 2 - mw / 2, window.scrollX + document.documentElement.clientWidth - mw - 8)) + "px";
+    setTimeout(() => { document.addEventListener("click", away, true); document.addEventListener("keydown", esc, true); }, 0);
+    if(first) first.focus();
+};
 
 // ---- settings UI ----
 const fmt = c => c.replace(/(.{4})(?=.)/g, "$1-");
