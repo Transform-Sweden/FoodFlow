@@ -2055,13 +2055,6 @@ Share your planner, recipes and shopping list with your household. Everyone sees
 <button onclick="ffSyncCreate()">
 <span data-i18n="sync_create">➕ Create household</span>
 </button>
-<div style="margin-top:8px;">
-<input type="text" id="syncJoinCode" autocomplete="off" autocapitalize="characters" spellcheck="false"
-data-i18n-placeholder="sync_code_placeholder" placeholder="XXXX-XXXX-XXXX">
-<button onclick="ffSyncJoin()">
-<span data-i18n="sync_join">🔗 Join with code</span>
-</button>
-</div>
 </div>
 
 <div id="syncOnBlock" style="display:none;">
@@ -2080,6 +2073,15 @@ data-i18n-placeholder="sync_code_placeholder" placeholder="XXXX-XXXX-XXXX">
 </button>
 <button class="delete" onclick="ffSyncLeave()">
 <span data-i18n="sync_leave">🚪 Leave household</span>
+</button>
+</div>
+
+<div id="syncJoinBlock" style="margin-top:18px;padding-top:14px;border-top:1px solid rgba(120,120,120,.25);">
+<div class="small" style="margin-bottom:6px;" data-i18n="sync_join_hint">Have a code from another household? Enter it here - it opens as an extra planner, your current one stays as it is.</div>
+<input type="text" id="syncJoinCode" autocomplete="off" autocapitalize="characters" spellcheck="false"
+data-i18n-placeholder="sync_code_placeholder" placeholder="XXXX-XXXX-XXXX">
+<button onclick="ffSyncJoin()">
+<span data-i18n="sync_join">🔗 Join with code</span>
 </button>
 </div>
 </div>
@@ -3342,6 +3344,9 @@ const translations = {
         ws_delete_message: "This removes the planner from this device. A shared household stays in the cloud and can be joined again with its code.",
         ws_cannot_delete_active: "Switch to another planner first.",
         ws_already_joined: "You already have a planner for that household.",
+        ws_rename_btn: "✏️ Rename",
+        ws_active_tag: "Active",
+        sync_join_hint: "Have a code from another household? Enter it here - it opens as an extra planner, your current one stays as it is.",
         sync_title: "👨‍👩‍👧 Household Sync",
         sync_description: "Share your planner, recipes and shopping list with your household. Everyone sees changes live.",
         sync_create: "➕ Create household",
@@ -3761,6 +3766,9 @@ const translations = {
         ws_delete_message: "Detta tar bort planeringen från den här enheten. Ett delat hushåll finns kvar i molnet och kan anslutas igen med sin kod.",
         ws_cannot_delete_active: "Byt till en annan planering först.",
         ws_already_joined: "Du har redan en planering för det hushållet.",
+        ws_rename_btn: "✏️ Byt namn",
+        ws_active_tag: "Aktiv",
+        sync_join_hint: "Har du en kod från ett annat hushåll? Skriv in den här - det öppnas som en extra planering, din nuvarande ligger kvar som den är.",
         sync_title: "👨‍👩‍👧 Hushållssynk",
         sync_description: "Dela din planering, dina recept och inköpslista med hushållet. Alla ser ändringar direkt.",
         sync_create: "➕ Skapa hushåll",
@@ -12791,7 +12799,16 @@ function onSnapshotData(snap){
 
     snap.docChanges().forEach(ch => {
         const id = ch.doc.id;
-        if(id === "meta") return;
+        if(id === "meta"){
+            // the household's shared planner name
+            const nm = ch.type !== "removed" && ch.doc.data() && ch.doc.data().name;
+            if(typeof nm === "string" && nm.trim()){
+                const w = loadWS();
+                const cur = w.list.find(x => x.id === w.active);
+                if(cur && cur.code === code && cur.name !== nm.trim()){ cur.name = nm.trim(); saveWS(w); renderSyncSettings(); }
+            }
+            return;
+        }
         if(ch.doc.metadata.hasPendingWrites) return;      // our own write echoing back
         const data = ch.doc.data();
         if(ch.type === "removed"){
@@ -12923,7 +12940,7 @@ window.ffWsNew = async function(){
     await switchTo(id);
 };
 
-window.ffWsRename = function(id){
+window.ffWsRename = async function(id){
     const w = loadWS();
     const x = w.list.find(y => y.id === id);
     if(!x) return;
@@ -12932,13 +12949,21 @@ window.ffWsRename = function(id){
     x.name = n.trim() || null;
     saveWS(w);
     renderSyncSettings();
+    // a household's name is shared: everyone in it sees the new name
+    if(x.code && x.name){
+        try{
+            await ensureReady();
+            await setDoc(doc(db, "households", x.code, "docs", "meta"), { name: x.name }, { merge: true });
+        }catch(e){ console.warn("FoodFlow: could not share the planner name", e); }
+    }
 };
 
 window.ffWsDelete = async function(id){
     const w = loadWS();
     if(id === w.active){ toast(tr("ws_cannot_delete_active"), { type: "error" }); return; }
     if(w.list.length <= 1) return;
-    const ok = await customConfirm(tr("ws_delete_message"), tr("ws_delete_title"));
+    const victim = w.list.find(x => x.id === id);
+    const ok = await customConfirm("\u201C" + wsName(victim || {}) + "\u201D\n\n" + tr("ws_delete_message"), tr("ws_delete_title"));
     if(!ok) return;
     w.list = w.list.filter(x => x.id !== id);
     saveWS(w);
@@ -12953,19 +12978,25 @@ function renderWorkspaces(){
     const w = loadWS();
     box.textContent = "";
     w.list.forEach(x => {
-        const row = document.createElement("div");
-        row.style.cssText = "display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0;";
+        const on = x.id === w.active;
+        const card = document.createElement("div");
+        card.style.cssText = "border:1px solid " + (on ? "var(--primary)" : "rgba(120,120,120,.3)") + ";border-radius:14px;padding:10px 12px;margin:10px 0;background:" + (on ? "var(--primary-light)" : "var(--card)") + ";";
+        const head = document.createElement("div");
+        head.style.cssText = "display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;";
         const nm = document.createElement("strong");
-        nm.textContent = (x.id === w.active ? "✓ " : "") + wsName(x);
+        nm.textContent = (on ? "✓ " : "") + wsName(x);
         const tag = document.createElement("span");
         tag.className = "small";
-        tag.textContent = x.code ? "👨‍👩‍👧 " + tr("ws_shared_tag") : "💻 " + tr("ws_local_tag");
-        row.append(nm, tag);
-        const mk = (txt, fn, cls) => { const b = document.createElement("button"); b.textContent = txt; if(cls) b.className = cls; b.onclick = fn; row.append(b); };
-        if(x.id !== w.active) mk(tr("ws_switch"), () => switchTo(x.id));
-        mk("✏️", () => window.ffWsRename(x.id));
-        if(x.id !== w.active && w.list.length > 1) mk("🗑️", () => window.ffWsDelete(x.id), "delete");
-        box.append(row);
+        tag.textContent = (x.code ? "👨‍👩‍👧 " + tr("ws_shared_tag") : "💻 " + tr("ws_local_tag")) + (on ? " · " + tr("ws_active_tag") : "");
+        head.append(nm, tag);
+        const actions = document.createElement("div");
+        actions.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;";
+        const mk = (txt, fn, cls) => { const b = document.createElement("button"); b.textContent = txt; b.style.margin = "0"; if(cls) b.className = cls; b.onclick = fn; actions.append(b); };
+        if(!on) mk(tr("ws_switch"), () => switchTo(x.id));
+        mk(tr("ws_rename_btn"), () => window.ffWsRename(x.id), "edit");
+        if(!on && w.list.length > 1) mk(tr("btn_delete"), () => window.ffWsDelete(x.id), "delete");
+        card.append(head, actions);
+        box.append(card);
     });
     if(label){
         const a = w.list.find(x => x.id === w.active);
@@ -13056,7 +13087,10 @@ window.ffSyncCreate = async function(){
         const bk = {};
         for(const k of Object.keys(SYNC_KEYS)) bk[k] = ls.get(k);
         ls.set("foodflowPreJoinBackup", JSON.stringify(bk));
-        await setDoc(doc(db, "households", c, "docs", "meta"), { created: serverTimestamp() });
+        const curWs = loadWS().list.find(x => x.id === loadWS().active);
+        const meta = { created: serverTimestamp() };
+        if(curWs && curWs.name) meta.name = curWs.name;
+        await setDoc(doc(db, "households", c, "docs", "meta"), meta);
         code = c; ls.set(CODE_KEY, c); base = {}; saveBase(); updateActiveWsCode();
         setStatus("connecting");
         ready = true;
@@ -13094,7 +13128,8 @@ window.ffSyncJoin = async function(){
         data[BASE_KEY] = JSON.stringify(newBase);
         const id = "ws" + Date.now().toString(36);
         ls.set(WS_PREFIX + id, JSON.stringify(data));
-        w.list.push({ id, name: tr("ws_household_default_name") + " " + fmt(c).slice(0, 4), code: c });
+        const sharedName = snap.data && snap.data() && typeof snap.data().name === "string" && snap.data().name.trim();
+        w.list.push({ id, name: sharedName || (tr("ws_household_default_name") + " " + fmt(c).slice(0, 4)), code: c });
         saveWS(w);
         document.getElementById("syncJoinCode").value = "";
         toast(tr("sync_joined"));
@@ -13153,7 +13188,10 @@ window.ffSyncChangeCode = async function(){
     try{
         await ensureReady();
         const c = newCode();
-        await setDoc(doc(db, "households", c, "docs", "meta"), { created: serverTimestamp() });
+        const curWs2 = loadWS().list.find(x => x.id === loadWS().active);
+        const meta2 = { created: serverTimestamp() };
+        if(curWs2 && curWs2.name) meta2.name = curWs2.name;
+        await setDoc(doc(db, "households", c, "docs", "meta"), meta2);
         if(unsub){ unsub(); unsub = null; }
         clearTimeout(pushTimer);
         code = c; ls.set(CODE_KEY, c); base = {}; saveBase(); updateActiveWsCode();
