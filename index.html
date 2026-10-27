@@ -12790,12 +12790,29 @@ function scheduleReload(){
     reloadTimer = setTimeout(tick, 600);
 }
 
+// Households made before planner names were shared have no name in the cloud.
+// The first device that has a real (not auto-made) name for it publishes it.
+function backfillSharedName(){
+    const w = loadWS();
+    const cur = w.list.find(x => x.id === w.active);
+    if(!cur || cur.code !== code || !cur.name) return;
+    // the auto-made name from joining ("Household ABCD", in either language) is never published
+    if(cur.name === tr("ws_household_default_name") + " " + fmt(code).slice(0, 4)) return;
+    if(/^(Household|Hushåll) [A-Z0-9]{4}$/.test(cur.name)) return;
+    setDoc(doc(db, "households", code, "docs", "meta"), { name: cur.name }, { merge: true })
+        .catch(e => console.warn("FoodFlow: could not share the planner name", e));
+}
+
 function onSnapshotData(snap){
     let changed = false;
     const local = localDocs();
     const remoteIds = new Set();
+    let metaName;                                       // undefined = no meta document seen
 
-    snap.forEach(d => { if(d.id !== "meta") remoteIds.add(d.id); });
+    snap.forEach(d => {
+        if(d.id !== "meta") remoteIds.add(d.id);
+        else { const m = d.data(); metaName = (m && typeof m.name === "string") ? m.name.trim() : ""; }
+    });
 
     snap.docChanges().forEach(ch => {
         const id = ch.doc.id;
@@ -12839,6 +12856,7 @@ function onSnapshotData(snap){
         onSnapshotData.done = true;
         ready = true;
         setStatus("on");
+        if(metaName === "") backfillSharedName();
         schedulePush();
     }
     saveBase();
