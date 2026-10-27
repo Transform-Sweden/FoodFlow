@@ -840,6 +840,17 @@ color:var(--text); font-size:14px; font-weight:500; border-radius:8px; transform
 .custom-list-active .meal-only, .custom-list-active #shoppingMealBanner { display:none !important; }
 #newListIcons button { width:42px; height:42px; padding:0; font-size:20px; border-radius:12px; }
 
+#recipeTagFilterBar button { min-height:0; height:auto; padding:6px 14px !important; line-height:1.2; margin:0; }
+/* Tag rows: one line that scrolls sideways on phones, edge fades hint at more */
+@media(max-width:700px){
+.tag-scroll { flex-wrap:nowrap !important; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; scrollbar-width:none; overscroll-behavior-x:contain; }
+.tag-scroll::-webkit-scrollbar { display:none; }
+.tag-scroll > * { flex:0 0 auto; white-space:nowrap; }
+.tag-scroll.fade-r { -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 36px),transparent); mask-image:linear-gradient(to right,#000 calc(100% - 36px),transparent); }
+.tag-scroll.fade-l { -webkit-mask-image:linear-gradient(to left,#000 calc(100% - 36px),transparent); mask-image:linear-gradient(to left,#000 calc(100% - 36px),transparent); }
+.tag-scroll.fade-l.fade-r { -webkit-mask-image:linear-gradient(to right,transparent,#000 36px,#000 calc(100% - 36px),transparent); mask-image:linear-gradient(to right,transparent,#000 36px,#000 calc(100% - 36px),transparent); }
+}
+
 /* MEAL PLANNER – month view */
 .view-toggle { display:flex; justify-content:center; gap:6px; margin:10px 0 16px; }
 .view-toggle button {
@@ -1919,7 +1930,7 @@ input[type="radio"] { width:18px; height:18px; }
     <option value="tag" data-i18n="recipe_sort_tag">Grouped by Tag</option>
 </select>
 
-<div id="recipeTagFilterBar" style="display:none; flex-wrap:wrap; gap:6px; margin:8px 0;">
+<div id="recipeTagFilterBar" class="tag-scroll" style="display:none; flex-wrap:wrap; gap:6px; margin:8px 0;">
 </div>
 
 <div id="recipeList">
@@ -8767,6 +8778,8 @@ if(allTags.length === 0){
 
     tagBar.style.display = "flex";
 
+    let keepTagScroll = tagBar.scrollLeft;
+
     tagBar.innerHTML = allTags.map(tag => `
         <button
             onclick="toggleRecipeTagFilter('${tag.replace(/'/g,"\\'")}')"
@@ -8780,6 +8793,8 @@ if(allTags.length === 0){
             "
         >${tag}</button>
     `).join("");
+
+    tagBar.scrollLeft = keepTagScroll;
 
 }
 
@@ -8872,8 +8887,30 @@ if(recipeSortMode === "tag"){
 
 }
 
+setupTagScrollers(document);
+
 }
 
+
+// Tag rows scroll sideways on phones instead of wrapping onto several lines.
+// The edge that has more tags behind it fades out, as a hint to swipe.
+function updateTagFade(el){
+    let max = el.scrollWidth - el.clientWidth;
+    el.classList.toggle("fade-r", max > 2 && el.scrollLeft < max - 2);
+    el.classList.toggle("fade-l", max > 2 && el.scrollLeft > 2);
+}
+
+function setupTagScrollers(root){
+    root.querySelectorAll(".tag-scroll").forEach(el => {
+        if(!el._tagScroll){
+            el._tagScroll = true;
+            el.addEventListener("scroll", () => updateTagFade(el), { passive:true });
+        }
+        updateTagFade(el);
+    });
+}
+
+window.addEventListener("resize", () => setupTagScrollers(document));
 
 function buildRecipeCard(recipe, index){
 
@@ -8896,7 +8933,7 @@ ${recipe.name}
 
 ${
     (recipe.tags && recipe.tags.length > 0)
-    ? `<div style="display:flex; flex-wrap:wrap; gap:4px; margin:6px 0 4px;">` + recipe.tags.map(tag => `
+    ? `<div class="tag-scroll" style="display:flex; flex-wrap:wrap; gap:4px; margin:6px 0 4px;">` + recipe.tags.map(tag => `
         <span style="
             padding:2px 8px;
             border-radius:999px;
@@ -8954,7 +8991,7 @@ document.getElementById("recipeDetailTitle").innerText =
 
 document.getElementById("recipeDetailTags").innerHTML =
     (recipe.tags && recipe.tags.length > 0)
-    ? `<div style="display:flex; flex-wrap:wrap; gap:4px; margin:4px 0 10px;">
+    ? `<div class="tag-scroll" style="display:flex; flex-wrap:wrap; gap:4px; margin:4px 0 10px;">
         ${recipe.tags.map(tag => `
             <span style="
                 padding:2px 8px;
@@ -9012,6 +9049,8 @@ document.getElementById("recipeDetailFavoriteBtn").innerText =
     recipe.favorite ? t("fav_remove") : t("fav_add");
 
 document.getElementById("recipeDetailModal").style.display = "flex";
+
+setupTagScrollers(document.getElementById("recipeDetailModal"));
 
 }
 
