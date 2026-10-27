@@ -1954,6 +1954,11 @@ Automatically built from every recipe in your meal planner, scaled to the number
 
 <div id="shoppingRangeSummary" class="small" style="margin-top:4px;"></div>
 
+<div id="shoppingMealBanner" style="display:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:10px;padding:8px 12px;border-radius:12px;border:1px solid var(--primary);background:var(--primary-light);">
+<span id="shoppingMealBannerText" style="font-weight:600;"></span>
+<button type="button" class="btn-soft" onclick="clearShoppingMealFilter()" data-i18n="shop_meal_clear" style="margin:0;">✕ Show full list</button>
+</div>
+
 <div class="week-nav-secondary" style="margin-top:8px;">
 <button class="wrap-label btn-soft" onclick="setShoppingRangePreset('thisWeek')" data-i18n="preset_this_week">This Week</button>
 <button class="wrap-label btn-soft" onclick="setShoppingRangePreset('restOfWeek')" data-i18n="preset_rest_of_week">📍 Rest of Week</button>
@@ -2425,6 +2430,8 @@ Meal
 <button class="edit" onclick="editMealFromDetail()" data-i18n="btn_edit">✏️ Edit</button>
 
 <button id="mealDetailOpenRecipeBtn" onclick="openRecipeFromMealDetail()" data-i18n="btn_open_recipe">📖 Open Recipe</button>
+
+<button id="mealDetailShopBtn" onclick="shopForMealFromDetail()" data-i18n="shop_meal_btn">🛒 Shopping list for this meal</button>
 
 <button class="delete" onclick="deleteMealFromDetail()" data-i18n="btn_delete">🗑 Delete</button>
 
@@ -3347,6 +3354,9 @@ const translations = {
         btn_edit: "✏️ Edit",
         btn_delete: "🗑 Delete",
         btn_open_recipe: "📖 Open Recipe",
+        shop_meal_btn: "🛒 Shopping list for this meal",
+        shop_meal_banner: "🍽️ Only for: {name}",
+        shop_meal_clear: "✕ Show full list",
         btn_duplicate: "📄 Duplicate",
         btn_add_to_planner: "📅 Add to Planner",
         btn_view_recipe: "📖 View Recipe",
@@ -3736,6 +3746,9 @@ const translations = {
         btn_edit: "✏️ Redigera",
         btn_delete: "🗑 Ta bort",
         btn_open_recipe: "📖 Öppna recept",
+        shop_meal_btn: "🛒 Inköpslista för den här måltiden",
+        shop_meal_banner: "🍽️ Bara för: {name}",
+        shop_meal_clear: "✕ Visa hela listan",
         btn_duplicate: "📄 Duplicera",
         btn_add_to_planner: "📅 Lägg till i planeringen",
         btn_view_recipe: "📖 Visa recept",
@@ -6712,6 +6725,10 @@ if(recipeIndexFor(meal.recipe) >= 0){
     openRecipeBtn.style.display = "none";
 }
 
+// a meal typed in by hand has no ingredients, so there is nothing to shop for
+document.getElementById("mealDetailShopBtn").style.display =
+    (recipeIndexFor(meal.recipe) >= 0 && meal.id) ? "block" : "none";
+
 document.getElementById("mealDetailModal").style.display = "flex";
 
 }
@@ -7328,7 +7345,68 @@ async function clearDay(day){
 }
 
 
+// ---- Shopping list for ONE meal ----
+// While set, the shopping list only counts this meal (everything else is hidden).
+let shoppingMealFilter = null;
+try{ shoppingMealFilter = JSON.parse(sessionStorage.getItem("ff_mealshop") || "null"); }catch(e){ shoppingMealFilter = null; }
+
+function setShoppingMealFilter(f){
+    shoppingMealFilter = f;
+    try{
+        if(f) sessionStorage.setItem("ff_mealshop", JSON.stringify(f));
+        else sessionStorage.removeItem("ff_mealshop");
+    }catch(e){}
+}
+
+function clearShoppingMealFilter(){
+    if(!shoppingMealFilter) return;
+    setShoppingMealFilter(null);
+    renderShoppingList();
+}
+
+function shopForMealFromDetail(){
+
+    if(mealDetailIndex === null) return;
+
+    let day = mealDetailDay;
+    let meal = meals[day] && meals[day][mealDetailIndex];
+
+    if(!meal || !meal.id) return;
+
+    closeMealDetail();
+
+    let dateKey = addDaysToKey(currentWeekKey, days.indexOf(day));
+
+    shoppingRangeStart = dateKey;
+    shoppingRangeEnd = dateKey;
+
+    setShoppingMealFilter({ id: meal.id, label: meal.type + " — " + meal.name });
+
+    saveShoppingState();
+    showPage("shopping");
+
+}
+
+function updateShoppingMealBanner(){
+
+    let box = document.getElementById("shoppingMealBanner");
+    if(!box) return;
+
+    if(!shoppingMealFilter){
+        box.style.display = "none";
+        return;
+    }
+
+    document.getElementById("shoppingMealBannerText").textContent =
+        t("shop_meal_banner").replace("{name}", shoppingMealFilter.label);
+    box.style.display = "flex";
+
+}
+
 function shopForDay(day){
+
+    setShoppingMealFilter(null);
+
 
     let dateKey = addDaysToKey(currentWeekKey, days.indexOf(day));
 
@@ -9639,10 +9717,28 @@ const categoryAccents = {
 };
 
 
+// Fallback for ingredients that aren't in the exact list above: look for
+// telltale words (English and Swedish, also inside Swedish compound words
+// like "matlagningsgrädde"). Order matters - e.g. "chicken stock" and
+// "pasta salad" are pantry items, so the pantry words are checked first.
+const categoryKeywordRules = [
+    ["Pantry", /sauce|sås\b|såser|dressing|ketchup|mustard|senap|stock\b|fond\b|broth|buljong|peanut butter|jam\b|sylt|marmalade|\bbuns?\b|\bbröd|bread|bagel|brioche|tortilla|wrap|pasta|spaghetti|nudl|noodle|\brice\b|\bris\b|flour|\bmjöl|sugar|socker|\boil\b|olja|vinegar|vinäger|chips|cereal|müsli|muesli|granola|\boats|havre|coffee|kaffe|\btea\b|honey|honung|\bnuts?\b|nötter|cracker|knäcke|syrup|sirap|canned|konserv|\bjars?\b|burk|pickles|inlagd|tomato paste|tomatpuré|crushed tomato|krossade tomater|beans in|bakpulver|baking powder|yeast|jäst|cocoa|kakao|chocolate|choklad|biscuit|kex/i],
+    ["Meat & Fish", /sausage|korv|pork|fläsk|bacon|\bbeef|\bnöt|kött|\bmeat|chicken|kyckling|\blamb|lamm|\bfish|fisk|salmon|\blax|shrimp|\bräk|\btuna|tonfisk|\bham\b|skinka|\bmince|färs|turkey|kalkon|steak|\bribs?\b|fillet|filé|bratwurst|hot ?dog sausage|prosciutto|chorizo/i],
+    ["Dairy & Eggs", /\bmilk|mjölk|cream|grädde|fraiche|fraîche|cheese|\bost\b|[a-zåäö]{4,}ost\b|butter|\bsmör|yogh?urt|jogurt|\beggs?\b|\bägg|kvarg|quark|hummus|cottage|margarin|filmjölk|kefir/i],
+    ["Herbs & Spices", /thyme|timjan|oregano|spice|krydd|seasoning|cinnamon|kanel|cumin|spiskummin|curry|rosemary|rosmarin|\bdill|bay leaf|bay leaves|lagerblad|vanilj|vanilla|nutmeg|muskot|cayenne|chili flakes|paprikapulver|paprika powder|saffron|saffran|cardamom|kardemumma|coriander|koriander|turmeric|gurkmeja|\bsage\b|salvia|mint\b|mynta|tarragon|dragon/i],
+    ["Produce", /salad|sallad|lettuce|sallat|tomat|cucumber|gurka|onion|\blök|garlic|vitlök|potato|potatis|carrot|morot|apple|äpple|banana|lemon|citron|\blime\b|fruit|frukt|vegetable|grönsak|berry|berries|\bbär|mushroom|svamp|champinjon|spinach|spenat|cabbage|\bkål|paprika|avocado|ginger|ingefära|broccoli|blomkål|cauliflower|zucchini|squash|pumpa|pumpkin|parsley|persilja|basil|basilika|coriander leaves|cilantro|leek|purjolök|celery|selleri|radish|rädisa|beet|rödbet|pear\b|päron|orange|grape|druv|melon|mango|pineapple|ananas|peach|persika|plum|plommon|spring onion|scallion|vårlök|corn\b|majs|peas\b|ärtor|beans?\b|bönor|sprouts|groddar|rucola|arugula|kale|grönkål/i]
+];
+
 function getIngredientCategory(normalizedName){
-    return customIngredientCategories[normalizedName]
-        || ingredientCategories[normalizedName]
-        || "Other";
+    let exact = customIngredientCategories[normalizedName]
+        || ingredientCategories[normalizedName];
+    if(exact) return exact;
+
+    let name = String(normalizedName || "").toLowerCase();
+    for(const [cat, re] of categoryKeywordRules){
+        if(re.test(name)) return cat;
+    }
+    return "Other";
 }
 
 
@@ -10020,6 +10116,9 @@ function generateShoppingList(){
 
         weekMeals.forEach(meal=>{
 
+            // "shopping list for one meal": skip every other meal
+            if(shoppingMealFilter && meal.id !== shoppingMealFilter.id) return;
+
             let mealRecipeIndex = recipeIndexFor(meal.recipe);
             let hasRecipe = mealRecipeIndex >= 0;
 
@@ -10181,7 +10280,7 @@ function generateShoppingList(){
 
         })
         .concat(
-            shoppingExtras.map(extra => {
+            (shoppingMealFilter ? [] : shoppingExtras).map(extra => {
 
                 let normalizedName = normalizeIngredientName(extra.name);
 
@@ -10409,6 +10508,7 @@ function onShoppingRangeChange(){
 
     shoppingRangeStart = newStart;
     shoppingRangeEnd = newEnd;
+    setShoppingMealFilter(null);
 
     saveShoppingState();
 
@@ -10455,6 +10555,8 @@ function setShoppingRangePreset(preset){
 
     }
 
+    setShoppingMealFilter(null);
+
     saveShoppingState();
 
     updateShoppingRangeInputs();
@@ -10472,6 +10574,14 @@ function renderShoppingList(){
 
     updateShoppingRangeInputs();
     renderShoppingSelectionBar();
+
+    // the meal this list was limited to no longer exists (deleted or moved): back to the full list
+    if(shoppingMealFilter){
+        let stillThere = getDateRangeDays(shoppingRangeStart, shoppingRangeEnd).some(({ weekKey, day }) =>
+            ((weeks[weekKey] && weeks[weekKey][day]) || []).some(m => m.id === shoppingMealFilter.id));
+        if(!stillThere) setShoppingMealFilter(null);
+    }
+    updateShoppingMealBanner();
 
     const { list: fullList, manualMeals } = generateShoppingList();
 
