@@ -833,6 +833,13 @@ color:var(--text); font-size:14px; font-weight:500; border-radius:8px; transform
 @media(min-width:700px){ #plannerPage .meal { padding:10px 9px 10px 10px; } #plannerPage .meal .meal-chevron { display:none; } #plannerPage .meal .meal-chip-lbl { display:none; } #plannerPage .meal .meal-foot { gap:4px; flex-wrap:nowrap; } #plannerPage .meal .meal-chip { padding:4px 7px; font-size:12px; } #plannerPage .meal .meal-name-clamp { font-size:1em; overflow-wrap:anywhere; word-break:normal; } }
 @media(hover:hover){ #plannerPage .meal:hover .meal-chevron { color:var(--brand); opacity:1; } }
 
+/* Shopping page: tabs for the meal-plan list and your own lists */
+.list-tabs { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 10px; margin:4px 0 6px; scrollbar-width:none; }
+.list-tabs::-webkit-scrollbar { display:none; }
+.list-tabs button { white-space:nowrap; flex:0 0 auto; margin:0; }
+.custom-list-active .meal-only, .custom-list-active #shoppingMealBanner { display:none !important; }
+#newListIcons button { width:42px; height:42px; padding:0; font-size:20px; border-radius:12px; }
+
 /* MEAL PLANNER – month view */
 .view-toggle { display:flex; justify-content:center; gap:6px; margin:10px 0 16px; }
 .view-toggle button {
@@ -1931,18 +1938,21 @@ input[type="radio"] { width:18px; height:18px; }
 
 <h2 data-i18n="shopping_heading">🛒 Shopping List</h2>
 
-<p class="small" data-i18n="shopping_description">
+<div id="listTabs" class="list-tabs"></div>
+
+<p class="small meal-only" data-i18n="shopping_description">
 Automatically built from every recipe in your meal planner, scaled to the number of people you set for each meal.
 </p>
 
 <button class="btn-sm-primary" onclick="openAddShoppingItem()"><span data-i18n="add_item">➕ Add Item</span></button>
+<button class="btn-soft" onclick="openPasteShoppingModal()"><span data-i18n="paste_items_btn">📋 Paste items</span></button>
 <button class="btn-soft" onclick="openShoppingMoreMenu()"><span data-i18n="more_actions">⋯ More</span></button>
 
-<div class="small" style="margin-top:12px;" data-i18n="shopping_for">
+<div class="small meal-only" style="margin-top:12px;" data-i18n="shopping_for">
 🗓️ Shopping for:
 </div>
 
-<div class="shopping-range-row">
+<div class="shopping-range-row meal-only">
 
 <input type="date" id="shoppingRangeStartInput" onchange="onShoppingRangeChange()">
 
@@ -1952,14 +1962,14 @@ Automatically built from every recipe in your meal planner, scaled to the number
 
 </div>
 
-<div id="shoppingRangeSummary" class="small" style="margin-top:4px;"></div>
+<div id="shoppingRangeSummary" class="small meal-only" style="margin-top:4px;"></div>
 
 <div id="shoppingMealBanner" style="display:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:10px;padding:8px 12px;border-radius:12px;border:1px solid var(--primary);background:var(--primary-light);">
 <span id="shoppingMealBannerText" style="font-weight:600;"></span>
 <button type="button" class="btn-soft" onclick="clearShoppingMealFilter()" data-i18n="shop_meal_clear" style="margin:0;">✕ Show full list</button>
 </div>
 
-<div class="week-nav-secondary" style="margin-top:8px;">
+<div class="week-nav-secondary meal-only" style="margin-top:8px;">
 <button class="wrap-label btn-soft" onclick="setShoppingRangePreset('thisWeek')" data-i18n="preset_this_week">This Week</button>
 <button class="wrap-label btn-soft" onclick="setShoppingRangePreset('restOfWeek')" data-i18n="preset_rest_of_week">📍 Rest of Week</button>
 <button class="wrap-label btn-soft" onclick="setShoppingRangePreset('next7')" data-i18n="preset_next_7">Next 7 Days</button>
@@ -2631,6 +2641,64 @@ Cancel
 </div>
 
 
+</div>
+
+<!-- PASTE SEVERAL SHOPPING ITEMS -->
+
+<div class="modal" role="dialog" aria-modal="true" id="pasteShoppingModal">
+
+<div class="modal-box">
+
+<h2 data-i18n="paste_items_title">📋 Paste items</h2>
+
+<p class="small" data-i18n="paste_items_description">Paste or type several items at once, one per line.</p>
+
+<textarea
+id="pasteShoppingText"
+rows="10"
+data-i18n-placeholder="ph_paste_items"
+placeholder="e.g.&#10;2 kg potatoes&#10;Milk - 3 l&#10;4 toilet paper&#10;Batteries, light bulbs"
+style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--field-border);font-size:15px;font-family:inherit;"
+></textarea>
+
+<br><br>
+
+<button data-primary onclick="addPastedShoppingItems()" data-i18n="paste_items_add">➕ Add to list</button>
+
+<button onclick="closePasteShoppingModal()" data-i18n="cancel">Cancel</button>
+
+</div>
+
+</div>
+
+<!-- NEW CUSTOM LIST -->
+
+<div class="modal" role="dialog" aria-modal="true" id="newListModal">
+<div class="modal-box">
+<h2 data-i18n="new_list_title">➕ New list</h2>
+<p class="small" data-i18n="new_list_description">A separate shopping list for anything - pharmacy, hardware store, a party. It is shared with your household like everything else.</p>
+<input type="text" id="newListName" autocomplete="off" maxlength="40" data-i18n-placeholder="new_list_name_ph" placeholder="e.g. Pharmacy" onkeydown="if(event.key==='Enter'){event.preventDefault();createCustomList();}">
+<div id="newListIcons" style="display:flex;flex-wrap:wrap;gap:6px;margin:12px 0;"></div>
+<button data-primary onclick="createCustomList()" data-i18n="new_list_create">Create list</button>
+<button onclick="closeNewListModal()" data-i18n="cancel">Cancel</button>
+</div>
+</div>
+
+<!-- CUSTOM LIST MENU -->
+
+<div class="modal" role="dialog" aria-modal="true" id="customListMenu">
+<div class="modal-box">
+<h2 id="customListMenuTitle">List</h2>
+<div class="action-list">
+<button data-i18n="list_rename" onclick="closeCustomListMenu(); renameCustomList();">✏️ Rename list</button>
+<button data-i18n="list_share" onclick="closeCustomListMenu(); shareCustomList();">📤 Share</button>
+<button data-i18n="list_uncheck_all" onclick="closeCustomListMenu(); uncheckAllCustomItems();">↩️ Uncheck all</button>
+<button data-i18n="list_clear_checked" onclick="closeCustomListMenu(); clearCheckedCustomItems();">🧹 Remove checked items</button>
+<button class="delete" data-i18n="list_delete" onclick="closeCustomListMenu(); deleteCustomList();">🗑 Delete list</button>
+</div>
+<br>
+<button data-i18n="close" onclick="closeCustomListMenu()">Close</button>
+</div>
 </div>
 
 <!-- SHOPPING LIST MORE ACTIONS MENU -->
@@ -3354,6 +3422,33 @@ const translations = {
         btn_edit: "✏️ Edit",
         btn_delete: "🗑 Delete",
         btn_open_recipe: "📖 Open Recipe",
+        paste_items_btn: "📋 Paste items",
+        paste_items_title: "📋 Paste items",
+        paste_items_description: "Paste or type several items at once, one per line (or separated by commas). Amounts are picked up automatically: \"2 kg potatoes\", \"Milk - 3 l\", \"Batteries x4\".",
+        ph_paste_items: "e.g.\n2 kg potatoes\nMilk - 3 l\n4 toilet paper\nBatteries, light bulbs",
+        paste_items_add: "➕ Add to list",
+        paste_items_none: "Paste some items first.",
+        paste_items_added: "Added {n} items",
+        list_tab_meal: "🍽️ Meal plan",
+        list_new: "➕ New list",
+        new_list_title: "➕ New list",
+        new_list_description: "A separate shopping list for anything - pharmacy, hardware store, a party. It is shared with your household like everything else.",
+        new_list_name_ph: "e.g. Pharmacy",
+        new_list_create: "Create list",
+        list_name_required: "Give the list a name first.",
+        list_rename: "✏️ Rename list",
+        list_rename_prompt: "New name for this list:",
+        list_share: "📤 Share",
+        list_uncheck_all: "↩️ Uncheck all",
+        list_clear_checked: "🧹 Remove checked items",
+        list_delete: "🗑 Delete list",
+        list_delete_title: "Delete this list?",
+        list_delete_message: "The list and all its items are removed for everyone in your household.",
+        list_empty: "This list is empty. Tap ➕ Add Item or 📋 Paste items.",
+        list_done_heading: "✅ Done",
+        list_item_removed: "Removed \"{name}\"",
+        list_checked_removed: "Removed {n} checked items",
+        list_nothing_checked: "Nothing is checked.",
         shop_meal_btn: "🛒 Shopping list for this meal",
         shop_meal_banner: "🍽️ Only for: {name}",
         shop_meal_clear: "✕ Show full list",
@@ -3746,6 +3841,33 @@ const translations = {
         btn_edit: "✏️ Redigera",
         btn_delete: "🗑 Ta bort",
         btn_open_recipe: "📖 Öppna recept",
+        paste_items_btn: "📋 Klistra in varor",
+        paste_items_title: "📋 Klistra in varor",
+        paste_items_description: "Klistra in eller skriv flera varor på en gång, en per rad (eller separerade med komma). Mängder känns igen automatiskt: \"2 kg potatis\", \"Mjölk - 3 l\", \"Batterier x4\".",
+        ph_paste_items: "t.ex.\n2 kg potatis\nMjölk - 3 l\n4 toalettpapper\nBatterier, glödlampor",
+        paste_items_add: "➕ Lägg till i listan",
+        paste_items_none: "Klistra in några varor först.",
+        paste_items_added: "Lade till {n} varor",
+        list_tab_meal: "🍽️ Måltidsplan",
+        list_new: "➕ Ny lista",
+        new_list_title: "➕ Ny lista",
+        new_list_description: "En separat inköpslista för vad som helst - apotek, järnhandel, en fest. Den delas med ditt hushåll precis som allt annat.",
+        new_list_name_ph: "t.ex. Apotek",
+        new_list_create: "Skapa lista",
+        list_name_required: "Ge listan ett namn först.",
+        list_rename: "✏️ Byt namn på listan",
+        list_rename_prompt: "Nytt namn på listan:",
+        list_share: "📤 Dela",
+        list_uncheck_all: "↩️ Avmarkera alla",
+        list_clear_checked: "🧹 Ta bort avbockade varor",
+        list_delete: "🗑 Ta bort listan",
+        list_delete_title: "Ta bort den här listan?",
+        list_delete_message: "Listan och alla varor i den tas bort för alla i ditt hushåll.",
+        list_empty: "Listan är tom. Tryck på ➕ Lägg till vara eller 📋 Klistra in varor.",
+        list_done_heading: "✅ Klart",
+        list_item_removed: "Tog bort \"{name}\"",
+        list_checked_removed: "Tog bort {n} avbockade varor",
+        list_nothing_checked: "Inget är avbockat.",
         shop_meal_btn: "🛒 Inköpslista för den här måltiden",
         shop_meal_banner: "🍽️ Bara för: {name}",
         shop_meal_clear: "✕ Visa hela listan",
@@ -7934,7 +8056,8 @@ const foodflowStorageKeys = [
     "foodflowCustomIngredientCategories",
     "foodflowDayNotes",
     "foodflowWeekTemplates",
-    "foodflowWeekNames"
+    "foodflowWeekNames",
+    "foodflowCustomLists"
 ];
 
 
@@ -10572,6 +10695,14 @@ let lastShoppingList = [];
 
 function renderShoppingList(){
 
+    renderListTabs();
+    document.body.classList.toggle("custom-list-active", !!activeCustomList());
+
+    if(activeCustomList()){
+        renderCustomList();
+        return;
+    }
+
     updateShoppingRangeInputs();
     renderShoppingSelectionBar();
 
@@ -10909,6 +11040,26 @@ function saveShoppingItem(){
     let amount =
         Number(String(amountRaw).replace(",",".")) || 0;
 
+    // an item of one of your own lists
+    if(activeCustomList()){
+
+        let l = activeCustomList();
+
+        if(editingShoppingKey && String(editingShoppingKey).startsWith("custom:")){
+            let item = l.items.find(i => i.id === editingShoppingKey.slice(7));
+            if(item){ item.name = name; item.amount = amount; item.unit = unit; }
+        }else{
+            l.items.push({ id: newCustomItemId(), name: name, amount: amount, unit: unit, checked: false });
+        }
+
+        saveCustomLists();
+        editingShoppingKey = null;
+        closeShoppingItemModal();
+        renderShoppingList();
+        return;
+
+    }
+
     if(editingShoppingKey === null){
 
         // Brand new manually-added item
@@ -11030,7 +11181,399 @@ function openAddShoppingItem(){
 }
 
 
+// =======================
+// CUSTOM SHOPPING LISTS (any kind of shopping, separate from the meal plan)
+// =======================
+// Stored as { listId: { name, icon, items: [{ id, name, amount, unit, checked }] } }
+// and synced with the household like the planner (one document per list).
+function loadCustomLists(){
+    try{
+        let v = JSON.parse(localStorage.getItem("foodflowCustomLists") || "{}");
+        return (v && typeof v === "object" && !Array.isArray(v)) ? v : {};
+    }catch(e){ return {}; }
+}
+
+let customLists = loadCustomLists();
+let activeShoppingList = "meal";
+try{ activeShoppingList = localStorage.getItem("foodflowActiveList") || "meal"; }catch(e){}
+
+function saveCustomLists(){
+    localStorage.setItem("foodflowCustomLists", JSON.stringify(customLists));
+}
+
+function activeCustomList(){
+    if(activeShoppingList === "meal") return null;
+    let l = customLists[activeShoppingList];
+    if(!l){ activeShoppingList = "meal"; return null; }
+    if(!Array.isArray(l.items)) l.items = [];
+    return l;
+}
+
+function showShoppingList(id){
+    activeShoppingList = id;
+    try{ localStorage.setItem("foodflowActiveList", id); }catch(e){}
+    shoppingSelectionMode = false;
+    let box = document.getElementById("shoppingSearch");
+    if(box) box.value = "";
+    renderShoppingList();
+}
+
+function renderListTabs(){
+
+    let box = document.getElementById("listTabs");
+    if(!box) return;
+
+    box.textContent = "";
+
+    let mk = (label, active, fn) => {
+        let b = document.createElement("button");
+        b.type = "button";
+        b.textContent = label;
+        if(active) b.setAttribute("data-primary", "");
+        b.onclick = fn;
+        box.appendChild(b);
+    };
+
+    let current = activeCustomList() ? activeShoppingList : "meal";
+
+    mk(t("list_tab_meal"), current === "meal", () => showShoppingList("meal"));
+
+    Object.keys(customLists).forEach(id => {
+        let l = customLists[id];
+        mk((l.icon || "🛒") + " " + (l.name || "?"), current === id, () => showShoppingList(id));
+    });
+
+    mk(t("list_new"), false, openNewListModal);
+
+}
+
+// ---- create ----
+const listIconChoices = ["🛒","💊","🔧","🎉","🧹","🐶","🎁","📚","🧴","🌱","🏠","✈️"];
+let newListIcon = "🛒";
+
+function renderNewListIcons(){
+    let box = document.getElementById("newListIcons");
+    if(!box) return;
+    box.textContent = "";
+    listIconChoices.forEach(ic => {
+        let b = document.createElement("button");
+        b.type = "button";
+        b.textContent = ic;
+        if(ic === newListIcon) b.setAttribute("data-primary", "");
+        b.onclick = () => { newListIcon = ic; renderNewListIcons(); };
+        box.appendChild(b);
+    });
+}
+
+function openNewListModal(){
+    newListIcon = "🛒";
+    document.getElementById("newListName").value = "";
+    renderNewListIcons();
+    document.getElementById("newListModal").style.display = "flex";
+    setTimeout(() => { try{ document.getElementById("newListName").focus(); }catch(e){} }, 50);
+}
+
+function closeNewListModal(){
+    document.getElementById("newListModal").style.display = "none";
+}
+
+function createCustomList(){
+
+    let name = document.getElementById("newListName").value.trim();
+
+    if(!name){
+        showToast(t("list_name_required"), { type:"error" });
+        return;
+    }
+
+    let id = "l" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+    customLists[id] = { name: name, icon: newListIcon, items: [] };
+    saveCustomLists();
+
+    closeNewListModal();
+    showShoppingList(id);
+
+}
+
+// ---- list menu ----
+function openCustomListMenu(){
+    let l = activeCustomList();
+    if(!l) return;
+    document.getElementById("customListMenuTitle").textContent = (l.icon || "🛒") + " " + l.name;
+    document.getElementById("customListMenu").style.display = "flex";
+}
+
+function closeCustomListMenu(){
+    document.getElementById("customListMenu").style.display = "none";
+}
+
+function renameCustomList(){
+    let l = activeCustomList();
+    if(!l) return;
+    let n = prompt(t("list_rename_prompt"), l.name);
+    if(n === null) return;
+    n = n.trim();
+    if(!n) return;
+    l.name = n;
+    saveCustomLists();
+    renderShoppingList();
+}
+
+async function deleteCustomList(){
+    let l = activeCustomList();
+    if(!l) return;
+    let ok = await customConfirm(t("list_delete_message"), t("list_delete_title"));
+    if(!ok) return;
+    delete customLists[activeShoppingList];
+    saveCustomLists();
+    showShoppingList("meal");
+}
+
+function uncheckAllCustomItems(){
+    let l = activeCustomList();
+    if(!l) return;
+    l.items.forEach(i => { i.checked = false; });
+    saveCustomLists();
+    renderShoppingList();
+}
+
+function clearCheckedCustomItems(){
+    let l = activeCustomList();
+    if(!l) return;
+    let removed = l.items.filter(i => i.checked);
+    if(removed.length === 0){
+        showToast(t("list_nothing_checked"));
+        return;
+    }
+    let listId = activeShoppingList;
+    l.items = l.items.filter(i => !i.checked);
+    saveCustomLists();
+    renderShoppingList();
+    showToast(t("list_checked_removed").replace("{n}", removed.length), {
+        actionLabel: t("undo"),
+        onAction: () => {
+            let cur = customLists[listId];
+            if(!cur) return;
+            cur.items.push(...removed);
+            saveCustomLists();
+            renderShoppingList();
+        }
+    });
+}
+
+function customItemText(i){
+    let amount = Number(i.amount) > 0 ? formatAmount(Number(i.amount)) + (i.unit ? " " + i.unit : "") + " " : "";
+    return amount + i.name;
+}
+
+function buildCustomListText(){
+    let l = activeCustomList();
+    if(!l) return "";
+    let lines = [(l.icon || "🛒") + " " + l.name, ""];
+    l.items.forEach(i => lines.push((i.checked ? "[x] " : "[ ] ") + customItemText(i)));
+    return lines.join("\n").trim();
+}
+
+async function shareCustomList(){
+    let text = buildCustomListText();
+    if(navigator.share){
+        try{ await navigator.share({ title: activeCustomList().name, text }); }
+        catch(err){ if(err && err.name !== "AbortError") showToast(t("couldnt_share"), { type:"error" }); }
+    }else if(navigator.clipboard){
+        try{ await navigator.clipboard.writeText(text); showToast(t("copied_to_clipboard")); }
+        catch(err){ showToast(t("couldnt_share"), { type:"error" }); }
+    }
+}
+
+// ---- items ----
+function toggleCustomItem(id){
+    let l = activeCustomList();
+    if(!l) return;
+    let item = l.items.find(i => i.id === id);
+    if(!item) return;
+    item.checked = !item.checked;
+    saveCustomLists();
+    renderShoppingList();
+}
+
+function editCustomItem(id){
+    let l = activeCustomList();
+    if(!l) return;
+    let item = l.items.find(i => i.id === id);
+    if(!item) return;
+    editingShoppingKey = "custom:" + id;
+    editingShoppingIsExtra = false;
+    openShoppingItemModal(t("edit_item_title"), item.name, Number(item.amount) > 0 ? item.amount : "", item.unit || "");
+}
+
+function deleteCustomItem(id){
+    let l = activeCustomList();
+    if(!l) return;
+    let idx = l.items.findIndex(i => i.id === id);
+    if(idx < 0) return;
+    let listId = activeShoppingList;
+    let item = l.items[idx];
+    l.items.splice(idx, 1);
+    saveCustomLists();
+    renderShoppingList();
+    showToast(t("list_item_removed").replace("{name}", item.name), {
+        actionLabel: t("undo"),
+        onAction: () => {
+            let cur = customLists[listId];
+            if(!cur) return;
+            cur.items.splice(Math.min(idx, cur.items.length), 0, item);
+            saveCustomLists();
+            renderShoppingList();
+        }
+    });
+}
+
+function newCustomItemId(){
+    return "i" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+function renderCustomList(){
+
+    let l = activeCustomList();
+    let container = document.getElementById("shoppingList");
+    let notes = document.getElementById("shoppingNotes");
+    let bar = document.getElementById("shoppingSelectionBar");
+
+    if(notes) notes.innerHTML = "";
+    if(bar) bar.style.display = "none";
+
+    let search = (document.getElementById("shoppingSearch") || { value:"" }).value.trim().toLowerCase();
+
+    // progress over the whole list
+    let total = l.items.length;
+    let done = l.items.filter(i => i.checked).length;
+    let pt = document.getElementById("shoppingProgressText");
+    let pb = document.getElementById("shoppingProgressBar");
+    if(pt && pb){
+        pt.innerText = total > 0 ? t("progress_checked").replace("{checked}", done).replace("{total}", total) : "";
+        pb.style.width = (total > 0 ? Math.round(done / total * 100) : 0) + "%";
+    }
+
+    if(total === 0){
+        container.innerHTML = `<p class="small">${t("list_empty")}</p>`;
+        return;
+    }
+
+    let shown = search ? l.items.filter(i => i.name.toLowerCase().includes(search)) : l.items;
+
+    if(shown.length === 0){
+        container.innerHTML = `<p class="small">${t("shopping_no_match")} "${search.replace(/</g, "&lt;")}".</p>`;
+        return;
+    }
+
+    let esc = x => String(x).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+    let row = i => `
+        <div class="meal" data-custom-id="${esc(i.id)}" style="--accent:var(--primary);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <input type="checkbox" style="width:auto;margin:0;" ${i.checked ? "checked" : ""} onchange="toggleCustomItem('${esc(i.id)}')">
+            <span style="flex:1;${i.checked ? "opacity:.5;text-decoration:line-through;" : ""}">${esc(customItemText(i))}</span>
+            <button class="edit" style="margin:0;padding:6px 10px;font-size:13px;" onclick="editCustomItem('${esc(i.id)}')">✏️</button>
+            <button class="delete" style="margin:0;padding:6px 10px;font-size:13px;" onclick="deleteCustomItem('${esc(i.id)}')">🗑️</button>
+        </div>`;
+
+    let open = shown.filter(i => !i.checked);
+    let closed = shown.filter(i => i.checked);
+
+    container.innerHTML =
+        open.map(row).join("") +
+        (closed.length ? `<h3 style="margin:20px 0 8px;">${t("list_done_heading")} (${closed.length})</h3>` + closed.map(row).join("") : "");
+
+    container.querySelectorAll("[data-custom-id]").forEach(r => {
+        attachSwipeToDelete(r, () => deleteCustomItem(r.getAttribute("data-custom-id")));
+    });
+
+}
+
+// ---- Paste several items at once ----
+function openPasteShoppingModal(){
+    document.getElementById("pasteShoppingText").value = "";
+    document.getElementById("pasteShoppingModal").style.display = "flex";
+    setTimeout(() => { try{ document.getElementById("pasteShoppingText").focus(); }catch(e){} }, 50);
+}
+
+function closePasteShoppingModal(){
+    document.getElementById("pasteShoppingModal").style.display = "none";
+}
+
+function addPastedShoppingItems(){
+
+    let raw = document.getElementById("pasteShoppingText").value;
+
+    // one item per line; a line with commas ("milk, eggs, 2 bread") is split up too
+    // (a decimal comma like "1,5 l" has no space after it, so it stays in one piece)
+    let pieces = [];
+    raw.split(/\r?\n/).forEach(line => {
+        stripListMarker(line).split(/[;]|,\s+(?=\S)/).forEach(piece => {
+            piece = piece.trim();
+            if(piece && !/:$/.test(piece)) pieces.push(piece);   // skip headings like "Groceries:"
+        });
+    });
+
+    let added = [];
+
+    pieces.forEach(piece => {
+
+        let parsed = parseIngredientLine(piece);
+
+        if(!parsed || !parsed.name || parsed.name.length > 80) return;
+
+        let name = parsed.name.charAt(0).toUpperCase() + parsed.name.slice(1);
+
+        added.push({
+            id: "x" + Date.now() + Math.floor(Math.random() * 100000),
+            name: name,
+            amount: Number(parsed.amount) || 0,
+            unit: parsed.unit || ""
+        });
+
+    });
+
+    if(added.length === 0){
+        showToast(t("paste_items_none"), { type:"error" });
+        return;
+    }
+
+    let customTarget = activeCustomList();
+    let targetId = activeShoppingList;
+
+    if(customTarget){
+        customTarget.items.push(...added.map(a => ({ ...a, checked: false })));
+        saveCustomLists();
+    }else{
+        shoppingExtras.push(...added);
+        saveShoppingState();
+    }
+
+    closePasteShoppingModal();
+    renderShoppingList();
+
+    let ids = new Set(added.map(a => a.id));
+
+    showToast(t("paste_items_added").replace("{n}", added.length), {
+        actionLabel: t("undo"),
+        onAction: () => {
+            if(customTarget && customLists[targetId]){
+                customLists[targetId].items = customLists[targetId].items.filter(e => !ids.has(e.id));
+                saveCustomLists();
+            }else{
+                shoppingExtras = shoppingExtras.filter(e => !ids.has(e.id));
+                saveShoppingState();
+            }
+            renderShoppingList();
+        }
+    });
+
+}
+
 function openShoppingMoreMenu(){
+
+    if(activeCustomList()){ openCustomListMenu(); return; }
 
     document.getElementById("shoppingMoreMenu")
     .style.display = "flex";
@@ -11433,6 +11976,12 @@ function parseIngredientLine(line){
         if(dashNote && dashNote[2].trim().split(/\s+/).length <= 3){
             line = dashNote[1].trim();
         }
+    }
+
+    // "Batteries x4" / "Plasters ×3": the multiplier after the name
+    let xAfter = line.match(/^(.+?)\s+[x×]\s*(\d+(?:[.,]\d+)?)$/i);
+    if(xAfter && !/^\d/.test(line)){
+        line = xAfter[2] + " " + xAfter[1].trim();
     }
 
     // "2x carrots" / "2 x carrots": a multiplier, not a unit
@@ -11955,6 +12504,7 @@ const SYNC_KEYS = {
     foodflowWeekNames: "map",
     foodflowCustomIngredientTranslations: "map",
     foodflowCustomIngredientCategories: "map",
+    foodflowCustomLists: "map",
     foodflowRecipes: "whole",
     foodflowCategories: "whole",
     foodflowCategoryOrder: "whole",
