@@ -3380,6 +3380,7 @@ const translations = {
         sync_leave_title: "Leave household?",
         sync_leave_message: "This device stops syncing. Your data stays here, but changes won't be shared anymore.",
         sync_updated: "Updated by your household",
+        ws_switched: "Switched to \"{name}\"",
         settings_backup: "💾 Backup",
         backup_description: "Your data lives only in this browser. Export it now and then to keep a safe copy, or to move it to another device.",
         export_data: "⬇️ Export Data",
@@ -3802,6 +3803,7 @@ const translations = {
         sync_leave_title: "Lämna hushållet?",
         sync_leave_message: "Den här enheten slutar synka. Din data finns kvar, men ändringar delas inte längre.",
         sync_updated: "Uppdaterad av ditt hushåll",
+        ws_switched: "Bytte till \"{name}\"",
         settings_backup: "💾 Säkerhetskopia",
         backup_description: "Din data finns bara i den här webbläsaren. Exportera då och då för att ha en säker kopia, eller för att flytta den till en annan enhet.",
         export_data: "⬇️ Exportera data",
@@ -12511,7 +12513,11 @@ renderShoppingList();
 // Called by the household sync when someone else changed something: re-reads the
 // saved data and redraws the screen in place (no page reload, no flash, scroll
 // position and open page stay as they are).
-window.ffSoftRefresh = function(){
+window.ffSoftRefresh = function(opts){
+
+    // opts.reset: a different planner was loaded into storage - start from its data
+    // and the usual starting view (this week, meal-plan list, no filters)
+    const reset = !!(opts && opts.reset);
 
     const read = (key, fallback) => {
         try{
@@ -12520,7 +12526,26 @@ window.ffSoftRefresh = function(){
         }catch(e){ return fallback; }
     };
 
-    const rec = read("foodflowRecipes", null);
+    if(reset){
+        currentWeekKey = getMondayKey(new Date());
+        { let th = parseDateKey(currentWeekKey); th.setDate(th.getDate() + 3); monthAnchor = new Date(th.getFullYear(), th.getMonth(), 1); }
+        shoppingRangeStart = localStorage.getItem("foodflowShoppingRangeStart");
+        shoppingRangeEnd = localStorage.getItem("foodflowShoppingRangeEnd");
+        if(!shoppingRangeStart || !shoppingRangeEnd){
+            shoppingRangeStart = currentWeekKey;
+            shoppingRangeEnd = addDaysToKey(currentWeekKey, 6);
+        }
+        shoppingRemoved = read("foodflowShoppingRemoved", {}) || {};
+        activeRecipeTagFilter = null;
+        shoppingSelectionMode = false;
+        shoppingSelectedKeys.clear();
+        setShoppingMealFilter(null);
+        activeShoppingList = "meal";
+        try{ localStorage.setItem("foodflowActiveList", "meal"); }catch(e){}
+        ["recipeSearchPage", "shoppingSearch"].forEach(id => { const el = document.getElementById(id); if(el) el.value = ""; });
+    }
+
+    const rec = read("foodflowRecipes", reset ? [] : null);
     if(Array.isArray(rec)){
         recipes = rec.map(r => ({
             ...r,
@@ -12530,7 +12555,7 @@ window.ffSoftRefresh = function(){
         }));
     }
 
-    const wk = read("foodflowWeeks", null);
+    const wk = read("foodflowWeeks", reset ? {} : null);
     if(wk && typeof wk === "object" && !Array.isArray(wk)) weeks = wk;
     meals = ensureWeek(currentWeekKey);
 
@@ -12549,7 +12574,7 @@ window.ffSoftRefresh = function(){
     customIngredientCategories = loadCustomIngredientCategories();
     customLists = loadCustomLists();
 
-    const cats = read("foodflowCategories", null);
+    const cats = read("foodflowCategories", reset ? ["🍳 Breakfast","☕ Fika","🥗 Lunch","🍝 Dinner"] : null);
     if(Array.isArray(cats) && cats.length) mealCategories = cats;
 
     renderMealTypeOptions();
@@ -13035,6 +13060,11 @@ async function switchTo(id){
     switching = true;
     clearTimeout(pushTimer);
     try{ if(code && db && ready) await Promise.race([pushLocal(), new Promise(r => setTimeout(r, 3000))]); }catch(e){}
+    // Redraw in place (no flash) - but only if no upload is still running that could
+    // touch the other planner's data; otherwise fall back to a full reload.
+    let soft = typeof window.ffSoftRefresh === "function";
+    for(let i = 0; i < 30 && pushing; i++) await new Promise(r => setTimeout(r, 100));
+    if(pushing) soft = false;
     const snap = {};
     for(const k of WS_DATA_KEYS){ const v = ls.get(k); if(v !== null) snap[k] = v; }
     ls.set(WS_PREFIX + w.active, JSON.stringify(snap));
@@ -13045,6 +13075,27 @@ async function switchTo(id){
     if(target.code) ls.set(CODE_KEY, target.code); else ls.del(CODE_KEY);
     w.active = id; saveWS(w);
     try { sessionStorage.removeItem("ff_week"); sessionStorage.removeItem("ff_scroll"); } catch(e){}
+    if(soft){
+        try{
+            // sync state for the newly opened planner
+            code = target.code || "";
+            try{ base = JSON.parse(ls.get(BASE_KEY) || "{}"); }catch(e){ base = {}; }
+            ready = false; pushAgain = false; pendingReload = false;
+            clearTimeout(retryTimer); clearTimeout(reloadTimer);
+            status = code ? "connecting" : "off";
+            window.ffSoftRefresh({ reset: true });
+            appView = {};
+            const lv = localDocs();
+            for(const k2 of Object.keys(lv)) appView[k2] = lv[k2].v;
+            switching = false;
+            renderSyncSettings();
+            if(code) start();
+            window.scrollTo(0, 0);
+            if(typeof closeSettings === "function") closeSettings();
+            toast(tr("ws_switched").replace("{name}", wsName(target)));
+            return;
+        }catch(err){ console.warn("FoodFlow: switching without reload failed, reloading", err); }
+    }
     location.reload();
 }
 
