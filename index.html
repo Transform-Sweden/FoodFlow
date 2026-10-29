@@ -12508,6 +12508,59 @@ renderRecipes();
 renderShoppingList();
 
 
+// Called by the household sync when someone else changed something: re-reads the
+// saved data and redraws the screen in place (no page reload, no flash, scroll
+// position and open page stay as they are).
+window.ffSoftRefresh = function(){
+
+    const read = (key, fallback) => {
+        try{
+            const v = JSON.parse(localStorage.getItem(key));
+            return (v === null || v === undefined) ? fallback : v;
+        }catch(e){ return fallback; }
+    };
+
+    const rec = read("foodflowRecipes", null);
+    if(Array.isArray(rec)){
+        recipes = rec.map(r => ({
+            ...r,
+            ingredients: Array.isArray(r.ingredients) ? r.ingredients : [],
+            expanded: r.expanded || false,
+            favorite: r.favorite || false
+        }));
+    }
+
+    const wk = read("foodflowWeeks", null);
+    if(wk && typeof wk === "object" && !Array.isArray(wk)) weeks = wk;
+    meals = ensureWeek(currentWeekKey);
+
+    shoppingCheckedByWeek = read("foodflowShoppingCheckedByWeek", {}) || {};
+    shoppingOverridesByWeek = read("foodflowShoppingOverridesByWeek", {}) || {};
+    shoppingExtrasByWeek = read("foodflowShoppingExtrasByWeek", {}) || {};
+    shoppingChecked = ensureWeekShoppingChecked(currentWeekKey);
+    shoppingOverrides = ensureWeekShoppingOverrides(currentWeekKey);
+    shoppingExtras = ensureWeekShoppingExtras(currentWeekKey);
+
+    weekTemplates = loadWeekTemplates();
+    weekNames = loadWeekNames();
+    dayNotes = loadDayNotes();
+    categoryOrder = loadCategoryOrder();
+    customIngredientTranslations = loadCustomIngredientTranslations();
+    customIngredientCategories = loadCustomIngredientCategories();
+    customLists = loadCustomLists();
+
+    const cats = read("foodflowCategories", null);
+    if(Array.isArray(cats) && cats.length) mealCategories = cats;
+
+    renderMealTypeOptions();
+    updateWeekLabel();
+    render();
+    renderRecipes();
+    renderShoppingList();
+
+};
+
+
 </script>
 
 <script type="module">
@@ -12823,6 +12876,18 @@ function scheduleReload(){
     const tick = () => {
         if(!pendingReload) return;
         if(!forceReload && modalOpenOrTyping()){ reloadTimer = setTimeout(tick, 2000); return; }
+        // Preferred: redraw in place (no flash). A full reload is only the fallback.
+        if(typeof window.ffSoftRefresh === "function"){
+            try{
+                window.ffSoftRefresh();
+                appView = {};
+                const lv = localDocs();
+                for(const id of Object.keys(lv)) appView[id] = lv[id].v;
+                pendingReload = false;
+                toast(tr("sync_updated"));
+                return;
+            }catch(err){ console.warn("FoodFlow soft refresh failed, reloading instead", err); }
+        }
         try { sessionStorage.setItem("ff_scroll", String(window.scrollY)); sessionStorage.setItem("ff_synced", "1"); if(typeof currentWeekKey === "string") sessionStorage.setItem("ff_week", currentWeekKey); } catch(e){}
         location.reload();
     };
