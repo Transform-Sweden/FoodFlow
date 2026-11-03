@@ -2233,6 +2233,12 @@ Your data lives only in this browser. Export it now and then to keep a safe copy
 <span data-i18n="import_data">⬆️ Import Data</span>
 </button>
 
+<button id="undoImportBtn" onclick="undoLastImport()" style="display:none;">
+<span data-i18n="backup_undo_import">↩️ Undo last import</span>
+</button>
+
+<p class="small" id="backupStatus" style="opacity:0.75;"></p>
+
 <input
 type="file"
 id="importFileInput"
@@ -3691,6 +3697,12 @@ const translations = {
         import_backup_message: "This will replace your current recipes, meal planner, settings, and shopping list with what's in this backup file. Continue?",
         import_backup_title: "Import backup?",
         import_complete: "Import complete! Reloading...",
+        backup_last: "Last backup: ",
+        backup_never: "No backup made yet — export one now and then.",
+        backup_undo_import: "↩️ Undo last import",
+        backup_undo_done: "Previous data restored. Reloading...",
+        backup_bad_file: "That doesn't look like a FoodFlow backup file.",
+        backup_shared_note: "In a shared household, imported data merges with what the household already has.",
         need_one_category: "You need at least one category.",
         delete_category_message: "Delete this category? Meals already using it will keep showing it, but it won't be selectable for new meals.",
         delete_category_title: "Delete category?",
@@ -4114,6 +4126,12 @@ const translations = {
         import_backup_message: "Detta ersätter dina nuvarande recept, måltidsplan, inställningar och inköpslista med innehållet i denna säkerhetskopia. Fortsätt?",
         import_backup_title: "Importera säkerhetskopia?",
         import_complete: "Importen är klar! Laddar om...",
+        backup_last: "Senaste säkerhetskopia: ",
+        backup_never: "Ingen säkerhetskopia gjord ännu — exportera en då och då.",
+        backup_undo_import: "↩️ Ångra senaste importen",
+        backup_undo_done: "Tidigare data återställd. Laddar om...",
+        backup_bad_file: "Det där ser inte ut som en FoodFlow-säkerhetskopia.",
+        backup_shared_note: "I ett delat hushåll slås importerad data ihop med det hushållet redan har.",
         need_one_category: "Du behöver minst en kategori.",
         delete_category_message: "Ta bort den här kategorin? Måltider som redan använder den visar den fortfarande, men den går inte att välja för nya måltider.",
         delete_category_title: "Ta bort kategori?",
@@ -4408,7 +4426,7 @@ function setupDayDropZone(card, targetDay){
 
         if(sourceDay !== targetDay){
             hapticFeedback();
-            showToast(`${t("moved_meal_prefix")}"${movedMeal.name}"${t("moved_meal_suffix")}${translateDayName(targetDay)}`);
+            showToast(`${t("moved_meal_prefix")}"${escapeHtml(movedMeal.name)}"${t("moved_meal_suffix")}${translateDayName(targetDay)}`);
         }
 
     });
@@ -4507,7 +4525,7 @@ function pickUpMeal(day, index, element){
     clearTimeout(pickupCancelTimer);
 
     showToast(
-        `${t("pick_a_day_prefix")}"${meal.name}"${t("pick_a_day_suffix")}`,
+        `${t("pick_a_day_prefix")}"${escapeHtml(meal.name)}"${t("pick_a_day_suffix")}`,
         {
             actionLabel: t("cancel"),
             onAction: cancelMealPickup,
@@ -4597,7 +4615,7 @@ function tryDropMealOnDay(targetDay){
 
     render();
 
-    showToast(`${t("moved_meal_prefix")}"${movedMeal.name}"${t("moved_meal_suffix")}${translateDayName(targetDay)}`);
+    showToast(`${t("moved_meal_prefix")}"${escapeHtml(movedMeal.name)}"${t("moved_meal_suffix")}${translateDayName(targetDay)}`);
 
 }
 
@@ -4797,7 +4815,7 @@ function openQuickAddDayPicker(){
         let label = translateDayName(day) +
             (day === todayName ? t("quick_add_today_suffix") : "");
 
-        return `<button onclick="pickQuickAddDay('${day}')">${label}</button>`;
+        return `<button onclick="pickQuickAddDay('${day}')">${escapeHtml(label)}</button>`;
 
     }).join("");
 
@@ -5370,7 +5388,7 @@ function describeMealRef(ref){
     let dateKey = dayIndex >= 0 ? addDaysToKey(ref.weekKey, dayIndex) : null;
     let dateLabel = dateKey ? parseDateKey(dateKey).toLocaleDateString(undefined, { month:"short", day:"numeric" }) : "";
 
-    return `${translateDayName(ref.day)} ${dateLabel} — ${meal.name}`;
+    return `${translateDayName(ref.day)} ${dateLabel} — ${escapeHtml(meal.name)}`;
 
 }
 
@@ -6276,7 +6294,7 @@ function renderTemplateList(){
             border-radius:8px;
             background:var(--bg);
         ">
-            <span>${template.name}</span>
+            <span>${escapeHtml(template.name)}</span>
 
             <span style="display:flex; gap:6px;">
                 <button
@@ -6468,7 +6486,7 @@ function getMealOrder(){
 function renderMealTypeOptions(){
 
     let optionsHtml = mealCategories
-        .map(cat => `<option>${cat}</option>`)
+        .map(cat => `<option>${escapeHtml(cat)}</option>`)
         .join("") +
         `<option value="__new_category__">${t("new_category_option")}</option>`;
 
@@ -6726,8 +6744,8 @@ if(meals[day] && meals[day].length > 0){
             : (meal.leftoverPortions > 0 ? `<span class="meal-chip" title="${meal.leftoverPortions} ${t("leftovers_badge_portions")}">📦 ${meal.leftoverPortions}<span class="meal-chip-lbl"> ${t("leftovers_badge_portions")}</span></span>` : "");
 
         box.innerHTML = `
-        <div class="meal-title" title="${meal.type}">${meal.type}</div>
-        <strong class="meal-name-clamp" title="${meal.name}">${meal.name}</strong>
+        <div class="meal-title" title="${escapeHtml(meal.type)}">${escapeHtml(meal.type)}</div>
+        <strong class="meal-name-clamp" title="${escapeHtml(meal.name)}">${escapeHtml(meal.name)}</strong>
         <div class="meal-foot">
             <span class="meal-chip" title="${peopleFull}">👥 ${meal.people}<span class="meal-chip-lbl"> ${peopleWord}</span></span>
             ${leftoverChip}
@@ -6943,7 +6961,7 @@ if(available.length === 0){
 
     trackedHtml = available.map(({weekKey, day, meal}) => `
         <div class="meal" style="margin-top:8px;">
-            <strong>${meal.name}</strong>
+            <strong>${escapeHtml(meal.name)}</strong>
             <div class="small">${translateDayName(day)} · 📦 ${meal.leftoverPortions} ${t("portions_label")}</div>
             <button onclick="chooseLeftoverSource('${weekKey}','${day}','${meal.id}')">
             ${t("use_this_button")}
@@ -7410,7 +7428,7 @@ saveData();
 render();
 
 
-showToast(`${t("toast_removed")} "${removedMeal.name}"`, {
+showToast(`${t("toast_removed")} "${escapeHtml(removedMeal.name)}"`, {
     actionLabel: t("undo"),
     onAction: () => {
 
@@ -7579,7 +7597,7 @@ function openMoveDayModal(day){
     const option = (value, label) => `
         <label style="display:flex;align-items:center;gap:8px;font-weight:normal;">
             <input type="radio" name="moveDayTarget" class="moveDayTarget" value="${value}" style="width:auto;margin:0;">
-            ${label}
+            ${escapeHtml(label)}
         </label>`;
 
     let html = days.filter(d => d !== day)
@@ -8005,6 +8023,8 @@ renderCustomIngredientTranslations();
 let roundToggle = document.getElementById("roundShoppingToggle");
 if(roundToggle) roundToggle.checked = shoppingRoundingOn();
 
+updateBackupStatus();
+
 }
 
 
@@ -8086,9 +8106,14 @@ function exportData(){
 
     let data = {};
 
+    data._foodflow = { version: 1, exported: new Date().toISOString() };
+
     foodflowStorageKeys.forEach(key=>{
         data[key] = localStorage.getItem(key);
     });
+
+    try{ localStorage.setItem("foodflowLastBackup", String(Date.now())); }catch(e){}
+    updateBackupStatus();
 
     let blob = new Blob(
         [JSON.stringify(data, null, 2)],
@@ -8109,6 +8134,65 @@ function exportData(){
     document.body.removeChild(a);
 
     URL.revokeObjectURL(url);
+
+}
+
+
+function updateBackupStatus(){
+
+    let el = document.getElementById("backupStatus");
+    let btn = document.getElementById("undoImportBtn");
+
+    if(el){
+
+        let last = 0;
+        try{ last = Number(localStorage.getItem("foodflowLastBackup")) || 0; }catch(e){}
+
+        el.textContent = last
+            ? t("backup_last") + new Date(last).toLocaleDateString()
+            : t("backup_never");
+
+        if(localStorage.getItem("foodflowHouseholdCode")){
+            el.textContent += " · " + t("backup_shared_note");
+        }
+
+    }
+
+    if(btn){
+
+        let has = false;
+        try{ has = !!localStorage.getItem("foodflowPreImport"); }catch(e){}
+
+        btn.style.display = has ? "" : "none";
+
+    }
+
+}
+
+
+function undoLastImport(){
+
+    let snap;
+
+    try{ snap = JSON.parse(localStorage.getItem("foodflowPreImport")); }catch(e){}
+
+    if(!snap || !snap.data) return;
+
+    foodflowStorageKeys.forEach(key=>{
+
+        if(snap.data[key] !== undefined){
+            localStorage.setItem(key, snap.data[key]);
+        }else{
+            localStorage.removeItem(key);
+        }
+
+    });
+
+    localStorage.removeItem("foodflowPreImport");
+
+    showToast(t("backup_undo_done"));
+
+    setTimeout(() => location.reload(), 900);
 
 }
 
@@ -8148,12 +8232,45 @@ async function importData(event){
 
             let data = JSON.parse(e.target.result);
 
+            if(!data || typeof data !== "object" || Array.isArray(data)){
+                throw new Error("bad");
+            }
+
+            // Only accept known keys holding valid JSON text (theme/language/page are plain words)
+            let plain = ["foodflowTheme","foodflowLanguage","foodflowPage"];
+            let accepted = {};
+
             foodflowStorageKeys.forEach(key=>{
 
-                if(data[key] !== null && data[key] !== undefined){
-                    localStorage.setItem(key, data[key]);
+                let v = data[key];
+
+                if(typeof v !== "string") return;
+
+                if(!plain.includes(key)){
+                    try{ JSON.parse(v); }catch(err){ return; }
                 }
 
+                accepted[key] = v;
+
+            });
+
+            if(Object.keys(accepted).length === 0){
+                showToast(t("backup_bad_file"), { type:"error" });
+                return;
+            }
+
+            // Safety copy of what is here now, so the import can be undone
+            try{
+                let before = {};
+                foodflowStorageKeys.forEach(key=>{
+                    let v = localStorage.getItem(key);
+                    if(v !== null) before[key] = v;
+                });
+                localStorage.setItem("foodflowPreImport", JSON.stringify({ t: Date.now(), data: before }));
+            }catch(err){}
+
+            Object.keys(accepted).forEach(key=>{
+                localStorage.setItem(key, accepted[key]);
             });
 
             showToast(t("import_complete"));
@@ -8198,7 +8315,7 @@ function renderCategoryList(){
     container.innerHTML = mealCategories.map((cat, index) => `
 
         <div class="meal" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;">
-            <span>${cat}</span>
+            <span>${escapeHtml(cat)}</span>
             <button
                 class="delete"
                 style="margin:0;padding:6px 10px;font-size:13px;"
@@ -8541,7 +8658,7 @@ item.style.padding = "10px";
 item.innerHTML = `
 
 <strong>
-${recipe.name}
+${escapeHtml(recipe.name)}
 </strong>
 
 <br>
@@ -8689,8 +8806,8 @@ item.amount
 ? formatAmount(Number(item.amount) * factor)
 : ""
 }
-${item.unit || ""}
-${item.name}
+${escapeHtml(item.unit || "")}
+${escapeHtml(item.name)}
 </li>
 
 `).join("")
@@ -8720,7 +8837,9 @@ function escapeHtml(text){
     return String(text)
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
 
 }
 
@@ -8784,7 +8903,7 @@ if(allTags.length === 0){
 
     tagBar.innerHTML = allTags.map(tag => `
         <button
-            onclick="toggleRecipeTagFilter('${tag.replace(/'/g,"\\'")}')"
+            onclick="toggleRecipeTagFilter(decodeURIComponent('${encodeURIComponent(tag).replace(/'/g,"%27")}'))"
             style="
                 padding:4px 10px;
                 border-radius:999px;
@@ -8793,7 +8912,7 @@ if(allTags.length === 0){
                 color:${activeRecipeTagFilter === tag ? "#fff" : "inherit"};
                 border:1px solid var(--primary);
             "
-        >${tag}</button>
+        >${escapeHtml(tag)}</button>
     `).join("");
 
     tagBar.scrollLeft = keepTagScroll;
@@ -8929,7 +9048,7 @@ card.innerHTML = `
 
 ${recipe.favorite ? "⭐ " : ""}
 
-${recipe.name}
+${escapeHtml(recipe.name)}
 
 </h3>
 
@@ -8943,7 +9062,7 @@ ${
             background:var(--bg);
             border:1px solid var(--primary);
             opacity:0.85;
-        ">${tag}</span>
+        ">${escapeHtml(tag)}</span>
     `).join("") + `</div>`
     : ""
     }
@@ -9002,7 +9121,7 @@ document.getElementById("recipeDetailTags").innerHTML =
                 background:var(--bg);
                 border:1px solid var(--primary);
                 opacity:0.85;
-            ">${tag}</span>
+            ">${escapeHtml(tag)}</span>
         `).join("")}
        </div>`
     : "";
@@ -9030,7 +9149,7 @@ ${recipe.ingredients.map(item=>`
 <li>${
     typeof item === "string"
     ? item
-    : `${item.amount || ""} ${item.unit || ""} ${item.name}`.trim()
+    : `${item.amount || ""} ${escapeHtml(item.unit || "")} ${escapeHtml(item.name)}`.trim()
 }</li>
 
 `).join("")}
@@ -9163,7 +9282,7 @@ JSON.stringify(recipes)
 
 renderRecipes();
 
-showToast(`${t("toast_removed")} "${removedRecipe.name}"`, {
+showToast(`${t("toast_removed")} "${escapeHtml(removedRecipe.name)}"`, {
     actionLabel: t("undo"),
     onAction: () => {
 
@@ -9368,7 +9487,7 @@ function addIngredientRow(name="", amount="", unit=""){
         <input
             class="ingredientName"
             placeholder="${t("ph_ingredient")}"
-            value="${name}"
+            value="${escapeHtml(name)}"
             style="flex:2;"
         >
 
@@ -9383,7 +9502,7 @@ function addIngredientRow(name="", amount="", unit=""){
         <input
             class="ingredientUnit"
             placeholder="${t("ph_unit")}"
-            value="${unit}"
+            value="${escapeHtml(unit)}"
             style="width:70px;"
         >
 
@@ -9830,20 +9949,20 @@ function renderCategoryOrderSettings(){
             border-radius:8px;
             background:var(--bg);
         ">
-            <span>${categoryIcons[cat] || "🛒"} ${categoryLabel(cat)}</span>
+            <span>${categoryIcons[cat] || "🛒"} ${escapeHtml(categoryLabel(cat))}</span>
 
             <span style="display:flex; gap:4px;">
                 <button
                     onclick="moveCategoryOrder(${index}, -1)"
                     ${index === 0 ? "disabled" : ""}
-                    aria-label="${t("aria_move_category_up")}: ${categoryLabel(cat)}"
+                    aria-label="${t("aria_move_category_up")}: ${escapeHtml(categoryLabel(cat))}"
                     style="padding:2px 10px;"
                 >▲</button>
 
                 <button
                     onclick="moveCategoryOrder(${index}, 1)"
                     ${index === categoryOrder.length - 1 ? "disabled" : ""}
-                    aria-label="${t("aria_move_category_down")}: ${categoryLabel(cat)}"
+                    aria-label="${t("aria_move_category_down")}: ${escapeHtml(categoryLabel(cat))}"
                     style="padding:2px 10px;"
                 >▼</button>
             </span>
@@ -10063,7 +10182,7 @@ function populateCustomTranslationCategorySelect(){
         `<option value="">${categoryIcons["Other"] || "🛒"} ${t("category_auto_other")}</option>` +
         categoryOrder
             .filter(cat => cat !== "Other")
-            .map(cat => `<option value="${cat}">${categoryIcons[cat] || "🛒"} ${categoryLabel(cat)}</option>`)
+            .map(cat => `<option value="${escapeHtml(cat)}">${categoryIcons[cat] || "🛒"} ${escapeHtml(categoryLabel(cat))}</option>`)
             .join("");
 
     select.value = current;
@@ -10180,8 +10299,8 @@ function renderCustomIngredientTranslations(){
     container.innerHTML = entries.map(([alias, target]) => {
 
         let category = customIngredientCategories[target];
-        let categoryLabel = category
-            ? ` · ${categoryIcons[category] || "🛒"} ${categoryLabel(category)}`
+        let catSuffix = category
+            ? ` · ${categoryIcons[category] || "🛒"} ${escapeHtml(categoryLabel(category))}`
             : "";
 
         return `
@@ -10196,11 +10315,11 @@ function renderCustomIngredientTranslations(){
             border-radius:8px;
             background:var(--bg);
         ">
-            <span>${alias} → ${target}${categoryLabel}</span>
+            <span>${escapeHtml(alias)} → ${escapeHtml(target)}${catSuffix}</span>
 
             <button
-                onclick="deleteCustomIngredientTranslation('${alias.replace(/'/g,"\\'")}')"
-                aria-label="${t("aria_delete_translation")}: ${alias}"
+                onclick="deleteCustomIngredientTranslation(decodeURIComponent('${encodeURIComponent(alias).replace(/'/g,"%27")}'))"
+                aria-label="${t("aria_delete_translation")}: ${escapeHtml(alias)}"
                 style="padding:2px 10px;"
             >🗑</button>
         </div>
@@ -10493,7 +10612,7 @@ function formatAmount(num){
 
 function renderShoppingItemRow(item){
 
-    let safeKey = item.key.replace(/'/g,"\\'");
+    let safeKey = String(item.key).replace(/\\/g,"\\\\").replace(/'/g,"\\x27").replace(/"/g,"\\x22").replace(/</g,"\\x3c").replace(/>/g,"\\x3e").replace(/&/g,"\\x26").replace(/\n/g,"\\n");
     let accent = categoryAccents[item.category] || categoryAccents["Other"];
 
     let amountText = item.amount > 0
@@ -10516,7 +10635,7 @@ function renderShoppingItemRow(item){
                     ${selected ? "checked" : ""}
                 >
                 <span style="flex:1;">
-                    ${amountText}${item.name}
+                    ${escapeHtml(amountText)}${escapeHtml(item.name)}
                     ${item.isExtra ? `<span class="small">(added by you)</span>` : ""}
                 </span>
             </div>
@@ -10528,7 +10647,7 @@ function renderShoppingItemRow(item){
     let hasSources = item.sources && item.sources.length > 0;
 
     return `
-        <div class="meal" data-swipe-key="${safeKey}" style="--accent:${accent};display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div class="meal" data-swipe-key="${escapeHtml(item.key)}" style="--accent:${accent};display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
             <input
                 type="checkbox"
                 style="width:auto;margin:0;"
@@ -10539,7 +10658,7 @@ function renderShoppingItemRow(item){
                 style="flex:1;${checked ? "opacity:.5;text-decoration:line-through;" : ""}${hasSources ? "cursor:pointer;" : ""}"
                 ${hasSources ? `onclick="showIngredientSources('${safeKey}')"` : ""}
             >
-                ${amountText}${item.name}
+                ${escapeHtml(amountText)}${escapeHtml(item.name)}
                 ${item.needText ? `<span class="small" style="opacity:.55;">(${t("need_exact")} ${item.needText})</span>` : ""}
                 ${item.isExtra ? `<span class="small">(added by you)</span>` : ""}
                 ${hasSources ? `<span class="small" style="opacity:0.6;"> 📖</span>` : ""}
@@ -10589,7 +10708,7 @@ function showIngredientSources(key){
             <div class="action-list">
             ${item.sources.map(source => `
                 <button onclick="closeIngredientSources(); openRecipeDetail(${source.index});">
-                📖 ${source.name}
+                📖 ${escapeHtml(source.name)}
                 </button>
             `).join("")}
             </div>
@@ -10820,7 +10939,7 @@ function renderShoppingList(){
             .filter(cat => groups[cat] && groups[cat].length > 0)
             .map(cat => `
                 <h3 style="margin:20px 0 8px;">
-                    ${categoryIcons[cat] || ""} ${categoryLabel(cat)}
+                    ${categoryIcons[cat] || ""} ${escapeHtml(categoryLabel(cat))}
                 </h3>
                 ${groups[cat].map(renderShoppingItemRow).join("")}
             `)
@@ -11170,7 +11289,7 @@ function deleteShoppingItem(key){
         saveShoppingState();
         renderShoppingList();
 
-        showToast(`${t("toast_removed")} "${item.name}"`, {
+        showToast(`${t("toast_removed")} "${escapeHtml(item.name)}"`, {
             actionLabel: t("undo"),
             onAction: () => {
 
@@ -11199,7 +11318,7 @@ function deleteShoppingItem(key){
         saveShoppingState();
         renderShoppingList();
 
-        showToast(`${t("toast_removed")} "${item.name}"`, {
+        showToast(`${t("toast_removed")} "${escapeHtml(item.name)}"`, {
             actionLabel: t("undo"),
             onAction: () => {
 
@@ -11677,7 +11796,7 @@ function buildShoppingListText(){
         .filter(cat => groups[cat] && groups[cat].length > 0)
         .forEach(cat=>{
 
-            lines.push(`${categoryIcons[cat] || ""} ${categoryLabel(cat)}`);
+            lines.push(`${categoryIcons[cat] || ""} ${escapeHtml(categoryLabel(cat))}`);
 
             groups[cat].forEach(item=>{
 
@@ -11687,7 +11806,7 @@ function buildShoppingListText(){
 
                 let box = shoppingChecked[item.key] ? "[x]" : "[ ]";
 
-                lines.push(`${box} ${amountText}${item.name}`);
+                lines.push(`${box} ${escapeHtml(amountText)}${escapeHtml(item.name)}`);
 
             });
 
@@ -11776,14 +11895,14 @@ function printShoppingList(){
 
                     return `
                         <div class="print-item ${checked}">
-                            ${box} &nbsp; ${amountText}${item.name}
+                            ${box} &nbsp; ${escapeHtml(amountText)}${escapeHtml(item.name)}
                         </div>
                     `;
 
                 }).join("");
 
                 return `
-                    <h3>${categoryIcons[cat] || ""} ${categoryLabel(cat)}</h3>
+                    <h3>${categoryIcons[cat] || ""} ${escapeHtml(categoryLabel(cat))}</h3>
                     ${rows}
                 `;
 
@@ -11828,8 +11947,8 @@ function printMealPlanner(){
 
             ? sortedMeals.map(meal => `
                 <div class="print-planner-meal">
-                    <div class="print-planner-meal-type">${meal.type}</div>
-                    <div class="print-planner-meal-name">${meal.name}</div>
+                    <div class="print-planner-meal-type">${escapeHtml(meal.type)}</div>
+                    <div class="print-planner-meal-name">${escapeHtml(meal.name)}</div>
                     <div class="print-planner-meal-people">👥 ${meal.people}</div>
                 </div>
             `).join("")
@@ -11839,7 +11958,7 @@ function printMealPlanner(){
         let note = dayNotes[dayNoteKey(day)];
 
         let noteHtml = note
-            ? `<div class="print-planner-note">📝 ${note}</div>`
+            ? `<div class="print-planner-note">📝 ${escapeHtml(note)}</div>`
             : "";
 
         return `
