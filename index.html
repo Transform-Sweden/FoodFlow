@@ -33,7 +33,7 @@
 --bg:#f3f6f3;
 --card:#ffffff;
 --text:#1d231f;
---text-soft:#5a6660;
+--text-soft:#434e48;
 --primary:#3f9e53;
 --primary-dark:#2f7d40;
 --brand:#37904a;
@@ -1664,6 +1664,9 @@ display:flex; align-items:center; gap:2px;
 max-width:60px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
 font-size:12.5px; line-height:1.5; color:var(--text-soft); border-radius:12px;
 }
+#wsLabel { opacity:1; }
+body:not(.dark) #wsLabel { color:#2b332e; }
+body:not(.dark) .small { opacity:.9; }
 #wsLabel:hover, #wsLabel:focus-visible { background:rgba(120,120,120,.16); color:var(--text); }
 #wsLabel .ws-name { display:none; }
 @media(min-width:700px){ #wsLabel { max-width:200px; font-size:13.5px; } #wsLabel .ws-name { display:inline-block; line-height:1.5; padding-bottom:2px; overflow:hidden; text-overflow:ellipsis; white-space:pre; } }
