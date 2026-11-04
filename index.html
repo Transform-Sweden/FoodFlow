@@ -6339,6 +6339,7 @@ async function applyTemplate(templateId){
 
     // Deep copy so editing this week later doesn't also change the template
     weeks[currentWeekKey] = JSON.parse(JSON.stringify(template.days));
+    fixLegacyMealTypes(weeks[currentWeekKey]);
     meals = weeks[currentWeekKey];
 
     saveData();
@@ -6375,6 +6376,19 @@ let mealCategories = JSON.parse(
 // Rename them to English for anyone who already had them saved, move
 // Fika between Breakfast and Lunch, and update any already-planned
 // meals so they keep matching their category correctly.
+// Renames old Swedish meal types inside a {day:[meals]} object; returns true if anything changed
+function fixLegacyMealTypes(days){
+    const map = { "🍳 Frukost":"🍳 Breakfast", "🍝 Middag":"🍝 Dinner" };
+    let changed = false;
+    Object.values(days || {}).forEach(list=>{
+        if(!Array.isArray(list)) return;
+        list.forEach(m=>{
+            if(m && map[m.type]){ m.type = map[m.type]; changed = true; }
+        });
+    });
+    return changed;
+}
+
 (function migrateSwedishMealCategoryNames(){
 
     const renameMap = {
@@ -6440,6 +6454,18 @@ let mealCategories = JSON.parse(
             "foodflowWeeks",
             JSON.stringify(weeks)
         );
+    }
+
+
+    // Saved week templates carry the same old names
+    if(typeof weekTemplates !== "undefined" && Array.isArray(weekTemplates)){
+        let tplChanged = false;
+        weekTemplates.forEach(tpl=>{
+            if(tpl && tpl.days && fixLegacyMealTypes(tpl.days)) tplChanged = true;
+        });
+        if(tplChanged){
+            localStorage.setItem("foodflowWeekTemplates", JSON.stringify(weekTemplates));
+        }
     }
 
 })();
