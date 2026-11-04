@@ -1664,6 +1664,13 @@ display:flex; align-items:center; gap:2px;
 max-width:60px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
 font-size:12.5px; line-height:1.5; color:var(--text-soft); border-radius:12px;
 }
+/* shared building blocks (keeps lists, small buttons, empty states and close buttons uniform) */
+.list-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; margin-bottom:6px; border-radius:10px; background:var(--bg); }
+.list-row > span:first-of-type { min-width:0; }
+button.btn-sm { padding:4px 10px; font-size:13px; margin:0; }
+.empty-state { text-align:center; font-size:14px; color:var(--text-soft); padding:14px 8px; }
+button.modal-close { margin-top:10px; }
+.modal-box > h2 { margin-top:0; }
 .tpl-grip { cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; font-size:20px; line-height:1; padding:6px 4px; color:var(--text-soft); }
 .tpl-row.tpl-dragging { box-shadow:var(--shadow); outline:2px solid var(--primary); position:relative; z-index:2; }
 .tpl-grip:focus-visible { outline:2px solid var(--primary); border-radius:6px; }
@@ -2505,7 +2512,7 @@ Meal
 
 </div>
 
-<button data-i18n="close" onclick="closeMealDetail()" style="margin-top:10px;">
+<button class="modal-close" data-i18n="close" onclick="closeMealDetail()">
 Close
 </button>
 
@@ -2525,7 +2532,7 @@ Close
 
 <div id="leftoverPickerList"></div>
 
-<button data-i18n="close" onclick="closeLeftoverPicker()" style="margin-top:10px;">
+<button class="modal-close" data-i18n="close" onclick="closeLeftoverPicker()">
 Close
 </button>
 
@@ -2864,7 +2871,7 @@ placeholder="e.g. g, dl, st" data-i18n-placeholder="ph_item_unit"
 
 <div id="ingredientSourcesList"></div>
 
-<button data-i18n="close" onclick="closeIngredientSources()" style="margin-top:10px;">
+<button class="modal-close" data-i18n="close" onclick="closeIngredientSources()">
 Close
 </button>
 
@@ -2982,7 +2989,7 @@ Recipe
 <button class="edit" onclick="editRecipeFromView()" data-i18n="btn_edit">✏️ Edit</button>
 </div>
 
-<button onclick="closeViewRecipe()" style="margin-top:10px;">
+<button class="modal-close" onclick="closeViewRecipe()">
 <span data-i18n="close">Close</span>
 </button>
 
@@ -3018,7 +3025,7 @@ Recipe
 
 </div>
 
-<button data-i18n="close" onclick="closeRecipeDetail()" style="margin-top:10px;">
+<button class="modal-close" data-i18n="close" onclick="closeRecipeDetail()">
 Close
 </button>
 
@@ -6321,7 +6328,7 @@ function renderTemplateList(){
 
     if(weekTemplates.length === 0){
 
-        container.innerHTML = `<p class="small" style="opacity:0.7;">${t("no_templates_yet")}</p>`;
+        container.innerHTML = `<p class="empty-state">${t("no_templates_yet")}</p>`;
 
         return;
 
@@ -6329,29 +6336,19 @@ function renderTemplateList(){
 
     container.innerHTML = weekTemplates.map(template => `
 
-        <div class="tpl-row" data-tpl-id="${escapeHtml(template.id)}" style="
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            gap:8px;
-            padding:8px 10px;
-            margin-bottom:6px;
-            border-radius:8px;
-            background:var(--bg);
-        ">
+        <div class="list-row tpl-row" data-tpl-id="${escapeHtml(template.id)}">
             <span class="tpl-grip" role="button" tabindex="0" aria-label="${t("tpl_drag_hint")}" title="${t("tpl_drag_hint")}">⠿</span>
             <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(template.name)}</span>
 
             <span style="display:flex; gap:6px;">
                 <button
+                    class="btn-sm"
                     onclick="applyTemplate('${template.id}')"
-                    style="padding:4px 10px;font-size:13px;"
                 >${t("apply")}</button>
 
                 <button
-                    class="delete"
+                    class="delete btn-sm"
                     onclick="deleteTemplate('${template.id}')"
-                    style="padding:4px 10px;font-size:13px;"
                 >🗑</button>
             </span>
         </div>
@@ -8456,11 +8453,10 @@ function renderCategoryList(){
 
     container.innerHTML = mealCategories.map((cat, index) => `
 
-        <div class="meal" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;">
+        <div class="list-row">
             <span>${escapeHtml(cat)}</span>
             <button
-                class="delete"
-                style="margin:0;padding:6px 10px;font-size:13px;"
+                class="delete btn-sm"
                 onclick="deleteCategory(${index})"
             >
                 🗑
@@ -10081,16 +10077,7 @@ function renderCategoryOrderSettings(){
 
     container.innerHTML = categoryOrder.map((cat, index) => `
 
-        <div style="
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            gap:8px;
-            padding:6px 10px;
-            margin-bottom:4px;
-            border-radius:8px;
-            background:var(--bg);
-        ">
+        <div class="list-row">
             <span>${categoryIcons[cat] || "🛒"} ${escapeHtml(categoryLabel(cat))}</span>
 
             <span style="display:flex; gap:4px;">
@@ -10098,14 +10085,14 @@ function renderCategoryOrderSettings(){
                     onclick="moveCategoryOrder(${index}, -1)"
                     ${index === 0 ? "disabled" : ""}
                     aria-label="${t("aria_move_category_up")}: ${escapeHtml(categoryLabel(cat))}"
-                    style="padding:2px 10px;"
+                    class="btn-sm"
                 >▲</button>
 
                 <button
                     onclick="moveCategoryOrder(${index}, 1)"
                     ${index === categoryOrder.length - 1 ? "disabled" : ""}
                     aria-label="${t("aria_move_category_down")}: ${escapeHtml(categoryLabel(cat))}"
-                    style="padding:2px 10px;"
+                    class="btn-sm"
                 >▼</button>
             </span>
         </div>
@@ -10432,7 +10419,7 @@ function renderCustomIngredientTranslations(){
 
     if(entries.length === 0){
 
-        container.innerHTML = `<p class="small" style="opacity:0.7;">${t("no_custom_translations_yet")}</p>`;
+        container.innerHTML = `<p class="empty-state">${t("no_custom_translations_yet")}</p>`;
 
         return;
 
@@ -10447,22 +10434,13 @@ function renderCustomIngredientTranslations(){
 
         return `
 
-        <div style="
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            gap:8px;
-            padding:6px 10px;
-            margin-bottom:4px;
-            border-radius:8px;
-            background:var(--bg);
-        ">
+        <div class="list-row">
             <span>${escapeHtml(alias)} → ${escapeHtml(target)}${catSuffix}</span>
 
             <button
                 onclick="deleteCustomIngredientTranslation(decodeURIComponent('${encodeURIComponent(alias).replace(/'/g,"%27")}'))"
                 aria-label="${t("aria_delete_translation")}: ${escapeHtml(alias)}"
-                style="padding:2px 10px;"
+                class="btn-sm delete"
             >🗑</button>
         </div>
 
@@ -11766,7 +11744,7 @@ function renderCustomList(){
     }
 
     if(total === 0){
-        container.innerHTML = `<p class="small">${t("list_empty")}</p>`;
+        container.innerHTML = `<p class="empty-state">${t("list_empty")}</p>`;
         return;
     }
 
