@@ -1667,6 +1667,26 @@ font-size:12.5px; line-height:1.5; color:var(--text-soft); border-radius:12px;
 .tpl-grip { cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; font-size:20px; line-height:1; padding:6px 4px; color:var(--text-soft); }
 .tpl-row.tpl-dragging { box-shadow:var(--shadow); outline:2px solid var(--primary); position:relative; z-index:2; }
 .tpl-grip:focus-visible { outline:2px solid var(--primary); border-radius:6px; }
+/* household sync panel */
+.sync-pill { display:inline-flex; align-items:center; gap:8px; font-size:13.5px; margin:6px 0 12px; padding:5px 12px; border-radius:999px; background:var(--primary-light); color:var(--text); }
+.sync-pill::before { content:""; width:8px; height:8px; border-radius:50%; background:var(--primary); flex:none; }
+.sync-pill[data-state="off"]::before { background:#9aa39e; }
+.sync-pill[data-state="busy"]::before { background:#f5a623; }
+.sync-pill[data-state="error"]::before { background:#e53935; }
+.sync-wide { display:block; width:100%; margin:6px 0; padding:12px; box-sizing:border-box; }
+.sync-code-card { border:1px solid var(--field-border); border-radius:14px; padding:12px 14px; background:var(--bg); }
+.sync-code { font-size:22px; font-weight:700; letter-spacing:2px; margin:2px 0 10px; font-variant-numeric:tabular-nums; word-break:break-all; }
+.sync-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.sync-actions button { margin:0; flex:1 1 auto; }
+.sync-more { margin-top:10px; }
+.sync-more > summary { cursor:pointer; font-size:14px; padding:8px 4px; color:var(--text-soft); list-style:none; }
+.sync-more > summary::-webkit-details-marker { display:none; }
+.sync-more-body { display:flex; flex-direction:column; align-items:stretch; gap:6px; padding:4px 0; }
+.sync-more-body button { margin:0; }
+.sync-join { margin-top:18px; padding-top:14px; border-top:1px solid rgba(120,120,120,.25); }
+.sync-join-row { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+.sync-join-row input { width:100%; box-sizing:border-box; margin:0; }
+.sync-join-row button { margin:0; width:100%; padding:12px; }
 #wsLabel { opacity:1; }
 body:not(.dark) #wsLabel { color:#2b332e; }
 body:not(.dark) .small { opacity:.9; }
@@ -2063,43 +2083,56 @@ Keep several separate planners on this device – for example a private one and 
 Share your planner, recipes and shopping list with your household. Everyone sees changes live.
 </p>
 
-<div id="syncStatus" class="small" style="margin:6px 0;"></div>
+<div id="syncStatus" class="sync-pill" data-state="off"></div>
 
 <div id="syncOffBlock">
-<button onclick="ffSyncRestore()">
-<span data-i18n="sync_restore">♻️ Restore data from before sync</span>
-</button>
-<button onclick="ffSyncCreate()">
+<button data-primary class="sync-wide" onclick="ffSyncCreate()">
 <span data-i18n="sync_create">➕ Create household</span>
+</button>
+<button class="sync-wide syncRestoreBtn" onclick="ffSyncRestore()" style="display:none;">
+<span data-i18n="sync_restore">♻️ Restore data from before sync</span>
 </button>
 </div>
 
 <div id="syncOnBlock" style="display:none;">
-<div style="font-size:20px;font-weight:600;letter-spacing:1px;margin:6px 0;" id="syncCodeDisplay"></div>
-<button onclick="ffSyncShare()">
+<div class="sync-code-card">
+<div class="small" data-i18n="sync_code_label">Household code</div>
+<div class="sync-code" id="syncCodeDisplay"></div>
+<div class="sync-actions">
+<button data-primary onclick="ffSyncShare()">
 <span data-i18n="sync_share">🔗 Share invite link</span>
 </button>
 <button onclick="ffSyncCopy()">
 <span data-i18n="sync_copy">📋 Copy code</span>
 </button>
+</div>
+</div>
+
+<details class="sync-more">
+<summary data-i18n="sync_more">⋯ More options</summary>
+<div class="sync-more-body">
 <button onclick="ffSyncChangeCode()">
 <span data-i18n="sync_change">🔄 Change code</span>
 </button>
-<button onclick="ffSyncRestore()">
+<button class="syncRestoreBtn" onclick="ffSyncRestore()" style="display:none;">
 <span data-i18n="sync_restore">♻️ Restore data from before sync</span>
 </button>
 <button class="delete" onclick="ffSyncLeave()">
 <span data-i18n="sync_leave">🚪 Leave household</span>
 </button>
 </div>
+</details>
+</div>
 
-<div id="syncJoinBlock" style="margin-top:18px;padding-top:14px;border-top:1px solid rgba(120,120,120,.25);">
-<div class="small" style="margin-bottom:6px;" data-i18n="sync_join_hint">Have a code from another household? Enter it here - it opens as an extra planner, your current one stays as it is.</div>
+<div id="syncJoinBlock" class="sync-join">
+<div class="small" data-i18n="sync_join_hint">Have a code from another household? Enter it here - it opens as an extra planner, your current one stays as it is.</div>
+<div class="sync-join-row">
 <input type="text" id="syncJoinCode" autocomplete="off" autocapitalize="characters" spellcheck="false"
 data-i18n-placeholder="sync_code_placeholder" placeholder="XXXX-XXXX-XXXX">
-<button onclick="ffSyncJoin()">
+<button data-primary onclick="ffSyncJoin()">
 <span data-i18n="sync_join">🔗 Join with code</span>
 </button>
+</div>
 </div>
 </div>
 </details>
@@ -3378,7 +3411,9 @@ const translations = {
         sync_leave: "🚪 Leave household",
         sync_code_placeholder: "XXXX-XXXX-XXXX",
         sync_status_off: "Not shared – your data stays on this device only.",
-        sync_status_on: "Shared – your household code is:",
+        sync_status_on: "Shared – changes sync live",
+        sync_code_label: "Household code",
+        sync_more: "⋯ More options",
         sync_status_connecting: "Connecting…",
         sync_status_error: "Sync problem – will retry. Your data is safe on this device.",
         sync_created: "Household created. Share the code with the others.",
@@ -3808,7 +3843,9 @@ const translations = {
         sync_leave: "🚪 Lämna hushållet",
         sync_code_placeholder: "XXXX-XXXX-XXXX",
         sync_status_off: "Inte delad – din data finns bara på den här enheten.",
-        sync_status_on: "Delad – din hushållskod är:",
+        sync_status_on: "Delad – ändringar synkas live",
+        sync_code_label: "Hushållskod",
+        sync_more: "⋯ Fler alternativ",
         sync_status_connecting: "Ansluter…",
         sync_status_error: "Synkproblem – försöker igen. Din data är säker på den här enheten.",
         sync_created: "Hushåll skapat. Dela koden med de andra.",
@@ -13467,6 +13504,9 @@ function renderSyncSettings(){
         status === "error" ? tr("sync_status_error") :
         status === "connecting" ? tr("sync_status_connecting") :
         tr("sync_status_on");
+    st.dataset.state = !on ? "off" : status === "error" ? "error" : status === "connecting" ? "busy" : "on";
+    const hasBackup = !!ls.get("foodflowPreJoinBackup");
+    document.querySelectorAll(".syncRestoreBtn").forEach(b => { b.style.display = hasBackup ? "" : "none"; });
 }
 window.renderSyncSettings = renderSyncSettings;
 
