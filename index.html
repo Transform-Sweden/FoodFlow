@@ -1664,6 +1664,9 @@ display:flex; align-items:center; gap:2px;
 max-width:60px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
 font-size:12.5px; line-height:1.5; color:var(--text-soft); border-radius:12px;
 }
+.tpl-grip { cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; font-size:20px; line-height:1; padding:6px 4px; color:var(--text-soft); }
+.tpl-row.tpl-dragging { box-shadow:var(--shadow); outline:2px solid var(--primary); position:relative; z-index:2; }
+.tpl-grip:focus-visible { outline:2px solid var(--primary); border-radius:6px; }
 #wsLabel { opacity:1; }
 body:not(.dark) #wsLabel { color:#2b332e; }
 body:not(.dark) .small { opacity:.9; }
@@ -3700,6 +3703,7 @@ const translations = {
         import_backup_message: "This will replace your current recipes, meal planner, settings, and shopping list with what's in this backup file. Continue?",
         import_backup_title: "Import backup?",
         import_complete: "Import complete! Reloading...",
+        tpl_drag_hint: "Drag to reorder",
         backup_last: "Last backup: ",
         backup_never: "No backup made yet — export one now and then.",
         backup_undo_import: "↩️ Undo last import",
@@ -4129,6 +4133,7 @@ const translations = {
         import_backup_message: "Detta ersätter dina nuvarande recept, måltidsplan, inställningar och inköpslista med innehållet i denna säkerhetskopia. Fortsätt?",
         import_backup_title: "Importera säkerhetskopia?",
         import_complete: "Importen är klar! Laddar om...",
+        tpl_drag_hint: "Dra för att ändra ordning",
         backup_last: "Senaste säkerhetskopia: ",
         backup_never: "Ingen säkerhetskopia gjord ännu — exportera en då och då.",
         backup_undo_import: "↩️ Ångra senaste importen",
@@ -6287,7 +6292,7 @@ function renderTemplateList(){
 
     container.innerHTML = weekTemplates.map(template => `
 
-        <div style="
+        <div class="tpl-row" data-tpl-id="${escapeHtml(template.id)}" style="
             display:flex;
             align-items:center;
             justify-content:space-between;
@@ -6297,7 +6302,8 @@ function renderTemplateList(){
             border-radius:8px;
             background:var(--bg);
         ">
-            <span>${escapeHtml(template.name)}</span>
+            <span class="tpl-grip" role="button" tabindex="0" aria-label="${t("tpl_drag_hint")}" title="${t("tpl_drag_hint")}">⠿</span>
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(template.name)}</span>
 
             <span style="display:flex; gap:6px;">
                 <button
@@ -6314,6 +6320,76 @@ function renderTemplateList(){
         </div>
 
     `).join("");
+
+    setupTemplateDrag(container);
+
+}
+
+// Drag & drop (touch or mouse) to reorder saved templates by the ⠿ handle.
+// Arrow Up/Down on a focused handle moves it too.
+function setupTemplateDrag(container){
+
+    function ids(){ return [...container.querySelectorAll(".tpl-row")].map(r => r.dataset.tplId); }
+
+    function commit(){
+        let order = ids();
+        let byId = {};
+        weekTemplates.forEach(x => byId[x.id] = x);
+        let next = order.map(id => byId[id]).filter(Boolean);
+        if(next.length !== weekTemplates.length) return;
+        if(order.join("|") === weekTemplates.map(x => x.id).join("|")) return;
+        weekTemplates = next;
+        saveWeekTemplates();
+    }
+
+    container.querySelectorAll(".tpl-grip").forEach(grip => {
+
+        let row = grip.closest(".tpl-row");
+
+        grip.addEventListener("pointerdown", e => {
+
+            e.preventDefault();
+            container.setPointerCapture(e.pointerId);
+            row.classList.add("tpl-dragging");
+
+            let move = ev => {
+                let rows = [...container.querySelectorAll(".tpl-row")].filter(r => r !== row);
+                let target = rows.find(r => {
+                    let box = r.getBoundingClientRect();
+                    return ev.clientY < box.top + box.height / 2;
+                });
+                if(target) container.insertBefore(row, target);
+                else if(rows.length) rows[rows.length - 1].after(row);
+            };
+
+            let end = () => {
+                container.removeEventListener("pointermove", move);
+                container.removeEventListener("pointerup", end);
+                container.removeEventListener("pointercancel", end);
+                row.classList.remove("tpl-dragging");
+                commit();
+            };
+
+            container.addEventListener("pointermove", move);
+            container.addEventListener("pointerup", end);
+            container.addEventListener("pointercancel", end);
+
+        });
+
+        grip.addEventListener("keydown", e => {
+
+            if(e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+            e.preventDefault();
+
+            if(e.key === "ArrowUp" && row.previousElementSibling) container.insertBefore(row, row.previousElementSibling);
+            if(e.key === "ArrowDown" && row.nextElementSibling) row.nextElementSibling.after(row);
+
+            commit();
+            grip.focus();
+
+        });
+
+    });
 
 }
 
