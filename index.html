@@ -36,7 +36,7 @@
 --text-soft:#434e48;
 --primary:#3f9e53;
 --primary-dark:#2f7d40;
---brand:#37904a;
+--brand:#2d8040;
 --primary-light:#e7f5e9;
 --soft-text:var(--text);
 --soft-bg:var(--card);
@@ -1664,6 +1664,24 @@ display:flex; align-items:center; gap:2px;
 max-width:60px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
 font-size:12.5px; line-height:1.5; color:var(--text-soft); border-radius:12px;
 }
+/* feedback, empty states and first-use hints */
+@keyframes mealLanded { 0%{ transform:scale(.96); box-shadow:0 0 0 0 color-mix(in srgb, var(--primary) 55%, transparent); } 40%{ transform:scale(1.03); box-shadow:0 0 0 8px color-mix(in srgb, var(--primary) 25%, transparent); } 100%{ transform:scale(1); box-shadow:0 0 0 0 transparent; } }
+.meal.meal-landed { animation:mealLanded .9s ease-out; outline:2px solid var(--primary); outline-offset:2px; background:color-mix(in srgb, var(--primary) 14%, var(--card)); }
+@media (prefers-reduced-motion: reduce){ .meal.meal-landed { animation:none; } }
+#syncChip { position:fixed; top:10px; left:50%; transform:translate(-50%,-14px); z-index:3000; padding:7px 14px; border-radius:999px; font-size:13.5px; background:var(--card); color:var(--text); border:1px solid var(--field-border); box-shadow:var(--shadow); opacity:0; pointer-events:none; transition:opacity .25s, transform .25s; max-width:90vw; text-align:center; }
+#syncChip.show { opacity:1; transform:translate(-50%,0); }
+#syncChip[data-kind="saved"] { border-color:var(--primary); }
+#syncChip[data-kind="offline"] { border-color:#e0a030; }
+.empty-hero { text-align:center; padding:22px 16px; margin:10px 0 14px; border-radius:16px; border:1px dashed var(--field-border); background:var(--card); }
+.empty-hero .empty-icon { font-size:34px; line-height:1; margin-bottom:8px; }
+.empty-hero h3 { margin:0 0 6px; }
+.empty-hero p { margin:0 auto 14px; max-width:34em; color:var(--text-soft); font-size:14.5px; }
+.empty-hero .empty-actions { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+.empty-hero .empty-actions button { margin:0; }
+.week.week-empty .day-empty { display:none; }
+.hint-card { display:flex; align-items:center; gap:10px; padding:10px 12px; margin:8px 0 12px; border-radius:12px; background:color-mix(in srgb, var(--primary) 10%, var(--card)); font-size:14px; }
+.hint-card > span { flex:1; }
+.hint-card button { flex:none; }
 /* shared building blocks (keeps lists, small buttons, empty states and close buttons uniform) */
 .list-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; margin-bottom:6px; border-radius:10px; background:var(--bg); }
 .list-row > span:first-of-type { min-width:0; }
@@ -1671,6 +1689,10 @@ button.btn-sm { padding:4px 10px; font-size:13px; margin:0; }
 .empty-state { text-align:center; font-size:14px; color:var(--text-soft); padding:14px 8px; }
 button.modal-close { margin-top:10px; }
 .modal-box > h2 { margin-top:0; }
+/* dark theme: white text on green buttons needs a deeper green to stay readable */
+body.dark button[data-primary], body.dark button.btn-sm-primary, body.dark button.add-btn, body.dark #quickAddFab, body.dark #navbar button.nav-active, body.dark #plannerPage .week-nav-secondary button.active {
+background:#2f7d40; background-image:linear-gradient(135deg,#2f8043,#2a7239);
+}
 .tpl-grip { cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; font-size:20px; line-height:1; padding:6px 4px; color:var(--text-soft); }
 .tpl-row.tpl-dragging { box-shadow:var(--shadow); outline:2px solid var(--primary); position:relative; z-index:2; }
 .tpl-grip:focus-visible { outline:2px solid var(--primary); border-radius:6px; }
@@ -1840,7 +1862,7 @@ input[type="radio"] { width:18px; height:18px; }
 
 <p data-i18n="app_tagline">Plan • Shop • Cook</p>
 
-<p id="wsLabel" class="small" role="button" tabindex="0" style="display:none;cursor:pointer;" onclick="ffWsMenu(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();ffWsMenu(this)}"></p>
+<p id="wsLabel" class="small" role="button" tabindex="0" data-i18n-aria-label="aria_switch_planner" aria-label="Switch planner" aria-haspopup="true" style="display:none;cursor:pointer;" onclick="ffWsMenu(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();ffWsMenu(this)}"></p>
 
 
 
@@ -1924,6 +1946,8 @@ input[type="radio"] { width:18px; height:18px; }
 <button type="button" id="viewMonthBtn" onclick="setPlannerView('month')" data-i18n="view_month">Month</button>
 </div>
 
+<div class="hint-card" data-hint="planner" style="display:none;"><span data-i18n="hint_planner">Tip</span><button class="btn-sm" onclick="dismissHint('planner')" data-i18n="hint_got_it">Got it</button></div>
+
 <div class="week" id="week"></div>
 
 <div class="month" id="month"></div>
@@ -1937,6 +1961,8 @@ input[type="radio"] { width:18px; height:18px; }
 <div class="container">
 
 <h2 data-i18n="recipes_heading">📖 Recipes</h2>
+
+<div class="hint-card" data-hint="recipes" style="display:none;"><span data-i18n="hint_recipes">Tip</span><button class="btn-sm" onclick="dismissHint('recipes')" data-i18n="hint_got_it">Got it</button></div>
 
 <button class="btn-sm-primary" onclick="openRecipeModal()">
 <span data-i18n="add_recipe">➕ Add Recipe</span>
@@ -1982,6 +2008,8 @@ input[type="radio"] { width:18px; height:18px; }
 
 <h2 data-i18n="shopping_heading">🛒 Shopping List</h2>
 
+<div class="hint-card" data-hint="shopping" style="display:none;"><span data-i18n="hint_shopping">Tip</span><button class="btn-sm" onclick="dismissHint('shopping')" data-i18n="hint_got_it">Got it</button></div>
+
 <div id="listTabs" class="list-tabs"></div>
 
 <p class="small meal-only" data-i18n="shopping_description">
@@ -1998,11 +2026,11 @@ Automatically built from every recipe in your meal planner, scaled to the number
 
 <div class="shopping-range-row meal-only">
 
-<input type="date" id="shoppingRangeStartInput" onchange="onShoppingRangeChange()">
+<input type="date" id="shoppingRangeStartInput" data-i18n-aria-label="aria_range_start" aria-label="Shopping list from date" onchange="onShoppingRangeChange()">
 
 <span class="small" data-i18n="range_to">to</span>
 
-<input type="date" id="shoppingRangeEndInput" onchange="onShoppingRangeChange()">
+<input type="date" id="shoppingRangeEndInput" data-i18n-aria-label="aria_range_end" aria-label="Shopping list to date" onchange="onShoppingRangeChange()">
 
 </div>
 
@@ -2026,11 +2054,11 @@ data-i18n-placeholder="shopping_search_placeholder"
 oninput="renderShoppingList()"
 >
 
-<div id="shoppingProgressText" class="small" style="margin-top:10px;"></div>
+<div id="shoppingProgressText" class="small" role="status" aria-live="polite" style="margin-top:10px;"></div>
 
 <div id="shoppingSelectionBar" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0;padding:10px;background:rgba(120,120,120,.12);border-radius:14px;"></div>
 
-<div id="shoppingProgressWrap">
+<div id="shoppingProgressWrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-i18n-aria-label="aria_progress" aria-label="Shopping progress">
 <div id="shoppingProgressBar" style="width:0%;"></div>
 </div>
 
@@ -2635,7 +2663,7 @@ placeholder="e.g. Spaghetti Bolognese" data-i18n-placeholder="ph_meal_name"
 
 <div class="stepper">
 <button type="button" onclick="adjustStepper('people',-1)" data-i18n-aria-label="aria_decrease_servings" aria-label="Decrease servings">−</button>
-<input id="people" type="number" value="4" min="1" onblur="clampStepperInput('people')">
+<input id="people" type="number" data-i18n-aria-label="aria_people" aria-label="Number of people" value="4" min="1" onblur="clampStepperInput('people')">
 <button type="button" onclick="adjustStepper('people',1)" data-i18n-aria-label="aria_increase_servings" aria-label="Increase servings">+</button>
 </div>
 
@@ -2923,7 +2951,7 @@ placeholder="e.g. quick, vegetarian, dessert" data-i18n-placeholder="ph_recipe_t
 
 <div class="stepper">
 <button type="button" onclick="adjustStepper('recipePeople',-1)" data-i18n-aria-label="aria_decrease_servings" aria-label="Decrease servings">−</button>
-<input id="recipePeople" type="number" value="4" min="1" onblur="clampStepperInput('recipePeople')">
+<input id="recipePeople" type="number" data-i18n-aria-label="aria_people" aria-label="Number of people" value="4" min="1" onblur="clampStepperInput('recipePeople')">
 <button type="button" onclick="adjustStepper('recipePeople',1)" data-i18n-aria-label="aria_increase_servings" aria-label="Increase servings">+</button>
 </div>
 
@@ -3089,7 +3117,7 @@ Close
 
 <div class="stepper">
 <button type="button" onclick="adjustStepper('plannerRecipePeople',-1)" data-i18n-aria-label="aria_decrease_servings" aria-label="Decrease servings">−</button>
-<input id="plannerRecipePeople" type="number" value="4" min="1" onblur="clampStepperInput('plannerRecipePeople')">
+<input id="plannerRecipePeople" type="number" data-i18n-aria-label="aria_people" aria-label="Number of people" value="4" min="1" onblur="clampStepperInput('plannerRecipePeople')">
 <button type="button" onclick="adjustStepper('plannerRecipePeople',1)" data-i18n-aria-label="aria_increase_servings" aria-label="Increase servings">+</button>
 </div>
 
@@ -3117,7 +3145,8 @@ Close
 </div>    
 
 
-<div id="toastContainer"></div>
+<div id="syncChip" role="status" aria-live="polite"></div>
+<div id="toastContainer" role="status" aria-live="polite" aria-atomic="false"></div>
 
 <!-- CUSTOM CONFIRM WINDOW -->
 
@@ -3250,7 +3279,7 @@ Give this week a name of your own — useful for a rotating schedule, e.g. "Week
 <span data-i18n="copy_week_target_label">Target week (any date in that week)</span>
 </label>
 
-<input type="date" id="copyWeekTargetInput">
+<input type="date" id="copyWeekTargetInput" data-i18n-aria-label="aria_copy_target" aria-label="Copy to week starting on">
 
 <div class="week-nav-secondary" style="margin-top:8px;">
 <button class="wrap-label" onclick="setCopyWeekPreset(1)" style="font-size:13px;padding:8px 10px;" data-i18n="copy_week_preset_next">Next Week</button>
@@ -3372,6 +3401,16 @@ const translations = {
         aria_add_meal: "Add a meal",
         aria_move_category_up: "Move category up",
         aria_move_category_down: "Move category down",
+        aria_edit: "Edit",
+        aria_delete: "Delete",
+        aria_check_item: "Mark as bought",
+        aria_switch_planner: "Switch planner",
+        aria_range_start: "Shopping list from date",
+        aria_range_end: "Shopping list to date",
+        aria_people: "Number of people",
+        aria_copy_target: "Copy to week starting on",
+        aria_close_dialog: "Close",
+        aria_progress: "Shopping progress",
         aria_delete_translation: "Delete translation",
         settings_custom_translations: "🔤 Custom Ingredient Translations",
         custom_translations_description: "Add your own word so it always combines on the shopping list, no matter which language it's written in.",
@@ -3418,6 +3457,25 @@ const translations = {
         sync_leave: "🚪 Leave household",
         sync_code_placeholder: "XXXX-XXXX-XXXX",
         sync_status_off: "Not shared – your data stays on this device only.",
+        sync_chip_saving: "↻ Saving…",
+        sync_chip_saved: "✓ Synced",
+        sync_chip_updated: "↓ Updated from household",
+        sync_chip_offline: "⚠ Offline – saved on this device",
+        sync_last: "last synced",
+        empty_week_title: "Your week is empty",
+        empty_week_text: "Add a meal, let FoodFlow plan the week, or start from a saved template.",
+        empty_add_meal: "➕ Add a meal",
+        empty_autoplan: "✨ Auto-plan week",
+        empty_load_template: "📂 Load template",
+        empty_recipes_title: "No recipes yet",
+        empty_recipes_text: "Type in your first recipe or paste one from a website. Recipes can then be added to your planner with one tap.",
+        empty_add_recipe: "➕ Add recipe",
+        empty_paste_recipe: "📋 Paste from web",
+        empty_shopping_go: "📅 Go to planner",
+        hint_got_it: "Got it",
+        hint_planner: "💡 Tip: tap a meal to open it. Press and hold a meal to move it to another day, and swipe sideways to change week.",
+        hint_recipes: "💡 Tip: add a recipe by typing or pasting it from a website. Use tags to group your recipes and find them faster.",
+        hint_shopping: "💡 Tip: this list builds itself from your planned meals. Tick items off while you shop, or use ➕ to add things that aren't food.",
         sync_status_on: "Shared – changes sync live",
         sync_code_label: "Household code",
         sync_more: "⋯ More options",
@@ -3804,6 +3862,16 @@ const translations = {
         aria_add_meal: "Lägg till en måltid",
         aria_move_category_up: "Flytta kategori uppåt",
         aria_move_category_down: "Flytta kategori nedåt",
+        aria_edit: "Redigera",
+        aria_delete: "Ta bort",
+        aria_check_item: "Markera som köpt",
+        aria_switch_planner: "Byt planerare",
+        aria_range_start: "Inköpslista från datum",
+        aria_range_end: "Inköpslista till datum",
+        aria_people: "Antal personer",
+        aria_copy_target: "Kopiera till veckan som börjar",
+        aria_close_dialog: "Stäng",
+        aria_progress: "Inköpsframsteg",
         aria_delete_translation: "Ta bort översättning",
         settings_custom_translations: "🔤 Egna ingrediensöversättningar",
         custom_translations_description: "Lägg till ett eget ord så att det alltid kombineras på inköpslistan, oavsett vilket språk det är skrivet på.",
@@ -3850,6 +3918,25 @@ const translations = {
         sync_leave: "🚪 Lämna hushållet",
         sync_code_placeholder: "XXXX-XXXX-XXXX",
         sync_status_off: "Inte delad – din data finns bara på den här enheten.",
+        sync_chip_saving: "↻ Sparar…",
+        sync_chip_saved: "✓ Synkat",
+        sync_chip_updated: "↓ Uppdaterat från hushållet",
+        sync_chip_offline: "⚠ Offline – sparat på den här enheten",
+        sync_last: "senast synkat",
+        empty_week_title: "Veckan är tom",
+        empty_week_text: "Lägg till en måltid, låt FoodFlow planera veckan eller börja från en sparad mall.",
+        empty_add_meal: "➕ Lägg till måltid",
+        empty_autoplan: "✨ Planera veckan automatiskt",
+        empty_load_template: "📂 Ladda mall",
+        empty_recipes_title: "Inga recept ännu",
+        empty_recipes_text: "Skriv in ditt första recept eller klistra in ett från en webbplats. Recept kan sedan läggas i planeraren med ett tryck.",
+        empty_add_recipe: "➕ Lägg till recept",
+        empty_paste_recipe: "📋 Klistra in från webben",
+        empty_shopping_go: "📅 Gå till planeraren",
+        hint_got_it: "Uppfattat",
+        hint_planner: "💡 Tips: tryck på en måltid för att öppna den. Håll in en måltid för att flytta den till en annan dag och svep i sidled för att byta vecka.",
+        hint_recipes: "💡 Tips: lägg till ett recept genom att skriva eller klistra in det från en webbplats. Använd taggar för att gruppera och hitta recept snabbare.",
+        hint_shopping: "💡 Tips: listan bygger sig själv utifrån planerade måltider. Bocka av under shoppingen, eller använd ➕ för sådant som inte är mat.",
         sync_status_on: "Delad – ändringar synkas live",
         sync_code_label: "Hushållskod",
         sync_more: "⋯ Fler alternativ",
@@ -4303,6 +4390,7 @@ function showToast(message, options={}){
 
     let toast = document.createElement("div");
     toast.className = "toast" + (options.type === "error" ? " error" : "");
+    if(options.type === "error") toast.setAttribute("role", "alert");
 
     let msg = document.createElement("span");
     msg.className = "msg";
@@ -4477,8 +4565,9 @@ function setupDayDropZone(card, targetDay){
         render();
 
         if(sourceDay !== targetDay){
+            flashMovedMeal(targetDay);
             hapticFeedback();
-            showToast(`${t("moved_meal_prefix")}"${escapeHtml(movedMeal.name)}"${t("moved_meal_suffix")}${translateDayName(targetDay)}`);
+            showToast(`${t("moved_meal_prefix")}"${movedMeal.name}"${t("moved_meal_suffix")}${translateDayName(targetDay)}`);
         }
 
     });
@@ -4577,7 +4666,7 @@ function pickUpMeal(day, index, element){
     clearTimeout(pickupCancelTimer);
 
     showToast(
-        `${t("pick_a_day_prefix")}"${escapeHtml(meal.name)}"${t("pick_a_day_suffix")}`,
+        `${t("pick_a_day_prefix")}"${meal.name}"${t("pick_a_day_suffix")}`,
         {
             actionLabel: t("cancel"),
             onAction: cancelMealPickup,
@@ -4667,7 +4756,9 @@ function tryDropMealOnDay(targetDay){
 
     render();
 
-    showToast(`${t("moved_meal_prefix")}"${escapeHtml(movedMeal.name)}"${t("moved_meal_suffix")}${translateDayName(targetDay)}`);
+    flashMovedMeal(targetDay);
+
+    showToast(`${t("moved_meal_prefix")}"${movedMeal.name}"${t("moved_meal_suffix")}${translateDayName(targetDay)}`);
 
 }
 
@@ -4744,16 +4835,22 @@ function attachSwipeToDelete(element, onDelete){
 function getFocusableElements(container){
 
     return Array.from(container.querySelectorAll(
-        'button, [href], input:not([type="hidden"]), select, textarea, [tabindex]:not([tabindex="-1"])'
-    )).filter(el => !el.disabled && el.offsetParent !== null);
+        'button, [href], input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])'
+    )).filter(el => {
+        if(el.disabled || el.offsetParent === null) return false;
+        // content of a collapsed <details> (other than its <summary>) can't take focus
+        let d = el.closest("details:not([open])");
+        if(d && !(el.tagName === "SUMMARY" && el.parentElement === d)) return false;
+        return true;
+    });
 
 }
 
 
 function autoFocusModal(modal){
 
-    let firstField = modal.querySelector(
-        'input:not([type="hidden"]), textarea, select'
+    let firstField = getFocusableElements(modal).find(
+        el => /^(input|textarea|select)$/i.test(el.tagName)
     );
 
     let target = firstField || getFocusableElements(modal)[0];
@@ -4773,6 +4870,15 @@ function autoFocusModal(modal){
 // alone isn't a reliable way to decide which one should be on top.
 let topModalZIndex = 1000;
 
+// Give every dialog an accessible name from its heading
+document.querySelectorAll(".modal").forEach(modal=>{
+    let h = modal.querySelector("h2, h3");
+    if(h && modal.id){
+        if(!h.id) h.id = modal.id + "Title";
+        modal.setAttribute("aria-labelledby", h.id);
+    }
+});
+
 document.querySelectorAll(".modal").forEach(modal=>{
 
     let wasOpen = false;
@@ -4782,8 +4888,21 @@ document.querySelectorAll(".modal").forEach(modal=>{
         let isOpen = modal.style.display === "flex";
 
         if(isOpen && !wasOpen){
+            // remember what had focus so it can go back there when the dialog closes
+            let a = document.activeElement;
+            modal._opener = (a && a !== document.body && !modal.contains(a)) ? a : null;
             autoFocusModal(modal);
             modal.style.zIndex = ++topModalZIndex;
+        }
+
+        if(!isOpen && wasOpen){
+            let o = modal._opener;
+            modal._opener = null;
+            // only restore if focus isn't already somewhere sensible (e.g. another open dialog)
+            let otherOpen = Array.from(document.querySelectorAll(".modal")).some(m => m !== modal && m.style.display === "flex");
+            if(o && document.contains(o) && !otherOpen && typeof o.focus === "function"){
+                setTimeout(() => { try{ o.focus({ preventScroll:true }); }catch(e){} }, 0);
+            }
         }
 
         wasOpen = isOpen;
@@ -6343,11 +6462,13 @@ function renderTemplateList(){
             <span style="display:flex; gap:6px;">
                 <button
                     class="btn-sm"
+                    aria-label="${t("apply")}: ${escapeHtml(template.name)}"
                     onclick="applyTemplate('${template.id}')"
                 >${t("apply")}</button>
 
                 <button
                     class="delete btn-sm"
+                    aria-label="${t("aria_delete")}: ${escapeHtml(template.name)}"
                     onclick="deleteTemplate('${template.id}')"
                 >🗑</button>
             </span>
@@ -6788,6 +6909,42 @@ function openDayMenu(btn, day){
 
 document.addEventListener("keydown", (e)=>{ if(e.key === "Escape") closeDayMenu(); });
 
+// ---- first-use hints (each one shows until dismissed) ----
+function hintDismissed(key){ try{ return localStorage.getItem("foodflowHint_" + key) === "1"; }catch(e){ return false; } }
+function dismissHint(key){
+    try{ localStorage.setItem("foodflowHint_" + key, "1"); }catch(e){}
+    document.querySelectorAll('.hint-card[data-hint="' + key + '"]').forEach(el => el.style.display = "none");
+}
+function initHints(){
+    document.querySelectorAll(".hint-card").forEach(el => {
+        el.style.display = hintDismissed(el.dataset.hint) ? "none" : "flex";
+    });
+}
+
+// ---- friendly empty states ----
+function emptyHeroHtml(icon, titleKey, textKey, actions){
+    return `<div class="empty-hero">
+        <div class="empty-icon" aria-hidden="true">${icon}</div>
+        <h3>${t(titleKey)}</h3>
+        <p>${t(textKey)}</p>
+        <div class="empty-actions">${actions.map(a => `<button ${a.primary ? "data-primary" : ""} onclick="${a.fn}">${t(a.label)}</button>`).join("")}</div>
+    </div>`;
+}
+
+// ---- highlight a meal that was just moved ----
+function flashMovedMeal(day){
+    try{
+        const card = document.querySelector('#week .day[data-day="' + day + '"]');
+        if(!card) return;
+        const boxes = card.querySelectorAll(".meal");
+        const box = boxes[boxes.length - 1];
+        if(!box) return;
+        box.classList.add("meal-landed");
+        box.scrollIntoView({ block:"nearest", behavior:"smooth" });
+        setTimeout(() => box.classList.remove("meal-landed"), 1800);
+    }catch(e){}
+}
+
 function render(){
 
 applyPlannerView();
@@ -6799,8 +6956,6 @@ document.getElementById("week");
 
 
 week.innerHTML="";
-
-
 let mealOrder = getMealOrder();
 
 
@@ -6812,6 +6967,7 @@ document.createElement("div");
 
 
 card.className="day";
+card.dataset.day = day;
 
 
 
@@ -6926,7 +7082,7 @@ if(meals[day] && meals[day].length > 0){
 }else{
 
     let emptyMsg = document.createElement("p");
-    emptyMsg.className = "small";
+    emptyMsg.className = "small day-empty";
     emptyMsg.style.textAlign = "center";
     emptyMsg.style.opacity = "0.7";
     emptyMsg.innerText = t("planner_no_meals");
@@ -7567,7 +7723,7 @@ saveData();
 render();
 
 
-showToast(`${t("toast_removed")} "${escapeHtml(removedMeal.name)}"`, {
+showToast(`${t("toast_removed")} "${removedMeal.name}"`, {
     actionLabel: t("undo"),
     onAction: () => {
 
@@ -8457,6 +8613,7 @@ function renderCategoryList(){
             <span>${escapeHtml(cat)}</span>
             <button
                 class="delete btn-sm"
+                aria-label="${t("aria_delete")}: ${escapeHtml(cat)}"
                 onclick="deleteCategory(${index})"
             >
                 🗑
@@ -9086,9 +9243,15 @@ if(filteredRecipes.length === 0){
     emptyMsg.style.textAlign = "center";
     emptyMsg.style.opacity = "0.7";
 
-    emptyMsg.innerText = recipes.length === 0
-        ? t("recipes_empty")
-        : `${t("recipes_no_match")} "${search}"`;
+    if(recipes.length === 0){
+        list.innerHTML = emptyHeroHtml("📖", "empty_recipes_title", "empty_recipes_text", [
+            { fn:"openRecipeModal()", label:"empty_add_recipe", primary:true },
+            { fn:"openPasteModal()", label:"empty_paste_recipe" }
+        ]);
+        return;
+    }
+
+    emptyMsg.innerText = `${t("recipes_no_match")} "${search}"`;
 
     list.appendChild(emptyMsg);
 
@@ -9286,7 +9449,7 @@ ${recipe.ingredients.map(item=>`
 
 <li>${
     typeof item === "string"
-    ? item
+    ? escapeHtml(item)
     : `${item.amount || ""} ${escapeHtml(item.unit || "")} ${escapeHtml(item.name)}`.trim()
 }</li>
 
@@ -9420,7 +9583,7 @@ JSON.stringify(recipes)
 
 renderRecipes();
 
-showToast(`${t("toast_removed")} "${escapeHtml(removedRecipe.name)}"`, {
+showToast(`${t("toast_removed")} "${removedRecipe.name}"`, {
     actionLabel: t("undo"),
     onAction: () => {
 
@@ -10752,6 +10915,7 @@ function renderShoppingItemRow(item){
                 <input
                     type="checkbox"
                     style="width:auto;margin:0;pointer-events:none;"
+                    aria-label="${escapeHtml(item.name)}"
                     ${selected ? "checked" : ""}
                 >
                 <span style="flex:1;">
@@ -10771,6 +10935,7 @@ function renderShoppingItemRow(item){
             <input
                 type="checkbox"
                 style="width:auto;margin:0;"
+                aria-label="${t("aria_check_item")}: ${escapeHtml(item.name)}"
                 ${checked}
                 onchange="toggleShoppingItem('${safeKey}')"
             >
@@ -10786,6 +10951,7 @@ function renderShoppingItemRow(item){
             <button
                 class="edit"
                 style="margin:0;padding:6px 10px;font-size:13px;"
+                aria-label="${t("aria_edit")}: ${escapeHtml(item.name)}"
                 onclick="editShoppingItem('${safeKey}')"
             >
                 ✏️
@@ -10793,6 +10959,7 @@ function renderShoppingItemRow(item){
             <button
                 class="delete"
                 style="margin:0;padding:6px 10px;font-size:13px;"
+                aria-label="${t("aria_delete")}: ${escapeHtml(item.name)}"
                 onclick="deleteShoppingItem('${safeKey}')"
             >
                 🗑
@@ -11032,15 +11199,18 @@ function renderShoppingList(){
             : "";
 
         progressBar.style.width = percent + "%";
+        if(progressBar.parentElement) progressBar.parentElement.setAttribute("aria-valuenow", percent);
 
     }
 
     if(fullList.length === 0){
 
         container.innerHTML = `
-            <p class="small">
-            ${t("shopping_empty")}
-            </p>
+            <div class="empty-hero">
+                <div class="empty-icon" aria-hidden="true">🛒</div>
+                <p>${t("shopping_empty")}</p>
+                <div class="empty-actions"><button data-primary onclick="showPage('planner')">${t("empty_shopping_go")}</button></div>
+            </div>
         `;
 
     }else if(list.length === 0){
@@ -11409,7 +11579,7 @@ function deleteShoppingItem(key){
         saveShoppingState();
         renderShoppingList();
 
-        showToast(`${t("toast_removed")} "${escapeHtml(item.name)}"`, {
+        showToast(`${t("toast_removed")} "${item.name}"`, {
             actionLabel: t("undo"),
             onAction: () => {
 
@@ -11438,7 +11608,7 @@ function deleteShoppingItem(key){
         saveShoppingState();
         renderShoppingList();
 
-        showToast(`${t("toast_removed")} "${escapeHtml(item.name)}"`, {
+        showToast(`${t("toast_removed")} "${item.name}"`, {
             actionLabel: t("undo"),
             onAction: () => {
 
@@ -11741,6 +11911,7 @@ function renderCustomList(){
     if(pt && pb){
         pt.innerText = total > 0 ? t("progress_checked").replace("{checked}", done).replace("{total}", total) : "";
         pb.style.width = (total > 0 ? Math.round(done / total * 100) : 0) + "%";
+        if(pb.parentElement) pb.parentElement.setAttribute("aria-valuenow", total > 0 ? Math.round(done / total * 100) : 0);
     }
 
     if(total === 0){
@@ -11759,10 +11930,10 @@ function renderCustomList(){
 
     let row = i => `
         <div class="meal" data-custom-id="${esc(i.id)}" style="--accent:var(--primary);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <input type="checkbox" style="width:auto;margin:0;" ${i.checked ? "checked" : ""} onchange="toggleCustomItem('${esc(i.id)}')">
+            <input type="checkbox" style="width:auto;margin:0;" aria-label="${t("aria_check_item")}: ${esc(customItemText(i))}" ${i.checked ? "checked" : ""} onchange="toggleCustomItem('${esc(i.id)}')">
             <span style="flex:1;${i.checked ? "opacity:.5;text-decoration:line-through;" : ""}">${esc(customItemText(i))}</span>
-            <button class="edit" style="margin:0;padding:6px 10px;font-size:13px;" onclick="editCustomItem('${esc(i.id)}')">✏️</button>
-            <button class="delete" style="margin:0;padding:6px 10px;font-size:13px;" onclick="deleteCustomItem('${esc(i.id)}')">🗑️</button>
+            <button class="edit" style="margin:0;padding:6px 10px;font-size:13px;" aria-label="${t("aria_edit")}: ${esc(customItemText(i))}" onclick="editCustomItem('${esc(i.id)}')">✏️</button>
+            <button class="delete" style="margin:0;padding:6px 10px;font-size:13px;" aria-label="${t("aria_delete")}: ${esc(customItemText(i))}" onclick="deleteCustomItem('${esc(i.id)}')">🗑️</button>
         </div>`;
 
     let open = shown.filter(i => !i.checked);
@@ -11916,7 +12087,7 @@ function buildShoppingListText(){
         .filter(cat => groups[cat] && groups[cat].length > 0)
         .forEach(cat=>{
 
-            lines.push(`${categoryIcons[cat] || ""} ${escapeHtml(categoryLabel(cat))}`);
+            lines.push(`${categoryIcons[cat] || ""} ${categoryLabel(cat)}`);
 
             groups[cat].forEach(item=>{
 
@@ -11926,7 +12097,7 @@ function buildShoppingListText(){
 
                 let box = shoppingChecked[item.key] ? "[x]" : "[ ]";
 
-                lines.push(`${box} ${escapeHtml(amountText)}${escapeHtml(item.name)}`);
+                lines.push(`${box} ${amountText}${item.name}`);
 
             });
 
@@ -12736,6 +12907,8 @@ localStorage.getItem("foodflowPage")
 
 applyTranslations();
 
+initHints();
+
 showPage(savedPage);
 
 renderMealTypeOptions();
@@ -12994,7 +13167,7 @@ async function pushLocal(){
     if(!code || !db || !ready) return;
     if(pushing){ pushAgain = true; return; }
     pushing = true;
-    let changedLocal = false, failed = false;
+    let changedLocal = false, failed = false, hasWork = false;
     try{
         const local = localDocs();
         const col = collection(db, "households", code, "docs");
@@ -13010,6 +13183,8 @@ async function pushLocal(){
             if(id in base){ updates.push([id, d]); continue; }
             fresh.push([id, d]);
         }
+        hasWork = updates.length > 0 || fresh.length > 0 || baseDels.length > 0;
+        if(hasWork) syncChip("saving");
         // A few brand-new documents go through the merge transaction too, in case
         // someone else created the same one (e.g. the same new week) a moment ago.
         // A big first upload is written in bulk.
@@ -13063,6 +13238,7 @@ async function pushLocal(){
             }
         }
         if(status === "error") setStatus("on");
+        if(hasWork){ lastSyncAt = Date.now(); syncChip("saved"); renderSyncSettings(); }
     }catch(err){
         // typically offline: keep the changes locally and try again later
         console.warn("FoodFlow sync push failed", err);
@@ -13228,7 +13404,7 @@ function onSnapshotData(snap){
         schedulePush();
     }
     saveBase();
-    if(changed) scheduleReload();
+    if(changed){ syncChip("updated"); lastSyncAt = Date.now(); scheduleReload(); }
 }
 
 function attach(){
@@ -13467,7 +13643,26 @@ window.ffWsMenu = function(anchor){
 const fmt = c => c.replace(/(.{4})(?=.)/g, "$1-");
 const normalize = s => (s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 
-function setStatus(s){ status = s; renderSyncSettings(); }
+let lastSyncAt = 0, syncChipTimer = null;
+function syncChip(kind){
+    const el = document.getElementById("syncChip");
+    if(!el) return;
+    clearTimeout(syncChipTimer);
+    el.dataset.kind = kind;
+    el.textContent = tr("sync_chip_" + kind);
+    el.classList.add("show");
+    if(kind !== "offline" && kind !== "saving") syncChipTimer = setTimeout(() => el.classList.remove("show"), 2200);
+}
+function hideSyncChip(kind){
+    const el = document.getElementById("syncChip");
+    if(el && (!kind || el.dataset.kind === kind)) el.classList.remove("show");
+}
+function setStatus(s){
+    status = s;
+    if(s === "on") hideSyncChip("offline");
+    if(s === "error" && code) syncChip("offline");
+    renderSyncSettings();
+}
 
 function renderSyncSettings(){
     const st = document.getElementById("syncStatus");
@@ -13482,6 +13677,9 @@ function renderSyncSettings(){
         status === "error" ? tr("sync_status_error") :
         status === "connecting" ? tr("sync_status_connecting") :
         tr("sync_status_on");
+    if(on && status !== "error" && lastSyncAt){
+        st.textContent += " · " + tr("sync_last") + " " + new Date(lastSyncAt).toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" });
+    }
     st.dataset.state = !on ? "off" : status === "error" ? "error" : status === "connecting" ? "busy" : "on";
     const hasBackup = !!ls.get("foodflowPreJoinBackup");
     document.querySelectorAll(".syncRestoreBtn").forEach(b => { b.style.display = hasBackup ? "" : "none"; });
