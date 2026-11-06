@@ -7067,8 +7067,11 @@ function chooseNewMealType(){
     let m = document.getElementById("modal");
     if(m && opener && document.contains(opener)) m._opener = opener;
 
-    pendingCategorySelectId = "mealType";
-    openCategoryManager();
+    // open the category window a moment later so it ends up on top of Add Meal
+    setTimeout(() => {
+        pendingCategorySelectId = "mealType";
+        openCategoryManager();
+    }, 30);
 
 }
 
