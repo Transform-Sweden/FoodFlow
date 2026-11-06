@@ -12386,6 +12386,66 @@ function closePasteModal(){
 }
 
 
+// Web pages write fractions in many ways: "1⁄2" (fraction slash), "⅛", "1⅛" ...
+// Turn them all into plain "1/2" / "1 1/8" so the amount is never lost.
+const EXTRA_FRACTIONS = { "⅛":"1/8", "⅜":"3/8", "⅝":"5/8", "⅞":"7/8", "⅕":"1/5", "⅖":"2/5", "⅗":"3/5", "⅘":"4/5", "⅙":"1/6", "⅚":"5/6", "⅐":"1/7", "⅑":"1/9", "⅒":"1/10" };
+
+function normalizeFractionText(text){
+    return String(text)
+        .replace(/[\u2044\u2215]/g, "/")
+        .replace(/(\d)\s*([⅛⅜⅝⅞⅕⅖⅗⅘⅙⅚⅐⅑⅒])/g, (m, w, f) => w + " " + EXTRA_FRACTIONS[f])
+        .replace(/[⅛⅜⅝⅞⅕⅖⅗⅘⅙⅚⅐⅑⅒]/g, f => EXTRA_FRACTIONS[f])
+        .replace(/(\d)\s*\/\s*(\d)/g, "$1/$2");
+}
+
+// Recipe cards often put amount, unit and name on separate lines
+// ("2" / "cups" / "flour"). Join them back into one line.
+function joinSplitIngredientLines(lines){
+
+    const qty = /^(\d+\/\d+|\d+(?:[.,]\d+)?(?:\s+\d+\/\d+)?|[½¼¾⅓⅔]|\d+\s*[½¼¾⅓⅔])$/;
+    const out = [];
+
+    for(let i = 0; i < lines.length; i++){
+
+        let line = lines[i];
+
+        if(qty.test(line) && i + 1 < lines.length){
+
+            let next = lines[i + 1];
+
+            if(next && !/^\d/.test(next) && next.split(/\s+/).length <= 6 && !/[.!?]$/.test(next)){
+
+                let joined = line + " " + next;
+                i++;
+
+                // "2" + "cups" + "flour"
+                if(
+                    typeof knownUnits !== "undefined" &&
+                    knownUnits.includes(next.toLowerCase()) &&
+                    i + 1 < lines.length &&
+                    lines[i + 1] &&
+                    !/^\d/.test(lines[i + 1]) &&
+                    lines[i + 1].split(/\s+/).length <= 6
+                ){
+                    joined += " " + lines[i + 1];
+                    i++;
+                }
+
+                out.push(joined);
+                continue;
+
+            }
+
+        }
+
+        out.push(line);
+
+    }
+
+    return out;
+
+}
+
 function parseQuantityToken(token){
 
     if(fractionMap[token] !== undefined){
@@ -12417,7 +12477,7 @@ function stripListMarker(line){
 
 function parseIngredientLine(line){
 
-    line = stripListMarker(line.trim());
+    line = stripListMarker(normalizeFractionText(line).trim());
 
     if(!line){
         return null;
@@ -12573,6 +12633,8 @@ function parsePastedRecipe(){
     // a range broken over two lines ("3-" then "4 litres") is joined back up
     raw = raw.replace(/(\d)\s*[-–—]\s*\r?\n\s*(?=\d)/g, "$1-");
 
+    raw = normalizeFractionText(raw);
+
     if(!raw.trim()){
 
         showToast(t("paste_text_first"), { type:"error" });
@@ -12585,6 +12647,17 @@ function parsePastedRecipe(){
         .map(l => stripListMarker(l.trim()))
         .filter(l => l !== "");
 
+    lines = joinSplitIngredientLines(lines);
+
+    // "1. 2 cups stock": numbering in front of an ingredient line is not a recipe step
+    lines = lines.map(l => {
+        let m = l.match(/^\d+[.)]\s+((?:\d|[½¼¾⅓⅔]).*)$/);
+        if(!m) return l;
+        let first = (m[1].match(/^[\d.,\/½¼¾⅓⅔]+(?:\s+\d+\/\d+)?\s*([A-Za-zÅÄÖåäö.]+)?/) || [])[1];
+        let looksLikeAmount = first && knownUnits.includes(first.replace(/\.$/, "").toLowerCase());
+        return looksLikeAmount || m[1].split(/\s+/).length <= 4 ? m[1] : l;
+    });
+
     // Guess servings — covers Swedish ("4 portioner", "4 port", "4
     // personer") and common English/shorthand forms ("10x", "10p",
     // "10 people", "serves 4", "4 servings").
@@ -12595,7 +12668,7 @@ function parsePastedRecipe(){
     let servingsMatch =
         (servingsLine && servingsLine.match(/(\d+)/)) ||
         raw.match(/(\d+)\s*(?:people|persons?|portioner|port\.?|personer|servings?|serves)\b/i) ||
-        raw.match(/(?:serves|serving size)\s*:?\s*(\d+)/i);
+        raw.match(/\b(?:serves|servings?|serving size|yield|portioner|antal portioner|ger)\b[ \t]*:?[ \t]*(\d+)/i);
 
     if(servingsMatch){
         servings = Number(servingsMatch[1]);
@@ -12604,7 +12677,7 @@ function parsePastedRecipe(){
     // Skip obvious section headers, non-ingredient lines, servings
     // lines, and numbered instruction steps like "1. Blanda ihop..."
     let skipPattern =
-        /^(ingredienser|gör så här|tillagning|instruktioner|steg|servering|tips)\b/i;
+        /^(ingredienser|ingredients?|gör så här|tillagning|instruktioner|instructions?|directions|method|steg|steps?|servering|tips|notes?)\b/i;
 
     // Only matches a line that is JUST the serving count on its own
     // (e.g. "4 portioner", "10x", "10p", "10 people", "serves 4") —
@@ -12614,7 +12687,7 @@ function parsePastedRecipe(){
         /^\d+\s*(?:x|p(?:eople|ersons?)?|portioner|port\.?|personer|servings?|serves)\.?$/i;
 
     let servingsLinePatternReversed =
-        /^(?:serves|serving size)\s*:?\s*\d+\.?$/i;
+        /^(?:serves|servings?|serving size|yield|makes?|portioner|antal portioner|ger)\s*:?\s*\d+(?:\s+[A-Za-zÅÄÖåäö]+)?\.?$/i;
 
     let numberedStepPattern =
         /^\d+[.)]\s/;
