@@ -1682,6 +1682,21 @@ font-size:12.5px; line-height:1.5; color:var(--text-soft); border-radius:12px;
 .hint-card { display:flex; align-items:center; gap:10px; padding:10px 12px; margin:8px 0 12px; border-radius:12px; background:color-mix(in srgb, var(--primary) 10%, var(--card)); font-size:14px; }
 .hint-card > span { flex:1; }
 .hint-card button { flex:none; }
+/* quick-add chips + grid view */
+#mealTypePickerList { display:flex; flex-direction:column; gap:8px; margin:10px 0 4px; }
+#mealTypePickerList button.type-pick { margin:0; padding:12px 14px; text-align:left; font-size:15px; font-weight:600; color:var(--text); background:color-mix(in srgb, var(--accent) 14%, var(--card)); background-image:none; border:none; border-left:5px solid var(--accent); border-radius:10px; box-shadow:none; }
+#mealTypePickerList button.type-pick-new { background:transparent; background-image:none; border:1px dashed var(--field-border); border-left:1px dashed var(--field-border); font-weight:500; color:var(--text-soft); }
+#mealTypePickerList button.type-pick:hover { background:color-mix(in srgb, var(--accent) 26%, var(--card)); background-image:none; filter:none; }
+.plan-grid { display:none; overflow-x:auto; padding-bottom:6px; }
+.plan-grid table { border-collapse:separate; border-spacing:4px; width:100%; table-layout:fixed; min-width:var(--pg-min, 0); }
+.plan-grid th { font-size:13px; font-weight:600; padding:4px 2px; text-align:center; color:var(--text); vertical-align:bottom; }
+.plan-grid th.pg-row { text-align:left; vertical-align:middle; font-size:12.5px; width:74px; padding-left:4px; }
+.plan-grid .pg-date { display:block; font-weight:400; font-size:12px; color:var(--text-soft); }
+.plan-grid td.pg-cell { vertical-align:top; background:var(--card); border-radius:10px; padding:3px; height:54px; }
+.plan-grid button.pg-meal { display:block; width:100%; margin:0 0 4px; padding:4px 4px 4px 5px; font-size:11.5px; font-weight:500; line-height:1.25; text-align:left; white-space:normal; overflow-wrap:break-word; hyphens:auto; color:var(--text); background:color-mix(in srgb, var(--accent) 18%, var(--card)); background-image:none; border:none; border-left:4px solid var(--accent); border-radius:6px; box-shadow:none; }
+.plan-grid button.pg-meal:hover { filter:none; transform:none; background:color-mix(in srgb, var(--accent) 28%, var(--card)); background-image:none; }
+.plan-grid button.pg-add { display:block; width:100%; height:100%; min-height:44px; margin:0; padding:0; font-size:18px; color:var(--text-soft); background:transparent; background-image:none; border:1px dashed var(--field-border); border-radius:8px; box-shadow:none; opacity:.75; }
+.plan-grid button.pg-add:hover { opacity:1; border-color:var(--primary); filter:none; transform:none; background:transparent; background-image:none; }
 /* shared building blocks (keeps lists, small buttons, empty states and close buttons uniform) */
 .list-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; margin-bottom:6px; border-radius:10px; background:var(--bg); }
 .list-row > span:first-of-type { min-width:0; }
@@ -1944,11 +1959,14 @@ input[type="radio"] { width:18px; height:18px; }
 <div class="view-toggle" id="viewToggle">
 <button type="button" id="viewWeekBtn" onclick="setPlannerView('week')" data-i18n="view_week">Week</button>
 <button type="button" id="viewMonthBtn" onclick="setPlannerView('month')" data-i18n="view_month">Month</button>
+<button type="button" id="viewGridBtn" onclick="setPlannerView('grid')" data-i18n="view_grid">Grid</button>
 </div>
 
 <div class="hint-card" data-hint="planner" style="display:none;"><span data-i18n="hint_planner">Tip</span><button class="btn-sm" onclick="dismissHint('planner')" data-i18n="hint_got_it">Got it</button></div>
 
 <div class="week" id="week"></div>
+
+<div class="plan-grid" id="planGrid"></div>
 
 <div class="month" id="month"></div>
 
@@ -2229,6 +2247,14 @@ data-i18n-placeholder="sync_code_placeholder" placeholder="XXXX-XXXX-XXXX">
 <span data-i18n="manage_categories">Manage Categories</span>
 
 </button>
+
+<label style="display:flex;align-items:flex-start;gap:10px;margin-top:18px;cursor:pointer;">
+<input type="checkbox" id="askTypeToggle" style="width:auto;margin:3px 0 0;" onchange="toggleAskType(this.checked)">
+<span>
+<strong data-i18n="ask_type_label">Ask for the meal type first</strong><br>
+<span class="small" data-i18n="ask_type_description">When you tap Add, pick Breakfast, Lunch, Dinner etc. first. You can still change it in the Add Meal window.</span>
+</span>
+</label>
 </div>
 </details>
 
@@ -3329,6 +3355,22 @@ Save this week's meals as a reusable template you can apply to any week later.
 
 <!-- LOAD WEEK TEMPLATE -->
 
+<div class="modal" role="dialog" aria-modal="true" id="mealTypePickerModal">
+
+<div class="modal-box">
+
+<h2 data-i18n="type_pick_title">What are you adding?</h2>
+
+<p class="small" id="mealTypePickerDay"></p>
+
+<div id="mealTypePickerList"></div>
+
+<button class="modal-close" onclick="closeMealTypePicker()" data-i18n="cancel">Cancel</button>
+
+</div>
+
+</div>
+
 <div class="modal" role="dialog" aria-modal="true" id="loadTemplateModal">
 
 <div class="modal-box">
@@ -3457,6 +3499,11 @@ const translations = {
         sync_leave: "🚪 Leave household",
         sync_code_placeholder: "XXXX-XXXX-XXXX",
         sync_status_off: "Not shared – your data stays on this device only.",
+        view_grid: "Grid",
+        grid_add_aria: "Add meal",
+        type_pick_title: "What are you adding?",
+        ask_type_label: "Ask for the meal type first",
+        ask_type_description: "When you tap Add, pick Breakfast, Lunch, Dinner etc. first. You can still change it in the Add Meal window.",
         sync_chip_saving: "↻ Saving…",
         sync_chip_saved: "✓ Synced",
         sync_chip_updated: "↓ Updated from household",
@@ -3918,6 +3965,11 @@ const translations = {
         sync_leave: "🚪 Lämna hushållet",
         sync_code_placeholder: "XXXX-XXXX-XXXX",
         sync_status_off: "Inte delad – din data finns bara på den här enheten.",
+        view_grid: "Rutnät",
+        grid_add_aria: "Lägg till måltid",
+        type_pick_title: "Vad vill du lägga till?",
+        ask_type_label: "Fråga efter måltidstyp först",
+        ask_type_description: "När du trycker på Lägg till väljer du först Frukost, Lunch, Middag osv. Du kan fortfarande ändra i fönstret Lägg till måltid.",
         sync_chip_saving: "↻ Sparar…",
         sync_chip_saved: "✓ Synkat",
         sync_chip_updated: "↓ Uppdaterat från hushållet",
@@ -4890,7 +4942,8 @@ document.querySelectorAll(".modal").forEach(modal=>{
         if(isOpen && !wasOpen){
             // remember what had focus so it can go back there when the dialog closes
             let a = document.activeElement;
-            modal._opener = (a && a !== document.body && !modal.contains(a)) ? a : null;
+            let cand = (a && a !== document.body && !modal.contains(a) && a.offsetParent !== null) ? a : null;
+            if(cand || !modal._opener) modal._opener = cand;
             autoFocusModal(modal);
             modal.style.zIndex = ++topModalZIndex;
         }
@@ -4999,7 +5052,7 @@ function pickQuickAddDay(day){
 
     closeQuickAddDayPicker();
 
-    openModal(day);
+    askMealType(day);
 
 }
 
@@ -5830,7 +5883,7 @@ function saveShoppingState(){
 // PLANNER VIEW: Week / Month (per device)
 // =======================
 let plannerView = (function(){
-    try{ return localStorage.getItem("foodflowPlannerView") === "month" ? "month" : "week"; }
+    try{ let v = localStorage.getItem("foodflowPlannerView"); return v === "month" || v === "grid" ? v : "week"; }
     catch(e){ return "week"; }
 })();
 
@@ -5861,16 +5914,21 @@ function applyPlannerView(){
     if(nav) nav.classList.toggle("month-mode", isMonth);
     let weekEl = document.getElementById("week");
     let monthEl = document.getElementById("month");
-    if(weekEl) weekEl.style.display = isMonth ? "none" : "";
+    let isGrid = plannerView === "grid";
+    let gridEl = document.getElementById("planGrid");
+    if(gridEl) gridEl.style.display = isGrid ? "block" : "none";
+    let bg = document.getElementById("viewGridBtn");
+    if(bg) bg.classList.toggle("active", isGrid);
+    if(weekEl) weekEl.style.display = (isMonth || isGrid) ? "none" : "";
     if(monthEl) monthEl.style.display = isMonth ? "block" : "none";
     let bw = document.getElementById("viewWeekBtn");
     let bm = document.getElementById("viewMonthBtn");
-    if(bw) bw.classList.toggle("active", !isMonth);
+    if(bw) bw.classList.toggle("active", !isMonth && !isGrid);
     if(bm) bm.classList.toggle("active", isMonth);
 }
 
 function setPlannerView(view){
-    plannerView = view === "month" ? "month" : "week";
+    plannerView = (view === "month" || view === "grid") ? view : "week";
     try{ localStorage.setItem("foodflowPlannerView", plannerView); }catch(e){}
     if(plannerView === "month"){
         let d = parseDateKey(currentWeekKey);
@@ -6945,11 +7003,170 @@ function flashMovedMeal(day){
     }catch(e){}
 }
 
+// ---- "ask for the meal type first" when adding a meal ----
+function askTypeOn(){
+    try{ return localStorage.getItem("foodflowAskMealType") !== "0"; }catch(e){ return true; }
+}
+function toggleAskType(on){
+    try{ localStorage.setItem("foodflowAskMealType", on ? "1" : "0"); }catch(e){}
+}
+
+let typePickerDay = null, typePickerOpener = null;
+
+function askMealType(day){
+
+    if(!askTypeOn() || mealCategories.length < 2){
+        openModal(day);
+        return;
+    }
+
+    typePickerDay = day;
+    typePickerOpener = document.activeElement;
+
+    document.getElementById("mealTypePickerDay").textContent = translateDayName(day);
+
+    let list = document.getElementById("mealTypePickerList");
+    list.innerHTML = "";
+
+    mealCategories.forEach(cat => {
+        let b = document.createElement("button");
+        b.type = "button";
+        b.className = "type-pick";
+        b.style.setProperty("--accent", getMealTypeAccent(cat));
+        b.textContent = cat;
+        b.onclick = () => chooseMealType(cat);
+        list.appendChild(b);
+    });
+
+    let nb = document.createElement("button");
+    nb.type = "button";
+    nb.className = "type-pick type-pick-new";
+    nb.textContent = t("new_category_option");
+    nb.onclick = () => chooseNewMealType();
+    list.appendChild(nb);
+
+    document.getElementById("mealTypePickerModal").style.display = "flex";
+
+}
+
+function closeMealTypePicker(){
+    document.getElementById("mealTypePickerModal").style.display = "none";
+}
+
+// "➕ New category": open Add Meal, then the category window; the new type gets selected
+function chooseNewMealType(){
+
+    let day = typePickerDay;
+    let opener = typePickerOpener;
+    if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    closeMealTypePicker();
+    if(!day) return;
+
+    openModal(day);
+
+    let m = document.getElementById("modal");
+    if(m && opener && document.contains(opener)) m._opener = opener;
+
+    pendingCategorySelectId = "mealType";
+    openCategoryManager();
+
+}
+
+function chooseMealType(cat){
+
+    let day = typePickerDay;
+    if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    closeMealTypePicker();
+    if(!day) return;
+
+    openModalForType(day, cat);
+
+    // when the Add Meal window closes, focus goes back to the button that started this
+    let m = document.getElementById("modal");
+    if(m && typePickerOpener && document.contains(typePickerOpener)) m._opener = typePickerOpener;
+
+}
+
+// Open the Add Meal window with a meal type already chosen
+function openModalForType(day, cat){
+    openModal(day);
+    let sel = document.getElementById("mealType");
+    if(sel && Array.from(sel.options).some(o => o.value === cat || o.text === cat)){
+        sel.value = cat;
+    }
+}
+
+// ---- optional grid view: meal types as rows, days as columns (or the other way round on phones) ----
+function renderGrid(){
+
+    let el = document.getElementById("planGrid");
+    if(!el) return;
+
+    let wide = window.matchMedia("(min-width: 760px)").matches;
+
+    let cats = mealCategories.slice();
+    days.forEach(d => (meals[d] || []).forEach(m => { if(m.type && !cats.includes(m.type)) cats.push(m.type); }));
+
+    let dayHead = (day, i) => {
+        let date = parseDateKey(addDaysToKey(currentWeekKey, i));
+        return `${escapeHtml(translateDayName(day).slice(0, 3))}<span class="pg-date">${date.getDate()}</span>`;
+    };
+
+    let catHead = cat => escapeHtml(cat);
+
+    let cell = (day, cat) => {
+
+        let items = (meals[day] || [])
+            .map((m, i) => ({ m, i }))
+            .filter(x => x.m.type === cat);
+
+        let h = items.map(({ m, i }) =>
+            `<button type="button" class="pg-meal" style="--accent:${getMealTypeAccent(m.type)}" title="${escapeHtml(m.name)}" onclick="openMealDetail('${day}',${i})">${escapeHtml(m.name)}</button>`
+        ).join("");
+
+        if(!items.length){
+            let catArg = encodeURIComponent(cat).replace(/'/g, "%27");
+            h = `<button type="button" class="pg-add" aria-label="${escapeHtml(t("grid_add_aria"))}: ${escapeHtml(translateDayName(day))}, ${escapeHtml(cat)}" onclick="openModalForType('${day}', decodeURIComponent('${catArg}'))">＋</button>`;
+        }
+
+        return `<td class="pg-cell">${h}</td>`;
+
+    };
+
+    let html;
+
+    if(wide){
+
+        html = `<table><thead><tr><th></th>${days.map((d, i) => `<th scope="col">${dayHead(d, i)}</th>`).join("")}</tr></thead><tbody>` +
+            cats.map(cat => `<tr><th scope="row" class="pg-row">${catHead(cat)}</th>${days.map(d => cell(d, cat)).join("")}</tr>`).join("") +
+            `</tbody></table>`;
+
+        el.style.setProperty("--pg-min", "0");
+
+    }else{
+
+        html = `<table><thead><tr><th></th>${cats.map(c => `<th scope="col">${catHead(c)}</th>`).join("")}</tr></thead><tbody>` +
+            days.map((d, i) => `<tr><th scope="row" class="pg-row">${dayHead(d, i)}</th>${cats.map(c => cell(d, c)).join("")}</tr>`).join("") +
+            `</tbody></table>`;
+
+        el.style.setProperty("--pg-min", Math.max(0, 64 + cats.length * 78) + "px");
+
+    }
+
+    el.innerHTML = html;
+
+}
+
+window.matchMedia("(min-width: 760px)").addEventListener("change", () => {
+    if(plannerView === "grid") renderGrid();
+});
+
 function render(){
 
 applyPlannerView();
 
 if(plannerView === "month"){ renderMonth(); return; }
+if(plannerView === "grid"){ renderGrid(); return; }
 
 const week =
 document.getElementById("week");
@@ -6997,7 +7214,7 @@ card.innerHTML = `
 >
 
 <div class="day-actions">
-<button class="add-btn" onclick="openModal('${day}')">
+<button class="add-btn" onclick="askMealType('${day}')">
 ${t("planner_add")}
 </button>
 
@@ -8314,6 +8531,9 @@ document.getElementById("settingsModal")
 renderCategoryOrderSettings();
 
 renderCustomIngredientTranslations();
+
+let atToggle = document.getElementById("askTypeToggle");
+if(atToggle) atToggle.checked = askTypeOn();
 
 let roundToggle = document.getElementById("roundShoppingToggle");
 if(roundToggle) roundToggle.checked = shoppingRoundingOn();
