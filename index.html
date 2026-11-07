@@ -50,6 +50,10 @@
 --danger-text:#c62828;
 --radius:16px;
 --radius-sm:10px;
+--radius-xs:6px;
+--radius-field:12px;
+--card-pad:12px 14px;
+--surface-inner:rgba(120,120,120,.09);
 --shadow-sm:0 2px 6px rgba(20,40,20,0.06);
 --shadow:0 6px 18px rgba(20,40,20,0.09), 0 1px 3px rgba(20,40,20,0.06);
 --shadow-lg:0 14px 34px rgba(20,40,20,0.14), 0 3px 8px rgba(20,40,20,0.08);
@@ -441,12 +445,11 @@ letter-spacing:-0.01em;
 
 .meal {
 
-background:
-rgba(120,120,120,.09);
+background:var(--surface-inner);
 
 border-radius:var(--radius-sm);
 
-padding:12px;
+padding:var(--card-pad);
 
 margin-top:10px;
 
@@ -553,7 +556,7 @@ overflow-y:auto;
 margin-top:10px;
 
 border:1px solid var(--field-border);
-border-radius:12px;
+border-radius:var(--radius-field);
 
 padding:6px;
 
@@ -672,7 +675,7 @@ padding:12px;
 
 margin:8px 0;
 
-border-radius:12px;
+border-radius:var(--radius-field);
 
 border:1px solid var(--field-border);
 
@@ -806,13 +809,13 @@ background:var(--brand); color:#fff;
 
 /* Recipe cards: only as tall as their content */
 #recipeList .meal-name-clamp { min-height:0; margin:0; font-size:1.05em; }
-#recipeList .meal { padding:14px 16px; }
+#recipeList .meal { padding:var(--card-pad); }
 
 /* small menu behind the ⋯ button */
 #dayMenu {
 position:absolute; z-index:1500; min-width:190px; padding:6px;
 background:var(--card); color:var(--text);
-border:1px solid rgba(120,120,120,.25); border-radius:12px;
+border:1px solid rgba(120,120,120,.25); border-radius:var(--radius-field);
 box-shadow:var(--shadow-lg);
 }
 #dayMenu button {
@@ -824,7 +827,7 @@ color:var(--text); font-size:14px; font-weight:500; border-radius:8px; transform
 
 /* Planner meal cards: type as a small colored label, name as the headline,
    people / leftovers as chips, and a chevron showing the card opens */
-#plannerPage .meal { padding:11px 14px 11px 12px; }
+#plannerPage .meal { padding:var(--card-pad); }
 #plannerPage .meal .meal-title { font-size:.72em; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--accent, var(--text-soft)); margin-bottom:3px; }
 #plannerPage .meal .meal-name-clamp { min-height:2.6em; font-size:1.05em; font-weight:700; line-height:1.3em; }
 #plannerPage .meal .meal-foot { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:8px; }
@@ -838,7 +841,7 @@ color:var(--text); font-size:14px; font-weight:500; border-radius:8px; transform
 .list-tabs::-webkit-scrollbar { display:none; }
 .list-tabs button { white-space:nowrap; flex:0 0 auto; margin:0; }
 .custom-list-active .meal-only, .custom-list-active #shoppingMealBanner { display:none !important; }
-#newListIcons button { width:42px; height:42px; padding:0; font-size:20px; border-radius:12px; }
+#newListIcons button { width:42px; height:42px; padding:0; font-size:20px; border-radius:var(--radius-field); }
 
 #recipeTagFilterBar button { min-height:0; height:auto; padding:6px 14px !important; line-height:1.2; margin:0; }
 /* Tag rows: one line that scrolls sideways on phones, edge fades hint at more */
@@ -860,6 +863,11 @@ border:1px solid var(--soft-border); box-shadow:none;
 }
 .view-toggle button.active { background:color-mix(in srgb, var(--primary) 16%, var(--card)); background-image:none; color:var(--text); font-weight:600; }
 .view-toggle button:hover { transform:none; }
+.layout-toggle { display:inline-flex; margin-left:6px; border:1px solid var(--soft-border); border-radius:999px; overflow:hidden; }
+.layout-toggle.is-hidden { display:none; }
+.view-toggle .layout-toggle button { border:none; border-radius:0; padding:4px 11px; display:inline-flex; align-items:center; }
+.view-toggle .layout-toggle button.active { background:color-mix(in srgb, var(--primary) 26%, var(--card)); color:var(--text); }
+.view-toggle .layout-toggle button + button { border-left:1px solid var(--soft-border); }
 #weekNav.month-mode .wk-only { display:none; }
 #weekNav:not(.month-mode) .mo-only { display:none; }
 
@@ -879,8 +887,8 @@ transition:background .15s ease, box-shadow .2s var(--ease);
 .mnum { font-size:12px; font-weight:600; opacity:.75; }
 .mcell.today .mnum { color:var(--primary-dark); opacity:1; }
 .mchip {
-font-size:11.5px; line-height:1.25; padding:2px 6px; border-radius:6px;
-background:rgba(120,120,120,.10); border-left:3px solid var(--accent);
+font-size:11.5px; line-height:1.25; padding:2px 6px; border-radius:var(--radius-xs);
+background:var(--surface-inner); border-left:3px solid var(--accent);
 white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .mchip:hover { background:rgba(120,120,120,.2); }
@@ -1657,7 +1665,7 @@ background:transparent;
 background-image:none;
 box-shadow:none;
 color:var(--text);
-border-radius:12px;
+border-radius:var(--radius-field);
 }
 
 /* planner switcher: top right corner, mirroring the menu button */
@@ -1666,7 +1674,7 @@ position:absolute; top:63px; right:max(12px, calc((100% - 1200px) / 2 + 12px));
 height:44px; margin:0; padding:0 8px; box-sizing:border-box;
 display:flex; align-items:center; gap:2px;
 max-width:60px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
-font-size:12.5px; line-height:1.5; color:var(--text-soft); border-radius:12px;
+font-size:12.5px; line-height:1.5; color:var(--text-soft); border-radius:var(--radius-field);
 }
 /* feedback, empty states and first-use hints */
 @keyframes mealLanded { 0%{ transform:scale(.96); box-shadow:0 0 0 0 color-mix(in srgb, var(--primary) 55%, transparent); } 40%{ transform:scale(1.03); box-shadow:0 0 0 8px color-mix(in srgb, var(--primary) 25%, transparent); } 100%{ transform:scale(1); box-shadow:0 0 0 0 transparent; } }
@@ -1676,14 +1684,14 @@ font-size:12.5px; line-height:1.5; color:var(--text-soft); border-radius:12px;
 #syncChip.show { opacity:1; transform:translate(-50%,0); }
 #syncChip[data-kind="saved"] { border-color:var(--primary); }
 #syncChip[data-kind="offline"] { border-color:#e0a030; }
-.empty-hero { text-align:center; padding:22px 16px; margin:10px 0 14px; border-radius:16px; border:1px dashed var(--field-border); background:var(--card); }
+.empty-hero { text-align:center; padding:22px 16px; margin:10px 0 14px; border-radius:var(--radius); border:1px dashed var(--field-border); background:var(--card); }
 .empty-hero .empty-icon { font-size:34px; line-height:1; margin-bottom:8px; }
 .empty-hero h3 { margin:0 0 6px; }
 .empty-hero p { margin:0 auto 14px; max-width:34em; color:var(--text-soft); font-size:14.5px; }
 .empty-hero .empty-actions { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
 .empty-hero .empty-actions button { margin:0; }
 .week.week-empty .day-empty { display:none; }
-.hint-card { display:flex; align-items:center; gap:10px; padding:10px 12px; margin:8px 0 12px; border-radius:12px; background:color-mix(in srgb, var(--primary) 10%, var(--card)); font-size:14px; }
+.hint-card { display:flex; align-items:center; gap:10px; padding:10px 12px; margin:8px 0 12px; border-radius:var(--radius-sm); background:color-mix(in srgb, var(--primary) 10%, var(--card)); font-size:14px; }
 .hint-card > span { flex:1; }
 .hint-card button { flex:none; }
 /* day titles shrink to fit their card (long names like "Wednesday" in the 7-column week) */
@@ -1699,7 +1707,7 @@ font-size:12.5px; line-height:1.5; color:var(--text-soft); border-radius:12px;
 }
 /* quick-add chips + grid view */
 #mealTypePickerList { display:flex; flex-direction:column; gap:8px; margin:10px 0 4px; }
-#mealTypePickerList button.type-pick { margin:0; padding:12px 14px; text-align:left; font-size:15px; font-weight:600; color:var(--text); background:color-mix(in srgb, var(--accent) 14%, var(--card)); background-image:none; border:none; border-left:5px solid var(--accent); border-radius:10px; box-shadow:none; }
+#mealTypePickerList button.type-pick { margin:0; padding:var(--card-pad); text-align:left; font-size:15px; font-weight:600; color:var(--text); background:color-mix(in srgb, var(--accent) 14%, var(--card)); background-image:none; border:none; border-left:5px solid var(--accent); border-radius:var(--radius-sm); box-shadow:none; }
 #mealTypePickerList button.type-pick-new { background:transparent; background-image:none; border:1px dashed var(--field-border); border-left:1px dashed var(--field-border); font-weight:500; color:var(--text-soft); }
 #mealTypePickerList button.type-pick:hover { background:color-mix(in srgb, var(--accent) 26%, var(--card)); background-image:none; filter:none; }
 .plan-grid { display:none; overflow-x:auto; padding-bottom:6px; }
@@ -1709,13 +1717,13 @@ font-size:12.5px; line-height:1.5; color:var(--text-soft); border-radius:12px;
 .plan-grid table.pg-narrow th { font-size:12px; }
 .plan-grid table.pg-narrow th.pg-row { width:44px; padding-left:2px; }
 .plan-grid .pg-date { display:block; font-weight:400; font-size:12px; color:var(--text-soft); }
-.plan-grid td.pg-cell { vertical-align:top; background:var(--card); border-radius:10px; padding:3px; height:54px; }
-.plan-grid button.pg-meal { display:block; width:100%; margin:0 0 4px; padding:4px 4px 4px 5px; font-size:11.5px; font-weight:500; line-height:1.25; text-align:left; white-space:normal; overflow-wrap:break-word; hyphens:auto; color:var(--text); background:color-mix(in srgb, var(--accent) 18%, var(--card)); background-image:none; border:none; border-left:4px solid var(--accent); border-radius:6px; box-shadow:none; }
+.plan-grid td.pg-cell { vertical-align:top; background:var(--card); border-radius:var(--radius-sm); box-shadow:var(--shadow-sm); padding:3px; height:54px; }
+.plan-grid button.pg-meal { display:block; width:100%; margin:0 0 4px; padding:4px 4px 4px 5px; font-size:11.5px; font-weight:500; line-height:1.25; text-align:left; white-space:normal; overflow-wrap:break-word; hyphens:auto; color:var(--text); background:color-mix(in srgb, var(--accent) 18%, var(--card)); background-image:none; border:none; border-left:4px solid var(--accent); border-radius:var(--radius-xs); box-shadow:none; }
 .plan-grid button.pg-meal:hover { filter:none; transform:none; background:color-mix(in srgb, var(--accent) 28%, var(--card)); background-image:none; }
-.plan-grid button.pg-add { display:block; width:100%; height:100%; min-height:44px; margin:0; padding:0; font-size:18px; color:var(--text-soft); background:transparent; background-image:none; border:1px dashed var(--field-border); border-radius:8px; box-shadow:none; opacity:.75; }
+.plan-grid button.pg-add { display:block; width:100%; height:100%; min-height:44px; margin:0; padding:0; font-size:18px; color:var(--text-soft); background:transparent; background-image:none; border:1px dashed var(--field-border); border-radius:var(--radius-xs); box-shadow:none; opacity:.75; }
 .plan-grid button.pg-add:hover { opacity:1; border-color:var(--primary); filter:none; transform:none; background:transparent; background-image:none; }
 /* shared building blocks (keeps lists, small buttons, empty states and close buttons uniform) */
-.list-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; margin-bottom:6px; border-radius:10px; background:var(--bg); }
+.list-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; margin-bottom:6px; border-radius:var(--radius-sm); background:var(--surface-inner); }
 .list-row > span:first-of-type { min-width:0; }
 button.btn-sm { padding:4px 10px; font-size:13px; margin:0; }
 .empty-state { text-align:center; font-size:14px; color:var(--text-soft); padding:14px 8px; }
@@ -1735,7 +1743,7 @@ background:#2f7d40; background-image:linear-gradient(135deg,#2f8043,#2a7239);
 .sync-pill[data-state="busy"]::before { background:#f5a623; }
 .sync-pill[data-state="error"]::before { background:#e53935; }
 .sync-wide { display:block; width:100%; margin:6px 0; padding:12px; box-sizing:border-box; }
-.sync-code-card { border:1px solid var(--field-border); border-radius:14px; padding:12px 14px; background:var(--bg); }
+.sync-code-card { border:1px solid var(--field-border); border-radius:var(--radius-sm); padding:var(--card-pad); background:var(--bg); }
 .sync-code { font-size:22px; font-weight:700; letter-spacing:2px; margin:2px 0 10px; font-variant-numeric:tabular-nums; word-break:break-all; }
 .sync-actions { display:flex; gap:8px; flex-wrap:wrap; }
 .sync-actions button { margin:0; flex:1 1 auto; }
@@ -1807,7 +1815,7 @@ background:var(--primary-light); background-image:none;
 filter:none; box-shadow:none; transform:none;
 }
 button:active { transform:scale(.97); box-shadow:none; filter:none; }
-.action-list button { border-radius:12px; }
+.action-list button { border-radius:var(--radius-field); }
 
 /* buttons that have their own look: no extra frame */
 #navbar button, .menu-btn, #dayMenu button { border:none; }
@@ -1855,7 +1863,7 @@ body.dark { color-scheme:dark; }
 input:not([type="checkbox"]):not([type="radio"]),
 select, textarea {
 background-color:var(--card); color:var(--text);
-border:1px solid var(--field-border); border-radius:12px;
+border:1px solid var(--field-border); border-radius:var(--radius-field);
 font-family:inherit;
 transition:border-color .15s var(--ease), box-shadow .15s var(--ease);
 }
@@ -1976,7 +1984,10 @@ input[type="radio"] { width:18px; height:18px; }
 <div class="view-toggle" id="viewToggle">
 <button type="button" id="viewWeekBtn" onclick="setPlannerView('week')" data-i18n="view_week">Week</button>
 <button type="button" id="viewMonthBtn" onclick="setPlannerView('month')" data-i18n="view_month">Month</button>
-<button type="button" id="viewGridBtn" onclick="setPlannerView('grid')" data-i18n="view_grid">Grid</button>
+<span class="layout-toggle" id="layoutToggle" role="group" data-i18n-aria-label="layout_label" aria-label="Layout">
+<button type="button" id="layoutCardsBtn" onclick="setPlannerLayout('cards')" data-i18n-aria-label="layout_cards" data-i18n-title aria-label="Card view" title="Card view" aria-pressed="true"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="2" y="2" width="12" height="3.2" rx="1" fill="currentColor"/><rect x="2" y="6.4" width="12" height="3.2" rx="1" fill="currentColor"/><rect x="2" y="10.8" width="12" height="3.2" rx="1" fill="currentColor"/></svg></button>
+<button type="button" id="layoutGridBtn" onclick="setPlannerLayout('grid')" data-i18n-aria-label="layout_grid" data-i18n-title aria-label="Grid view" title="Grid view" aria-pressed="false"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1" fill="currentColor"/><rect x="9" y="2" width="5" height="5" rx="1" fill="currentColor"/><rect x="2" y="9" width="5" height="5" rx="1" fill="currentColor"/><rect x="9" y="9" width="5" height="5" rx="1" fill="currentColor"/></svg></button>
+</span>
 </div>
 
 <div class="hint-card" data-hint="planner" style="display:none;"><span data-i18n="hint_planner">Tip</span><button class="btn-sm" onclick="dismissHint('planner')" data-i18n="hint_got_it">Got it</button></div>
@@ -2071,7 +2082,7 @@ Automatically built from every recipe in your meal planner, scaled to the number
 
 <div id="shoppingRangeSummary" class="small meal-only" style="margin-top:4px;"></div>
 
-<div id="shoppingMealBanner" style="display:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:10px;padding:8px 12px;border-radius:12px;border:1px solid var(--primary);background:var(--primary-light);">
+<div id="shoppingMealBanner" style="display:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:10px;padding:8px 12px;border-radius:var(--radius-field);border:1px solid var(--primary);background:var(--primary-light);">
 <span id="shoppingMealBannerText" style="font-weight:600;"></span>
 <button type="button" class="btn-soft" onclick="clearShoppingMealFilter()" data-i18n="shop_meal_clear" style="margin:0;">✕ Show full list</button>
 </div>
@@ -2757,7 +2768,7 @@ Copy a recipe's title, portions, and ingredient list from pretty much any websit
 id="pasteText"
 rows="12"
 placeholder="Paste the recipe text here, e.g.&#10;&#10;Köttbullar&#10;4 portioner&#10;500 g nötfärs&#10;1 gul lök&#10;1 dl ströbröd&#10;1 ägg" data-i18n-placeholder="ph_paste"
-style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--field-border);font-size:15px;font-family:inherit;"
+style="width:100%;padding:12px;border-radius:var(--radius-field);border:1px solid var(--field-border);font-size:15px;font-family:inherit;"
 ></textarea>
 
 
@@ -2794,7 +2805,7 @@ id="pasteShoppingText"
 rows="10"
 data-i18n-placeholder="ph_paste_items"
 placeholder="e.g.&#10;2 kg potatoes&#10;Milk - 3 l&#10;4 toilet paper&#10;Batteries, light bulbs"
-style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--field-border);font-size:15px;font-family:inherit;"
+style="width:100%;padding:12px;border-radius:var(--radius-field);border:1px solid var(--field-border);font-size:15px;font-family:inherit;"
 ></textarea>
 
 <br><br>
@@ -3021,7 +3032,7 @@ id="recipeInstructions"
 rows="8"
 placeholder="1. Chop the onions...&#10;2. Fry until golden...&#10;3. Add the rest and simmer for 20 minutes..."
 data-i18n-placeholder="recipe_instructions_placeholder"
-style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--field-border);font-size:15px;font-family:inherit;"
+style="width:100%;padding:12px;border-radius:var(--radius-field);border:1px solid var(--field-border);font-size:15px;font-family:inherit;"
 ></textarea>
 
 
@@ -3517,6 +3528,9 @@ const translations = {
         sync_code_placeholder: "XXXX-XXXX-XXXX",
         sync_status_off: "Not shared – your data stays on this device only.",
         view_grid: "Grid",
+        layout_label: "Layout",
+        layout_cards: "Card view",
+        layout_grid: "Grid view",
         grid_add_aria: "Add meal",
         type_pick_title: "What are you adding?",
         ask_type_label: "Ask for the meal type first",
@@ -3983,6 +3997,9 @@ const translations = {
         sync_code_placeholder: "XXXX-XXXX-XXXX",
         sync_status_off: "Inte delad – din data finns bara på den här enheten.",
         view_grid: "Rutnät",
+        layout_label: "Layout",
+        layout_cards: "Kortvy",
+        layout_grid: "Rutnätsvy",
         grid_add_aria: "Lägg till måltid",
         type_pick_title: "Vad vill du lägga till?",
         ask_type_label: "Fråga efter måltidstyp först",
@@ -4437,6 +4454,10 @@ function applyTranslations(){
             "aria-label",
             t(el.getAttribute("data-i18n-aria-label"))
         );
+
+        if(el.hasAttribute("data-i18n-title")){
+            el.setAttribute("title", t(el.getAttribute("data-i18n-aria-label")));
+        }
 
     });
 
@@ -5934,18 +5955,35 @@ function applyPlannerView(){
     let isGrid = plannerView === "grid";
     let gridEl = document.getElementById("planGrid");
     if(gridEl) gridEl.style.display = isGrid ? "block" : "none";
-    let bg = document.getElementById("viewGridBtn");
-    if(bg) bg.classList.toggle("active", isGrid);
+    let lt = document.getElementById("layoutToggle");
+    if(lt) lt.classList.toggle("is-hidden", isMonth);
+    let lc = document.getElementById("layoutCardsBtn");
+    let lg = document.getElementById("layoutGridBtn");
+    if(lc){ lc.classList.toggle("active", !isGrid); lc.setAttribute("aria-pressed", String(!isGrid)); }
+    if(lg){ lg.classList.toggle("active", isGrid); lg.setAttribute("aria-pressed", String(isGrid)); }
     if(weekEl) weekEl.style.display = (isMonth || isGrid) ? "none" : "";
     if(monthEl) monthEl.style.display = isMonth ? "block" : "none";
     let bw = document.getElementById("viewWeekBtn");
     let bm = document.getElementById("viewMonthBtn");
-    if(bw) bw.classList.toggle("active", !isMonth && !isGrid);
+    if(bw) bw.classList.toggle("active", !isMonth);
     if(bm) bm.classList.toggle("active", isMonth);
 }
 
+// Week/Month choose the time span; the layout switch chooses cards or grid for the week
+function weekLayoutPref(){
+    try{ return localStorage.getItem("foodflowWeekLayout") === "grid" ? "grid" : "cards"; }catch(e){ return "cards"; }
+}
+function setPlannerLayout(layout){
+    try{ localStorage.setItem("foodflowWeekLayout", layout === "grid" ? "grid" : "cards"); }catch(e){}
+    setPlannerView(layout === "grid" ? "grid" : "week");
+}
+
 function setPlannerView(view){
+    if(view === "week" && weekLayoutPref() === "grid") view = "grid";
     plannerView = (view === "month" || view === "grid") ? view : "week";
+    if(plannerView !== "month"){
+        try{ localStorage.setItem("foodflowWeekLayout", plannerView === "grid" ? "grid" : "cards"); }catch(e){}
+    }
     try{ localStorage.setItem("foodflowPlannerView", plannerView); }catch(e){}
     if(plannerView === "month"){
         let d = parseDateKey(currentWeekKey);
