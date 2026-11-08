@@ -875,7 +875,9 @@ border:1px solid var(--soft-border); box-shadow:none;
 @media (pointer:coarse){ .view-toggle button.layout-switch { --sw-h:44px; } .layout-switch .ls-ico svg { width:18px; height:18px; } }
 .layout-switch[aria-checked="false"] .ls-cards, .layout-switch[aria-checked="true"] .ls-grid { opacity:1; color:var(--text); }
 .layout-switch:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
-@media (prefers-reduced-motion: reduce){ .layout-switch .ls-knob { transition:none; } }
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important; }
+}
 #weekNav.month-mode .wk-only { display:none; }
 #weekNav:not(.month-mode) .mo-only { display:none; }
 
@@ -890,7 +892,8 @@ display:flex; flex-direction:column; gap:3px;
 transition:background .15s ease, box-shadow .2s var(--ease);
 }
 .mcell:hover { box-shadow:var(--shadow); }
-.mcell.out { opacity:.45; }
+.mcell.out { background:transparent; box-shadow:none; }
+.mcell.out .mnum { opacity:1; color:var(--text-soft); font-weight:500; }
 .mcell.today { outline:2px solid var(--primary); outline-offset:-2px; }
 .mnum { font-size:12px; font-weight:600; opacity:.75; }
 .mcell.today .mnum { color:var(--primary-dark); opacity:1; }
@@ -1745,6 +1748,8 @@ button.modal-close { margin-top:10px; }
 body.dark button[data-primary], body.dark button.btn-sm-primary, body.dark button.add-btn, body.dark #quickAddFab, body.dark #navbar button.nav-active, body.dark #plannerPage .week-nav-secondary button.active {
 background:#2f7d40; background-image:linear-gradient(135deg,#2f8043,#2a7239);
 }
+.field-error { color:var(--danger-text, #a12626); font-size:13px; margin:4px 2px 8px; }
+body.dark .field-error { color:#ff9a9a; }
 input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"] { border-color:#d32f2f; box-shadow:0 0 0 2px rgba(211,47,47,.22); }
 .tpl-grip { cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; font-size:20px; line-height:1; padding:6px 4px; color:var(--text-soft); }
 .tpl-row.tpl-dragging { box-shadow:var(--shadow); outline:2px solid var(--primary); position:relative; z-index:2; }
@@ -1880,7 +1885,7 @@ border:1px solid var(--field-border); border-radius:var(--radius-field);
 font-family:inherit;
 transition:border-color .15s var(--ease), box-shadow .15s var(--ease);
 }
-input::placeholder, textarea::placeholder { color:var(--text-soft); opacity:.75; }
+input::placeholder, textarea::placeholder { color:var(--text-soft); opacity:.88; }
 input:not([type="checkbox"]):not([type="radio"]):focus,
 select:focus, textarea:focus,
 input:not([type="checkbox"]):not([type="radio"]):focus-visible,
@@ -2219,7 +2224,7 @@ Share your planner, recipes and shopping list with your household. Everyone sees
 <div class="small" data-i18n="sync_join_hint">Have a code from another household? Enter it here - it opens as an extra planner, your current one stays as it is.</div>
 <div class="sync-join-row">
 <input type="text" id="syncJoinCode" autocomplete="off" autocapitalize="characters" spellcheck="false"
-data-i18n-placeholder="sync_code_placeholder" placeholder="XXXX-XXXX-XXXX">
+data-i18n-placeholder="sync_code_placeholder" placeholder="XXXX-XXXX-XXXX" data-i18n-aria-label="lbl_sync_code" aria-label="Household code">
 <button data-primary onclick="ffSyncJoin()">
 <span data-i18n="sync_join">🔗 Join with code</span>
 </button>
@@ -2310,12 +2315,14 @@ Add your own word so it always combines on the shopping list, no matter which la
 <input
     id="customTranslationAlias"
     placeholder="e.g. kycklingfilé"
+    data-i18n-aria-label="lbl_alias" aria-label="Your word"
     data-i18n-placeholder="custom_translation_alias_placeholder"
 >
 
 <input
     id="customTranslationTarget"
     placeholder="e.g. chicken breast"
+    data-i18n-aria-label="lbl_alias_target" aria-label="Combine with ingredient"
     data-i18n-placeholder="custom_translation_target_placeholder"
 >
 
@@ -2779,6 +2786,7 @@ Copy a recipe's title, portions, and ingredient list from pretty much any websit
 <textarea
 id="pasteText"
 rows="12"
+data-i18n-aria-label="lbl_paste_recipe" aria-label="Recipe text"
 placeholder="Paste the recipe text here, e.g.&#10;&#10;Köttbullar&#10;4 portioner&#10;500 g nötfärs&#10;1 gul lök&#10;1 dl ströbröd&#10;1 ägg" data-i18n-placeholder="ph_paste"
 style="width:100%;padding:12px;border-radius:var(--radius-field);border:1px solid var(--field-border);font-size:15px;font-family:inherit;"
 ></textarea>
@@ -2815,6 +2823,7 @@ Cancel
 <textarea
 id="pasteShoppingText"
 rows="10"
+data-i18n-aria-label="lbl_paste_items" aria-label="Shopping items, one per line"
 data-i18n-placeholder="ph_paste_items"
 placeholder="e.g.&#10;2 kg potatoes&#10;Milk - 3 l&#10;4 toilet paper&#10;Batteries, light bulbs"
 style="width:100%;padding:12px;border-radius:var(--radius-field);border:1px solid var(--field-border);font-size:15px;font-family:inherit;"
@@ -2836,7 +2845,7 @@ style="width:100%;padding:12px;border-radius:var(--radius-field);border:1px soli
 <div class="modal-box">
 <h2 data-i18n="new_list_title">➕ New list</h2>
 <p class="small" data-i18n="new_list_description">A separate shopping list for anything - pharmacy, hardware store, a party. It is shared with your household like everything else.</p>
-<input type="text" id="newListName" autocomplete="off" maxlength="40" data-i18n-placeholder="new_list_name_ph" placeholder="e.g. Pharmacy" onkeydown="if(event.key==='Enter'){event.preventDefault();createCustomList();}">
+<input type="text" id="newListName" aria-label="List name" data-i18n-aria-label="lbl_list_name" autocomplete="off" maxlength="40" data-i18n-placeholder="new_list_name_ph" placeholder="e.g. Pharmacy" onkeydown="if(event.key==='Enter'){event.preventDefault();createCustomList();}">
 <div id="newListIcons" style="display:flex;flex-wrap:wrap;gap:6px;margin:12px 0;"></div>
 <button data-primary onclick="createCustomList()" data-i18n="new_list_create">Create list</button>
 <button onclick="closeNewListModal()" data-i18n="cancel">Cancel</button>
@@ -3519,6 +3528,13 @@ const translations = {
         translation_saved: "Translation saved",
         no_custom_translations_yet: "No custom translations added yet.",
         day_note_placeholder: "📝 Note (e.g. eating out, leftovers)",
+        lbl_day_note: "Note for",
+        lbl_list_name: "List name",
+        lbl_paste_recipe: "Recipe text",
+        lbl_paste_items: "Shopping items, one per line",
+        lbl_sync_code: "Household code",
+        lbl_alias: "Your word",
+        lbl_alias_target: "Combine with ingredient",
         settings_shopping_categories: "🛒 Shopping List Order",
         shopping_category_order_description: "Reorder the categories to match how your store is laid out.",
         sync_restore: "♻️ Restore data from before sync",
@@ -3990,6 +4006,13 @@ const translations = {
         translation_saved: "Översättning sparad",
         no_custom_translations_yet: "Inga egna översättningar tillagda än.",
         day_note_placeholder: "📝 Anteckning (t.ex. äter ute, rester)",
+        lbl_day_note: "Anteckning för",
+        lbl_list_name: "Listans namn",
+        lbl_paste_recipe: "Receptets text",
+        lbl_paste_items: "Varor, en per rad",
+        lbl_sync_code: "Hushållskod",
+        lbl_alias: "Ditt ord",
+        lbl_alias_target: "Slå ihop med ingrediens",
         settings_shopping_categories: "🛒 Inköpslistans ordning",
         shopping_category_order_description: "Ändra ordningen på kategorierna så att den matchar din butik.",
         sync_restore: "♻️ Återställ data från före synk",
@@ -4994,6 +5017,22 @@ function autoFocusModal(modal){
 // alone isn't a reliable way to decide which one should be on top.
 let topModalZIndex = 1000;
 
+// the last button/link the person used outside a dialog; focus goes back to it when the dialog closes
+let lastOutsideModalEl = null;
+
+// the open dialog that is in front (highest z-index)
+function topOpenModal(){
+    let open = Array.from(document.querySelectorAll(".modal")).filter(m => m.style.display === "flex");
+    open.sort((a, b) => (parseInt(b.style.zIndex) || 0) - (parseInt(a.style.zIndex) || 0));
+    return open[0] || null;
+}
+["focusin", "pointerdown"].forEach(evt => {
+    document.addEventListener(evt, e => {
+        let el = e.target && e.target.closest ? e.target.closest("button, a, input, select, textarea, [tabindex], [role='button']") : null;
+        if(el && !el.closest(".modal")) lastOutsideModalEl = el;
+    }, true);
+});
+
 // Give every dialog an accessible name from its heading
 document.querySelectorAll(".modal").forEach(modal=>{
     let h = modal.querySelector("h2, h3");
@@ -5013,8 +5052,13 @@ document.querySelectorAll(".modal").forEach(modal=>{
 
         if(isOpen && !wasOpen){
             // remember what had focus so it can go back there when the dialog closes
+            // (some openers move focus into the dialog themselves, so also remember the last control used outside any dialog)
+            let shown = el => el && el.getClientRects().length > 0;
             let a = document.activeElement;
-            let cand = (a && a !== document.body && !modal.contains(a) && a.offsetParent !== null) ? a : null;
+            let cand = (a && a !== document.body && !modal.contains(a) && shown(a)) ? a : null;
+            if(!cand && lastOutsideModalEl && document.contains(lastOutsideModalEl) && shown(lastOutsideModalEl) && !modal.contains(lastOutsideModalEl)){
+                cand = lastOutsideModalEl;
+            }
             if(cand || !modal._opener) modal._opener = cand;
             autoFocusModal(modal);
             modal.style.zIndex = ++topModalZIndex;
@@ -5178,9 +5222,11 @@ document.addEventListener("keydown", function(e){
     // Esc closes whichever modal is open
     if(e.key === "Escape"){
 
-        document.querySelectorAll(".modal").forEach(modal=>{
-            closeAnyModal(modal);
-        });
+        // only the dialog on top closes (e.g. "+ New category" opened over Add Meal)
+        let topOpen = topOpenModal();
+        if(topOpen){
+            closeAnyModal(topOpen);
+        }
 
         return;
 
@@ -5195,8 +5241,7 @@ document.addEventListener("keydown", function(e){
             return;
         }
 
-        let openModal = Array.from(document.querySelectorAll(".modal"))
-            .find(m => m.style.display === "flex");
+        let openModal = topOpenModal();
 
         if(openModal){
 
@@ -7054,12 +7099,34 @@ document.addEventListener("keydown", (e)=>{ if(e.key === "Escape") closeDayMenu(
 
 // ---- accessibility helpers ----
 // Show an error, mark the field invalid, and move focus to it
+function clearFieldError(el){
+    el.removeAttribute("aria-invalid");
+    let errId = el.id + "-error";
+    let err = document.getElementById(errId);
+    if(err) err.remove();
+    let ids = (el.getAttribute("aria-describedby") || "").split(/\s+/).filter(x => x && x !== errId);
+    if(ids.length) el.setAttribute("aria-describedby", ids.join(" "));
+    else el.removeAttribute("aria-describedby");
+}
+
 function flagInvalid(fieldId, messageKey){
     showToast(t(messageKey), { type:"error" });
     let el = document.getElementById(fieldId);
     if(!el) return;
+    clearFieldError(el);
     el.setAttribute("aria-invalid", "true");
-    el.addEventListener("input", () => el.removeAttribute("aria-invalid"), { once:true });
+
+    // visible message under the field, tied to it with aria-describedby
+    let err = document.createElement("div");
+    err.id = el.id + "-error";
+    err.className = "field-error";
+    err.textContent = t(messageKey);
+    el.insertAdjacentElement("afterend", err);
+    let ids = (el.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean);
+    ids.push(err.id);
+    el.setAttribute("aria-describedby", ids.join(" "));
+
+    el.addEventListener("input", () => clearFieldError(el), { once:true });
     try{ el.focus(); }catch(e){}
 }
 
@@ -7112,7 +7179,7 @@ function flashMovedMeal(day){
         const box = boxes[boxes.length - 1];
         if(!box) return;
         box.classList.add("meal-landed");
-        box.scrollIntoView({ block:"nearest", behavior:"smooth" });
+        box.scrollIntoView({ block:"nearest", behavior: (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) ? "auto" : "smooth" });
         setTimeout(() => box.classList.remove("meal-landed"), 1800);
     }catch(e){}
 }
@@ -7313,6 +7380,7 @@ card.innerHTML = `
     class="day-note-input${(dayNotes[dayNoteKey(day)] || "") ? "" : " is-hidden"}"
     type="text"
     placeholder="${t("day_note_placeholder")}"
+    aria-label="${t("lbl_day_note")} ${translateDayName(day)}"
     value="${(dayNotes[dayNoteKey(day)] || "").replace(/"/g, "&quot;")}"
     onchange="updateDayNote('${day}', this.value)"
     onblur="if(!this.value.trim()) this.classList.add('is-hidden')"
@@ -7393,7 +7461,17 @@ if(meals[day] && meals[day].length > 0){
                 e.preventDefault();
                 openMealDetail(day, originalIndex);
             }
+            // keyboard alternative to swipe-to-delete (the Delete button inside the meal view works too)
+            if((e.key === "Delete" || e.key === "Backspace") && e.target === box && !pickedUpMeal){
+                e.preventDefault();
+                deleteMeal(day, originalIndex);
+                setTimeout(() => {
+                    let next = document.querySelector('[data-day="' + day + '"] .meal[tabindex="0"]') || document.querySelector('[data-day="' + day + '"] .add-btn');
+                    if(next) try{ next.focus(); }catch(err){}
+                }, 60);
+            }
         });
+        box.setAttribute("aria-keyshortcuts", "Delete");
 
 
         card.appendChild(box);
@@ -10192,7 +10270,7 @@ function addIngredientRow(name="", amount="", unit=""){
             type="button"
             class="delete"
             title="${t("remove_ingredient")}"
-            onclick="this.parentElement.remove()"
+            onclick="this.parentElement.remove(); renumberIngredientRows()"
             style="flex-shrink:0;padding:8px 12px;margin:0;"
         >
             🗑
@@ -10200,6 +10278,27 @@ function addIngredientRow(name="", amount="", unit=""){
     `;
 
     list.appendChild(row);
+
+    renumberIngredientRows();
+
+}
+
+// Gives every ingredient row's fields a distinct accessible name ("Amount 3") — a placeholder alone disappears and isn't unique
+function renumberIngredientRows(){
+
+    document.querySelectorAll("#ingredientList > div").forEach((row, i) => {
+
+        let n = i + 1;
+
+        [["ingredientName", "ph_ingredient"], ["ingredientAmount", "ph_amount"], ["ingredientUnit", "ph_unit"]].forEach(([cls, key]) => {
+            let el = row.querySelector("." + cls);
+            if(el){ el.setAttribute("aria-label", t(key) + " " + n); delete el.dataset.autoLabel; }
+        });
+
+        let del = row.querySelector("button.delete");
+        if(del) del.setAttribute("aria-label", t("remove_ingredient") + " " + n);
+
+    });
 
 }
 
@@ -14133,7 +14232,7 @@ window.ffWsMenu = function(anchor){
     menu.appendChild(document.createElement("hr"));
     item(tr("ws_menu_manage"), () => {
         if(typeof openSettings === "function") openSettings();
-        setTimeout(() => { const el = document.getElementById("wsNewName"); if(el) el.scrollIntoView({ block: "center", behavior: "smooth" }); }, 150);
+        setTimeout(() => { const el = document.getElementById("wsNewName"); if(el) el.scrollIntoView({ block: "center", behavior: (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) ? "auto" : "smooth" }); }, 150);
     });
     document.body.appendChild(menu);
     const r = anchor.getBoundingClientRect(), mw = menu.offsetWidth;
