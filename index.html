@@ -777,7 +777,7 @@ background-image:none; filter:none; box-shadow:none; transform:none;
 font-size:13px; font-weight:500; padding:4px 14px; border-radius:999px;
 }
 #plannerPage .more-btn {
-width:28px; height:26px; padding:0; border-radius:999px;
+width:28px; min-width:28px; flex:none; height:28px; padding:0; border-radius:999px;
 font-size:16px; line-height:1; letter-spacing:1px;
 display:inline-flex; align-items:center; justify-content:center;
 }
@@ -1078,7 +1078,7 @@ display:none;
 
 .nav-short {
 
-display:inline;
+display:inline-flex; align-items:center; justify-content:center;
 
 }
 
@@ -1957,7 +1957,7 @@ input[type="radio"] { width:18px; height:18px; }
 
 <button onclick="goToPreviousWeek()" data-i18n-aria-label="aria_previous_week" aria-label="Previous week">
 <span class="nav-full" data-i18n="nav_full_previous">◀︎ Previous</span>
-<span class="nav-short" data-i18n="nav_short_previous">◀︎</span>
+<span class="nav-short"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M10.5 2.5 4.5 8l6 5.5z" fill="currentColor"/></svg></span>
 </button>
 
 <div class="week-nav-center">
@@ -1966,7 +1966,7 @@ input[type="radio"] { width:18px; height:18px; }
 
 <button onclick="goToNextWeek()" data-i18n-aria-label="aria_next_week" aria-label="Next week">
 <span class="nav-full" data-i18n="nav_full_next">Next ▶︎</span>
-<span class="nav-short" data-i18n="nav_short_next">▶︎</span>
+<span class="nav-short"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5.5 2.5 11.5 8l-6 5.5z" fill="currentColor"/></svg></span>
 </button>
 
 </div>
@@ -7335,9 +7335,7 @@ card.innerHTML = `
 ${t("planner_add")}
 </button>
 
-<button class="more-btn" aria-haspopup="menu" aria-label="${t("day_menu_label")}" title="${t("day_menu_label")}" onclick="openDayMenu(this,'${day}')">
-⋯
-</button>
+<button class="more-btn" aria-haspopup="menu" aria-label="${t("day_menu_label")}" title="${t("day_menu_label")}" onclick="openDayMenu(this,'${day}')"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="3" cy="8" r="1.5" fill="currentColor"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/><circle cx="13" cy="8" r="1.5" fill="currentColor"/></svg></button>
 </div>
 
 `;
