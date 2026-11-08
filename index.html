@@ -12681,7 +12681,8 @@ const knownUnits = [
     "stick","sticks",
     "block","blocks","pack","packs","packet","packets",
     "loaf","loaves","limpa","limpor","l/kg","kg/l",
-    "bulb","bulbs","litre","litres","liters"
+    "bulb","bulbs","litre","litres","liters",
+    "gram","grams","gr","pkt","pk"
 ];
 
 // Common unit synonyms/plurals that should all combine on the
@@ -12719,6 +12720,8 @@ const unitAliases = {
     "skivor":"skiva",
     "liter":"l",
     "krm":"kryddmått",
+    "gram":"g", "grams":"g", "gr":"g",
+    "pkt":"paket", "pk":"paket",
     "potions":"portion",
     // Swedish spoon measures are the same units as their English
     // names, just spelled differently — "msk" (matsked) = tablespoon,
@@ -12794,7 +12797,7 @@ function joinSplitIngredientLines(lines){
 
             let next = lines[i + 1];
 
-            if(next && !/^\d/.test(next) && next.split(/\s+/).length <= 6 && !/[.!?]$/.test(next)){
+            if(next && !/^\d/.test(next) && next.split(/\s+/).length <= 14 && !/[.!?]$/.test(next)){
 
                 let joined = line + " " + next;
                 i++;
@@ -12806,7 +12809,7 @@ function joinSplitIngredientLines(lines){
                     i + 1 < lines.length &&
                     lines[i + 1] &&
                     !/^\d/.test(lines[i + 1]) &&
-                    lines[i + 1].split(/\s+/).length <= 6
+                    lines[i + 1].split(/\s+/).length <= 14
                 ){
                     joined += " " + lines[i + 1];
                     i++;
@@ -12856,6 +12859,15 @@ function stripListMarker(line){
     return line.replace(/^\s*(?:[*•·▪◦‣⁃☐☑✓✔□■▢-]+|\[[ xX]?\]|[–—])\s+/, "").trim();
 }
 
+// "chicken breasts, cut into strips" -> "chicken breasts"; "pepper to taste" -> "pepper".
+// Only cuts at a comma followed by a preparation/note word, so "boneless, skinless chicken" stays whole.
+function trimIngredientNotes(name){
+    let n = String(name || "");
+    n = n.replace(/,\s*(?:finely|roughly|thinly|coarsely|freshly|lightly|cut|chopped|diced|sliced|minced|grated|peeled|drained|divided|soaked|softened|melted|beaten|crushed|rinsed|halved|quartered|trimmed|cubed|shredded|plus|for\b|to\b|ask|or\b|such as|best|optional|about|see\b|smält|hackad|riven|skuren|skivad|tärnad|finhackad|pressad|till\b|eller|valfritt|ev\b).*$/i, "");
+    n = n.replace(/\s+(?:to taste|efter smak)\s*$/i, "");
+    return n.trim() || String(name || "").trim();
+}
+
 function parseIngredientLine(line){
 
     line = stripListMarker(normalizeFractionText(line).trim());
@@ -12863,6 +12875,24 @@ function parseIngredientLine(line){
     if(!line){
         return null;
     }
+
+    // "~2 dl flour" / "≈ 2 dl flour"
+    line = line.replace(/^[~≈]\s*/, "");
+
+    // "Milk (2 dl)" / "Flour (1 cup)" / "Eggs (3 st)": the amount sits in brackets after the name
+    let bracketAmount = line.match(/^([^\d(][^(]*?)\s*\(\s*((?:ca\.?\s*)?[\d½¼¾⅓⅔][\d.,\/\s½¼¾⅓⅔]*\s*[a-zA-ZåäöÅÄÖ]*\.?)\s*\)\s*$/);
+    if(bracketAmount){
+        line = bracketAmount[2].trim() + " " + bracketAmount[1].trim();
+    }
+
+    // "2 tbsp. olive oil" / "1 lb. beef": a full stop after the unit
+    let dotUnit = line.match(/^([\d½¼¾⅓⅔][\d.,\/\s½¼¾⅓⅔]*?)\s*([A-Za-z]{1,12})\.(?=\s)/);
+    if(dotUnit && knownUnits.includes(dotUnit[2].toLowerCase())){
+        line = line.replace(dotUnit[0], dotUnit[1].trim() + " " + dotUnit[2]);
+    }
+
+    // "1 cup/240 ml milk": a second unit after a slash is only a conversion
+    line = line.replace(/^(\S+\s+[A-Za-zåäö]+)\s*\/\s*\d+(?:[.,]\d+)?\s*(?:ml|g|oz|l|dl|cl|kg|cups?)\b\s*/i, "$1 ");
 
     // "Pork - 1.5" / "Ramen noodles - 1 kg" / "Eggs: 9": the amount comes AFTER
     // the name, separated by a dash or colon. Turn it into "1.5 Pork".
@@ -12890,7 +12920,7 @@ function parseIngredientLine(line){
     // A range such as "2-3 loaves" or "3 to 4.5 L": use the higher number,
     // so the shopping list never ends up short.
     line = line.replace(
-        /^(\d+(?:[.,]\d+)?)\s*(?:-|–|—|to|till|eller)\s*(\d+(?:[.,]\d+)?)(?=\s|[a-zA-ZåäöÅÄÖ]|$)/i,
+        /^(\d+(?:[.,]\d+)?)\s*(?:-|–|—|to|till|eller|or)\s*(\d+(?:[.,]\d+)?)(?=\s|[a-zA-ZåäöÅÄÖ]|$)/i,
         (m, a, b) => b
     );
 
@@ -13001,7 +13031,7 @@ function parseIngredientLine(line){
     return {
         amount: amount || "",
         unit: unit,
-        name: rest
+        name: trimIngredientNotes(rest)
     };
 
 }
@@ -13095,7 +13125,23 @@ function parsePastedRecipe(){
 
     let ingredientLines = [];
 
+    // Once the method starts ("Method", "Directions", "Gör så här" ...) nothing after it is an ingredient
+    let methodHeading = /^(gör så här|tillagning|instruktioner|instructions?|directions|method|metod|så här gör du|steg|steps?)\s*:?$/i;
+    let inMethod = false;
+
     lines.forEach((line, index)=>{
+
+        if(methodHeading.test(line) && ingredientLines.length > 0){
+            inMethod = true;
+        }
+        if(inMethod){
+            return;
+        }
+
+        // Group headings such as "For the sauce:" / "Till såsen:" are not ingredients
+        if(/:$/.test(line) && !/\d/.test(line)){
+            return;
+        }
 
         // The recipe's title line is never itself an ingredient —
         // without this, a short title (e.g. "Chicken Curry") could
@@ -13133,15 +13179,17 @@ function parsePastedRecipe(){
             let hasQuantity = parsed.amount !== "";
 
             let looksLikeIngredient =
-                (hasQuantity && wordCount > 0 && wordCount <= 6) ||
-                // No quantity given at all (e.g. "salt", "svartpeppar")
+                // after trimming prep notes the name is short, or the line has a real unit ("2 cups low-sodium chicken broth ...")
+                (hasQuantity && wordCount > 0 && (wordCount <= 6 || (parsed.unit !== "" && wordCount <= 12))) ||
+                // No quantity given at all ("salt", "olive oil, for greasing", "salt and pepper to taste")
                 // — only keep it if it's short and not a full sentence.
                 (!hasQuantity &&
                     wordCount > 0 &&
-                    wordCount <= 3 &&
-                    !line.trim().endsWith("."));
+                    wordCount <= 6 &&
+                    !/[.!?]$/.test(line.trim()));
 
             if(looksLikeIngredient){
+                parsed.name = parsed.name.replace(/[,;:\s]+$/, "");
                 ingredientLines.push(parsed);
             }
 
