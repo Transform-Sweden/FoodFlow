@@ -863,10 +863,14 @@ border:1px solid var(--soft-border); box-shadow:none;
 }
 .view-toggle button.active { background:color-mix(in srgb, var(--primary) 16%, var(--card)); background-image:none; color:var(--text); font-weight:600; }
 .view-toggle button:hover { transform:none; }
-.view-toggle button.layout-switch { position:relative; display:inline-flex; align-items:center; --sw-h:34px; width:calc(var(--sw-h) * 1.8); height:var(--sw-h); min-height:var(--sw-h); padding:0; margin-left:6px; border:1px solid var(--soft-border); border-radius:999px; background:var(--card); background-image:none; flex:none; font-weight:400; }
+.view-toggle button.layout-switch { position:relative; display:inline-flex; align-items:center; justify-content:space-between; box-sizing:border-box; --sw-h:34px; width:calc(var(--sw-h) * 1.8); height:var(--sw-h); min-height:var(--sw-h); padding:0 4px; margin-left:6px; border:1px solid var(--soft-border); border-radius:999px; background:var(--card); background-image:none; flex:none; font-weight:400; }
 .view-toggle button.layout-switch.is-hidden { display:none; }
-.layout-switch .ls-ico { position:relative; z-index:1; flex:1; display:flex; justify-content:center; align-items:center; color:var(--muted, var(--text)); opacity:.65; transition:opacity .2s, color .2s; }
+.layout-switch .ls-ico { position:absolute; top:50%; margin-top:calc((var(--sw-h) - 8px) / -2); left:4px; z-index:1; flex:none; width:calc(var(--sw-h) - 8px); height:calc(var(--sw-h) - 8px); display:flex; justify-content:center; align-items:center; color:var(--muted, var(--text)); opacity:.65; transition:opacity .2s, color .2s; }
 .layout-switch .ls-knob { position:absolute; top:50%; left:4px; width:calc(var(--sw-h) - 8px); height:calc(var(--sw-h) - 8px); margin-top:calc((var(--sw-h) - 8px) / -2); border-radius:50%; background:color-mix(in srgb, var(--primary) 30%, var(--card)); box-shadow:var(--shadow-sm); transition:transform .22s ease; }
+.layout-switch .ls-ico::after { content:attr(data-tip); position:absolute; top:calc(100% + 8px); left:50%; transform:translateX(-50%); white-space:nowrap; font-size:12px; line-height:1; padding:6px 9px; border-radius:8px; background:var(--text); color:var(--bg, var(--card)); box-shadow:var(--shadow-sm); opacity:0; pointer-events:none; transition:opacity .15s .25s; z-index:50; }
+.layout-switch .ls-ico:hover::after { opacity:1; }
+@media (hover:none){ .layout-switch .ls-ico::after { display:none; } }
+.layout-switch .ls-grid { left:calc(var(--sw-h) * 0.8 + 2px); }
 .layout-switch[aria-checked="true"] .ls-knob { transform:translateX(calc(var(--sw-h) * 0.8 - 2px)); }
 @media (pointer:coarse){ .view-toggle button.layout-switch { --sw-h:44px; } .layout-switch .ls-ico svg { width:18px; height:18px; } }
 .layout-switch[aria-checked="false"] .ls-cards, .layout-switch[aria-checked="true"] .ls-grid { opacity:1; color:var(--text); }
@@ -1993,7 +1997,7 @@ input[type="radio"] { width:18px; height:18px; }
 <div class="view-toggle" id="viewToggle">
 <button type="button" id="viewWeekBtn" onclick="setPlannerView('week')" data-i18n="view_week">Week</button>
 <button type="button" id="viewMonthBtn" onclick="setPlannerView('month')" data-i18n="view_month">Month</button>
-<button type="button" class="layout-switch" id="layoutToggle" role="switch" aria-checked="false" onclick="setPlannerLayout(this.getAttribute('aria-checked') === 'true' ? 'cards' : 'grid')" data-i18n-aria-label="layout_grid" data-i18n-title aria-label="Grid view" title="Grid view"><span class="ls-knob" aria-hidden="true"></span><span class="ls-ico ls-cards" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="2" y="2" width="12" height="3.2" rx="1" fill="currentColor"/><rect x="2" y="6.4" width="12" height="3.2" rx="1" fill="currentColor"/><rect x="2" y="10.8" width="12" height="3.2" rx="1" fill="currentColor"/></svg></span><span class="ls-ico ls-grid" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1" fill="currentColor"/><rect x="9" y="2" width="5" height="5" rx="1" fill="currentColor"/><rect x="2" y="9" width="5" height="5" rx="1" fill="currentColor"/><rect x="9" y="9" width="5" height="5" rx="1" fill="currentColor"/></svg></span></button>
+<button type="button" class="layout-switch" id="layoutToggle" role="switch" aria-checked="false" onclick="setPlannerLayout(this.getAttribute('aria-checked') === 'true' ? 'cards' : 'grid')" data-i18n-aria-label="layout_grid" aria-label="Grid view"><span class="ls-knob" aria-hidden="true"></span><span class="ls-ico ls-cards" aria-hidden="true" data-i18n-aria-label="layout_cards" data-i18n-tip aria-label="Card view" data-tip="Card view"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="2" y="2" width="12" height="3.2" rx="1" fill="currentColor"/><rect x="2" y="6.4" width="12" height="3.2" rx="1" fill="currentColor"/><rect x="2" y="10.8" width="12" height="3.2" rx="1" fill="currentColor"/></svg></span><span class="ls-ico ls-grid" aria-hidden="true" data-i18n-aria-label="layout_grid" data-i18n-tip aria-label="Grid view" data-tip="Grid view"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1" fill="currentColor"/><rect x="9" y="2" width="5" height="5" rx="1" fill="currentColor"/><rect x="2" y="9" width="5" height="5" rx="1" fill="currentColor"/><rect x="9" y="9" width="5" height="5" rx="1" fill="currentColor"/></svg></span></button>
 </div>
 
 <div class="hint-card" data-hint="planner" style="display:none;"><span data-i18n="hint_planner">Tip</span><button class="btn-sm" onclick="dismissHint('planner')" data-i18n="hint_got_it">Got it</button></div>
@@ -4483,6 +4487,10 @@ function applyTranslations(){
 
         if(el.hasAttribute("data-i18n-title")){
             el.setAttribute("title", t(el.getAttribute("data-i18n-aria-label")));
+        }
+
+        if(el.hasAttribute("data-i18n-tip")){
+            el.setAttribute("data-tip", t(el.getAttribute("data-i18n-aria-label")));
         }
 
     });
