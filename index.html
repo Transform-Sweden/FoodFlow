@@ -863,11 +863,12 @@ border:1px solid var(--soft-border); box-shadow:none;
 }
 .view-toggle button.active { background:color-mix(in srgb, var(--primary) 16%, var(--card)); background-image:none; color:var(--text); font-weight:600; }
 .view-toggle button:hover { transform:none; }
-.view-toggle button.layout-switch { position:relative; display:inline-flex; align-items:center; width:60px; height:32px; padding:0; margin-left:6px; border:1px solid var(--soft-border); border-radius:999px; background:var(--card); background-image:none; flex:none; font-weight:400; }
+.view-toggle button.layout-switch { position:relative; display:inline-flex; align-items:center; --sw-h:34px; width:calc(var(--sw-h) * 1.8); height:var(--sw-h); min-height:var(--sw-h); padding:0; margin-left:6px; border:1px solid var(--soft-border); border-radius:999px; background:var(--card); background-image:none; flex:none; font-weight:400; }
 .view-toggle button.layout-switch.is-hidden { display:none; }
 .layout-switch .ls-ico { position:relative; z-index:1; flex:1; display:flex; justify-content:center; align-items:center; color:var(--muted, var(--text)); opacity:.65; transition:opacity .2s, color .2s; }
-.layout-switch .ls-knob { position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:color-mix(in srgb, var(--primary) 30%, var(--card)); box-shadow:var(--shadow-sm); transition:transform .22s ease; }
-.layout-switch[aria-checked="true"] .ls-knob { transform:translateX(28px); }
+.layout-switch .ls-knob { position:absolute; top:50%; left:4px; width:calc(var(--sw-h) - 8px); height:calc(var(--sw-h) - 8px); margin-top:calc((var(--sw-h) - 8px) / -2); border-radius:50%; background:color-mix(in srgb, var(--primary) 30%, var(--card)); box-shadow:var(--shadow-sm); transition:transform .22s ease; }
+.layout-switch[aria-checked="true"] .ls-knob { transform:translateX(calc(var(--sw-h) * 0.8 - 2px)); }
+@media (pointer:coarse){ .view-toggle button.layout-switch { --sw-h:44px; } .layout-switch .ls-ico svg { width:18px; height:18px; } }
 .layout-switch[aria-checked="false"] .ls-cards, .layout-switch[aria-checked="true"] .ls-grid { opacity:1; color:var(--text); }
 .layout-switch:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
 @media (prefers-reduced-motion: reduce){ .layout-switch .ls-knob { transition:none; } }
