@@ -828,7 +828,7 @@ color:var(--text); font-size:14px; font-weight:500; border-radius:8px; transform
 /* Planner meal cards: type as a small colored label, name as the headline,
    people / leftovers as chips, and a chevron showing the card opens */
 #plannerPage .meal { padding:var(--card-pad); }
-#plannerPage .meal .meal-title { font-size:.72em; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--accent, var(--text-soft)); margin-bottom:3px; }
+#plannerPage .meal .meal-title { font-size:.72em; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:color-mix(in srgb, var(--accent, var(--text-soft)) 45%, var(--text)); margin-bottom:3px; }
 #plannerPage .meal .meal-name-clamp { min-height:2.6em; font-size:1.05em; font-weight:700; line-height:1.3em; }
 #plannerPage .meal .meal-foot { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:8px; }
 #plannerPage .meal .meal-chip { font-size:12.5px; line-height:1; padding:4px 9px; border-radius:999px; background:var(--card); border:1px solid rgba(120,120,120,.22); color:var(--text); white-space:nowrap; }
@@ -863,11 +863,14 @@ border:1px solid var(--soft-border); box-shadow:none;
 }
 .view-toggle button.active { background:color-mix(in srgb, var(--primary) 16%, var(--card)); background-image:none; color:var(--text); font-weight:600; }
 .view-toggle button:hover { transform:none; }
-.layout-toggle { display:inline-flex; margin-left:6px; border:1px solid var(--soft-border); border-radius:999px; overflow:hidden; }
-.layout-toggle.is-hidden { display:none; }
-.view-toggle .layout-toggle button { border:none; border-radius:0; padding:4px 11px; display:inline-flex; align-items:center; }
-.view-toggle .layout-toggle button.active { background:color-mix(in srgb, var(--primary) 26%, var(--card)); color:var(--text); }
-.view-toggle .layout-toggle button + button { border-left:1px solid var(--soft-border); }
+.view-toggle button.layout-switch { position:relative; display:inline-flex; align-items:center; width:60px; height:32px; padding:0; margin-left:6px; border:1px solid var(--soft-border); border-radius:999px; background:var(--card); background-image:none; flex:none; font-weight:400; }
+.view-toggle button.layout-switch.is-hidden { display:none; }
+.layout-switch .ls-ico { position:relative; z-index:1; flex:1; display:flex; justify-content:center; align-items:center; color:var(--muted, var(--text)); opacity:.65; transition:opacity .2s, color .2s; }
+.layout-switch .ls-knob { position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:color-mix(in srgb, var(--primary) 30%, var(--card)); box-shadow:var(--shadow-sm); transition:transform .22s ease; }
+.layout-switch[aria-checked="true"] .ls-knob { transform:translateX(28px); }
+.layout-switch[aria-checked="false"] .ls-cards, .layout-switch[aria-checked="true"] .ls-grid { opacity:1; color:var(--text); }
+.layout-switch:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
+@media (prefers-reduced-motion: reduce){ .layout-switch .ls-knob { transition:none; } }
 #weekNav.month-mode .wk-only { display:none; }
 #weekNav:not(.month-mode) .mo-only { display:none; }
 
@@ -1488,6 +1491,8 @@ transition:opacity .25s ease;
 
 @media(pointer:coarse){
 
+.more-btn { min-width:44px; }
+
 button {
 
 padding:12px 16px;
@@ -1706,6 +1711,8 @@ font-size:12.5px; line-height:1.5; color:var(--text-soft); border-radius:var(--r
     #plannerPage .meal .meal-name-clamp { font-size:.8em; word-break:normal; overflow-wrap:break-word; hyphens:auto; -webkit-line-clamp:3; min-height:3.9em; }
 }
 /* quick-add chips + grid view */
+.day-pick-list { display:flex; flex-direction:column; gap:6px; margin:10px 0 4px; }
+.day-pick-list button { margin:0; text-align:left; }
 #mealTypePickerList { display:flex; flex-direction:column; gap:8px; margin:10px 0 4px; }
 #mealTypePickerList button.type-pick { margin:0; padding:var(--card-pad); text-align:left; font-size:15px; font-weight:600; color:var(--text); background:color-mix(in srgb, var(--accent) 14%, var(--card)); background-image:none; border:none; border-left:5px solid var(--accent); border-radius:var(--radius-sm); box-shadow:none; }
 #mealTypePickerList button.type-pick-new { background:transparent; background-image:none; border:1px dashed var(--field-border); border-left:1px dashed var(--field-border); font-weight:500; color:var(--text-soft); }
@@ -1733,6 +1740,7 @@ button.modal-close { margin-top:10px; }
 body.dark button[data-primary], body.dark button.btn-sm-primary, body.dark button.add-btn, body.dark #quickAddFab, body.dark #navbar button.nav-active, body.dark #plannerPage .week-nav-secondary button.active {
 background:#2f7d40; background-image:linear-gradient(135deg,#2f8043,#2a7239);
 }
+input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"] { border-color:#d32f2f; box-shadow:0 0 0 2px rgba(211,47,47,.22); }
 .tpl-grip { cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; font-size:20px; line-height:1; padding:6px 4px; color:var(--text-soft); }
 .tpl-row.tpl-dragging { box-shadow:var(--shadow); outline:2px solid var(--primary); position:relative; z-index:2; }
 .tpl-grip:focus-visible { outline:2px solid var(--primary); border-radius:6px; }
@@ -1984,10 +1992,7 @@ input[type="radio"] { width:18px; height:18px; }
 <div class="view-toggle" id="viewToggle">
 <button type="button" id="viewWeekBtn" onclick="setPlannerView('week')" data-i18n="view_week">Week</button>
 <button type="button" id="viewMonthBtn" onclick="setPlannerView('month')" data-i18n="view_month">Month</button>
-<span class="layout-toggle" id="layoutToggle" role="group" data-i18n-aria-label="layout_label" aria-label="Layout">
-<button type="button" id="layoutCardsBtn" onclick="setPlannerLayout('cards')" data-i18n-aria-label="layout_cards" data-i18n-title aria-label="Card view" title="Card view" aria-pressed="true"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="2" y="2" width="12" height="3.2" rx="1" fill="currentColor"/><rect x="2" y="6.4" width="12" height="3.2" rx="1" fill="currentColor"/><rect x="2" y="10.8" width="12" height="3.2" rx="1" fill="currentColor"/></svg></button>
-<button type="button" id="layoutGridBtn" onclick="setPlannerLayout('grid')" data-i18n-aria-label="layout_grid" data-i18n-title aria-label="Grid view" title="Grid view" aria-pressed="false"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1" fill="currentColor"/><rect x="9" y="2" width="5" height="5" rx="1" fill="currentColor"/><rect x="2" y="9" width="5" height="5" rx="1" fill="currentColor"/><rect x="9" y="9" width="5" height="5" rx="1" fill="currentColor"/></svg></button>
-</span>
+<button type="button" class="layout-switch" id="layoutToggle" role="switch" aria-checked="false" onclick="setPlannerLayout(this.getAttribute('aria-checked') === 'true' ? 'cards' : 'grid')" data-i18n-aria-label="layout_grid" data-i18n-title aria-label="Grid view" title="Grid view"><span class="ls-knob" aria-hidden="true"></span><span class="ls-ico ls-cards" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="2" y="2" width="12" height="3.2" rx="1" fill="currentColor"/><rect x="2" y="6.4" width="12" height="3.2" rx="1" fill="currentColor"/><rect x="2" y="10.8" width="12" height="3.2" rx="1" fill="currentColor"/></svg></span><span class="ls-ico ls-grid" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1" fill="currentColor"/><rect x="9" y="2" width="5" height="5" rx="1" fill="currentColor"/><rect x="2" y="9" width="5" height="5" rx="1" fill="currentColor"/><rect x="9" y="9" width="5" height="5" rx="1" fill="currentColor"/></svg></span></button>
 </div>
 
 <div class="hint-card" data-hint="planner" style="display:none;"><span data-i18n="hint_planner">Tip</span><button class="btn-sm" onclick="dismissHint('planner')" data-i18n="hint_got_it">Got it</button></div>
@@ -2587,6 +2592,8 @@ Meal
 <button class="edit" onclick="editMealFromDetail()" data-i18n="btn_edit">✏️ Edit</button>
 
 <button id="mealDetailOpenRecipeBtn" onclick="openRecipeFromMealDetail()" data-i18n="btn_open_recipe">📖 Open Recipe</button>
+
+<button id="mealDetailMoveBtn" onclick="openMoveMealPicker()" data-i18n="move_meal_btn">↔️ Move to another day</button>
 
 <button id="mealDetailShopBtn" onclick="shopForMealFromDetail()" data-i18n="shop_meal_btn">🛒 Shopping list for this meal</button>
 
@@ -3383,6 +3390,20 @@ Save this week's meals as a reusable template you can apply to any week later.
 
 <!-- LOAD WEEK TEMPLATE -->
 
+<div class="modal" role="dialog" aria-modal="true" id="moveMealModal">
+
+<div class="modal-box">
+
+<h2 data-i18n="move_meal_title">Move to which day?</h2>
+
+<div id="moveMealList" class="day-pick-list"></div>
+
+<button class="modal-close" onclick="closeMoveMealPicker()" data-i18n="cancel">Cancel</button>
+
+</div>
+
+</div>
+
 <div class="modal" role="dialog" aria-modal="true" id="mealTypePickerModal">
 
 <div class="modal-box">
@@ -3529,6 +3550,8 @@ const translations = {
         sync_status_off: "Not shared – your data stays on this device only.",
         view_grid: "Grid",
         layout_label: "Layout",
+        move_meal_btn: "↔️ Move to another day",
+        move_meal_title: "Move to which day?",
         layout_cards: "Card view",
         layout_grid: "Grid view",
         grid_add_aria: "Add meal",
@@ -3998,6 +4021,8 @@ const translations = {
         sync_status_off: "Inte delad – din data finns bara på den här enheten.",
         view_grid: "Rutnät",
         layout_label: "Layout",
+        move_meal_btn: "↔️ Flytta till annan dag",
+        move_meal_title: "Flytta till vilken dag?",
         layout_cards: "Kortvy",
         layout_grid: "Rutnätsvy",
         grid_add_aria: "Lägg till måltid",
@@ -5956,17 +5981,13 @@ function applyPlannerView(){
     let gridEl = document.getElementById("planGrid");
     if(gridEl) gridEl.style.display = isGrid ? "block" : "none";
     let lt = document.getElementById("layoutToggle");
-    if(lt) lt.classList.toggle("is-hidden", isMonth);
-    let lc = document.getElementById("layoutCardsBtn");
-    let lg = document.getElementById("layoutGridBtn");
-    if(lc){ lc.classList.toggle("active", !isGrid); lc.setAttribute("aria-pressed", String(!isGrid)); }
-    if(lg){ lg.classList.toggle("active", isGrid); lg.setAttribute("aria-pressed", String(isGrid)); }
+    if(lt){ lt.classList.toggle("is-hidden", isMonth); lt.setAttribute("aria-checked", String(isGrid)); }
     if(weekEl) weekEl.style.display = (isMonth || isGrid) ? "none" : "";
     if(monthEl) monthEl.style.display = isMonth ? "block" : "none";
     let bw = document.getElementById("viewWeekBtn");
     let bm = document.getElementById("viewMonthBtn");
-    if(bw) bw.classList.toggle("active", !isMonth);
-    if(bm) bm.classList.toggle("active", isMonth);
+    if(bw){ bw.classList.toggle("active", !isMonth); bw.setAttribute("aria-pressed", String(!isMonth)); }
+    if(bm){ bm.classList.toggle("active", isMonth); bm.setAttribute("aria-pressed", String(isMonth)); }
 }
 
 // Week/Month choose the time span; the layout switch chooses cards or grid for the week
@@ -6509,7 +6530,7 @@ function confirmSaveTemplate(){
 
     if(name === ""){
 
-        showToast(t("enter_template_name"), { type:"error" });
+        flagInvalid("saveTemplateNameInput", "enter_template_name");
         return;
 
     }
@@ -7022,6 +7043,34 @@ function openDayMenu(btn, day){
 
 document.addEventListener("keydown", (e)=>{ if(e.key === "Escape") closeDayMenu(); });
 
+// ---- accessibility helpers ----
+// Show an error, mark the field invalid, and move focus to it
+function flagInvalid(fieldId, messageKey){
+    showToast(t(messageKey), { type:"error" });
+    let el = document.getElementById(fieldId);
+    if(!el) return;
+    el.setAttribute("aria-invalid", "true");
+    el.addEventListener("input", () => el.removeAttribute("aria-invalid"), { once:true });
+    try{ el.focus(); }catch(e){}
+}
+
+// Tie visible <label>s to the field that follows them, and give placeholder-only fields a name
+function linkFormLabels(){
+    document.querySelectorAll("label:not([for])").forEach(label => {
+        if(label.querySelector("input,select,textarea")) return;
+        let next = label.nextElementSibling;
+        while(next && !/^(INPUT|SELECT|TEXTAREA)$/.test(next.tagName) && next.tagName !== "LABEL" && next.children.length === 0 && next.tagName !== "DIV") next = next.nextElementSibling;
+        if(next && /^(INPUT|SELECT|TEXTAREA)$/.test(next.tagName) && next.id) label.setAttribute("for", next.id);
+    });
+    document.querySelectorAll("input:not([type=hidden]):not([type=file]):not([type=checkbox]),select,textarea").forEach(el => {
+        if((el.getAttribute("aria-label") && !el.dataset.autoLabel) || el.getAttribute("aria-labelledby")) return;
+        if(el.id && document.querySelector('label[for="' + el.id + '"]')) return;
+        if(el.closest("label")) return;
+        let name = el.getAttribute("placeholder") || el.title;
+        if(name){ el.setAttribute("aria-label", name); el.dataset.autoLabel = "1"; }
+    });
+}
+
 // ---- first-use hints (each one shows until dismissed) ----
 function hintDismissed(key){ try{ return localStorage.getItem("foodflowHint_" + key) === "1"; }catch(e){ return false; } }
 function dismissHint(key){
@@ -7029,6 +7078,7 @@ function dismissHint(key){
     document.querySelectorAll('.hint-card[data-hint="' + key + '"]').forEach(el => el.style.display = "none");
 }
 function initHints(){
+    linkFormLabels();
     document.querySelectorAll(".hint-card").forEach(el => {
         el.style.display = hintDismissed(el.dataset.hint) ? "none" : "flex";
     });
@@ -7870,7 +7920,7 @@ existing
 
 if(!meal.name){
 
-showToast(t("enter_meal_name"), { type:"error" });
+flagInvalid("mealName", "enter_meal_name");
 
 return;
 
@@ -8093,6 +8143,51 @@ function clearShoppingMealFilter(){
     if(!shoppingMealFilter) return;
     setShoppingMealFilter(null);
     renderShoppingList();
+}
+
+// Keyboard- and tap-friendly way to move one meal to another day (no drag or long-press needed)
+let moveMealSource = null;
+
+function openMoveMealPicker(){
+
+    if(mealDetailIndex === null) return;
+
+    let day = mealDetailDay;
+    let index = mealDetailIndex;
+    if(!meals[day] || !meals[day][index]) return;
+
+    moveMealSource = { day, index };
+
+    let list = document.getElementById("moveMealList");
+    list.innerHTML = "";
+
+    days.forEach(d => {
+        if(d === day) return;
+        let b = document.createElement("button");
+        b.type = "button";
+        b.textContent = translateDayName(d);
+        b.onclick = () => chooseMoveMealDay(d);
+        list.appendChild(b);
+    });
+
+    closeMealDetail();
+    document.getElementById("moveMealModal").style.display = "flex";
+
+}
+
+function closeMoveMealPicker(){
+    document.getElementById("moveMealModal").style.display = "none";
+}
+
+function chooseMoveMealDay(targetDay){
+
+    let src = moveMealSource;
+    closeMoveMealPicker();
+    if(!src) return;
+
+    pickedUpMeal = { day: src.day, index: src.index };
+    tryDropMealOnDay(targetDay);
+
 }
 
 function shopForMealFromDetail(){
@@ -8635,6 +8730,7 @@ lang
 );
 
 applyTranslations();
+linkFormLabels();
 
 render();
 renderRecipes();
@@ -8969,7 +9065,7 @@ document.getElementById("categoryEmoji").value.trim() || "🍽️";
 
 if(!name){
 
-showToast(t("enter_category_name"), { type:"error" });
+flagInvalid("categoryName", "enter_category_name");
 
 return;
 
@@ -9114,7 +9210,7 @@ favorite:false
 
 if(recipe.name===""){
 
-showToast(t("enter_recipe_name"), { type:"error" });
+flagInvalid("recipeName", "enter_recipe_name");
 
 return;
 
@@ -10796,7 +10892,7 @@ function addCustomIngredientTranslation(){
 
     if(alias === "" || target === ""){
 
-        showToast(t("enter_both_translation_fields"), { type:"error" });
+        flagInvalid(alias === "" ? "customTranslationAlias" : "customTranslationTarget", "enter_both_translation_fields");
 
         return;
 
@@ -11769,7 +11865,7 @@ function saveShoppingItem(){
         document.getElementById("shoppingItemUnit").value.trim();
 
     if(!name){
-        showToast(t("enter_item_name"), { type:"error" });
+        flagInvalid("shoppingItemName", "enter_item_name");
         return;
     }
 
@@ -12018,7 +12114,7 @@ function createCustomList(){
     let name = document.getElementById("newListName").value.trim();
 
     if(!name){
-        showToast(t("list_name_required"), { type:"error" });
+        flagInvalid("newListName", "list_name_required");
         return;
     }
 
@@ -13124,6 +13220,7 @@ page
 
 document.querySelectorAll("#navbar button").forEach(btn=>{
     btn.classList.remove("nav-active");
+    btn.removeAttribute("aria-current");
 });
 
 let activeNavBtn = document.getElementById(
@@ -13132,6 +13229,7 @@ let activeNavBtn = document.getElementById(
 
 if(activeNavBtn){
     activeNavBtn.classList.add("nav-active");
+    activeNavBtn.setAttribute("aria-current", "page");
 }
 
 
