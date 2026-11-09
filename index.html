@@ -849,6 +849,9 @@ color:var(--text); font-size:14px; font-weight:500; border-radius:8px; transform
 .tag-scroll { flex-wrap:nowrap !important; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; scrollbar-width:none; overscroll-behavior-x:contain; }
 .tag-scroll::-webkit-scrollbar { display:none; }
 .tag-scroll > * { flex:0 0 auto; white-space:nowrap; }
+/* room around the chips so the scroll box never shaves their borders, and air before the first card */
+.tag-scroll { padding:3px 2px; }
+#recipeTagFilterBar { margin:6px 0 14px !important; }
 .tag-scroll.fade-r { -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 36px),transparent); mask-image:linear-gradient(to right,#000 calc(100% - 36px),transparent); }
 .tag-scroll.fade-l { -webkit-mask-image:linear-gradient(to left,#000 calc(100% - 36px),transparent); mask-image:linear-gradient(to left,#000 calc(100% - 36px),transparent); }
 .tag-scroll.fade-l.fade-r { -webkit-mask-image:linear-gradient(to right,transparent,#000 36px,#000 calc(100% - 36px),transparent); mask-image:linear-gradient(to right,transparent,#000 36px,#000 calc(100% - 36px),transparent); }
