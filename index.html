@@ -207,6 +207,8 @@ background:var(--bg);
 }
 
 
+#navbar .nav-lbl-tab { display:none; }
+
 #navbar button {
 
 background:transparent;
@@ -1491,6 +1493,11 @@ animation:checkPop .3s ease;
 
 }
 
+.scale-btn{ width:44px; min-width:44px; padding:0 !important; display:inline-flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--primary); }
+.scale-btn.on{ background:color-mix(in srgb, var(--primary) 22%, transparent); border-width:2px; }
+.scale-btn[hidden]{ display:none; }
+.hc-group{ border:0; padding:0; margin:12px 0 0; min-width:0; }
+.hc-group legend{ font-weight:600; padding:0; margin-bottom:2px; }
 .ap-types{ display:flex; flex-wrap:wrap; gap:6px 14px; margin:8px 0 12px; }
 .ap-type{ display:inline-flex; align-items:center; gap:6px; font-weight:normal; margin:0; min-height:36px; }
 .ap-type input{ width:auto; margin:0; }
@@ -1567,19 +1574,31 @@ width:100% !important;
 
 #navbar {
 
+/* Floating rounded bar, inset from the screen edges */
 position:fixed;
 
-bottom:0;
+bottom:calc(12px + env(safe-area-inset-bottom));
 
-left:0;
+left:14px;
 
-right:0;
+right:14px;
 
-background:var(--card);
+max-width:460px;
 
-box-shadow:0 -4px 12px rgba(0,0,0,.15);
+margin:0 auto;
 
-padding:8px;
+border-radius:999px;
+
+background:color-mix(in srgb, var(--card) 88%, transparent);
+
+-webkit-backdrop-filter:blur(14px) saturate(1.4);
+backdrop-filter:blur(14px) saturate(1.4);
+
+box-shadow:0 8px 24px rgba(0,0,0,.2), 0 0 0 1px rgba(120,120,120,.18);
+
+padding:5px;
+
+gap:4px;
 
 z-index:500;
 
@@ -1600,21 +1619,37 @@ will-change:transform;
 
 flex:1;
 
-margin:2px;
+margin:0;
 
-font-size:14px;
+font-size:12px;
 
-padding:12px 7px;
+padding:7px 4px 6px;
 
-min-height:46px;
+min-height:54px;
 
 box-shadow:none;
 
+border-radius:999px;
+
+line-height:1.1;
+
 }
+
+/* phone: icon on top, short label underneath */
+#navbar .nav-lbl-full { display:none; }
+#navbar .nav-lbl-tab { display:flex; flex-direction:column; align-items:center; gap:2px; }
+#navbar .nav-ico { font-size:20px; line-height:1; }
 
 body {
 
-padding-bottom:78px;
+padding-bottom:calc(104px + env(safe-area-inset-bottom));
+
+}
+
+/* toasts sit above the floating bar instead of covering it */
+#toastContainer {
+
+bottom:calc(96px + env(safe-area-inset-bottom));
 
 }
 
@@ -1667,7 +1702,7 @@ align-items:center;
 
 justify-content:center;
 
-bottom:90px;
+bottom:calc(98px + env(safe-area-inset-bottom));
 
 }
 
@@ -1958,17 +1993,20 @@ input[type="radio"] { width:18px; height:18px; }
 <nav id="navbar">
 
 <button id="navBtnPlanner" onclick="showPage('planner')">
-<span data-i18n="nav_planner">🏠 Meal Planner</span>
+<span class="nav-lbl-full" data-i18n="nav_planner">🏠 Meal Planner</span>
+<span class="nav-lbl-tab"><span class="nav-ico" aria-hidden="true">🏠</span><span data-i18n="nav_tab_planner">Planner</span></span>
 </button>
 
 
 <button id="navBtnRecipes" onclick="showPage('recipes')">
-<span data-i18n="nav_recipes">📖 Recipes</span>
+<span class="nav-lbl-full" data-i18n="nav_recipes">📖 Recipes</span>
+<span class="nav-lbl-tab"><span class="nav-ico" aria-hidden="true">📖</span><span data-i18n="nav_tab_recipes">Recipes</span></span>
 </button>
 
 
 <button id="navBtnShopping" onclick="showPage('shopping')">
-<span data-i18n="nav_shopping">🛒 Shopping List</span>
+<span class="nav-lbl-full" data-i18n="nav_shopping">🛒 Shopping List</span>
+<span class="nav-lbl-tab"><span class="nav-ico" aria-hidden="true">🛒</span><span data-i18n="nav_tab_shopping">Shopping</span></span>
 </button>
 
 </nav>
@@ -2379,6 +2417,14 @@ Reorder the categories to match how your store is laid out.
 <span>
 <strong data-i18n="round_shopping_label">Round up shopping amounts</strong><br>
 <span class="small" data-i18n="round_shopping_description">80 g becomes 100 g, 1.2 kg becomes 1.5 kg. The exact amount stays visible in gray. Recipes and the planner are not changed.</span>
+</span>
+</label>
+
+<label style="display:flex;align-items:flex-start;gap:10px;margin-top:18px;cursor:pointer;">
+<input type="checkbox" id="gentleSpicesToggle" style="width:auto;margin:3px 0 0;" onchange="toggleGentleSpices(this.checked)">
+<span>
+<strong data-i18n="gentle_spices_label">Scale seasonings gently for big batches</strong><br>
+<span class="small" data-i18n="gentle_spices_description">Salt, spices and baking powder grow more slowly than the rest: for 5 times the people they are about 2.2 times. Taste before adding more. Applies to the shopping list and scaled recipes. Use the ⚖️ button in the recipe editor to scale one ingredient in full.</span>
 </span>
 </label>
 </div>
@@ -3367,6 +3413,7 @@ Close
 <div class="action-list">
 
 <button onclick="closeWeekActionsMenu(); openAutoPlan();"><span data-i18n="autoplan_button">✨ Fill empty days</span></button>
+<button onclick="closeWeekActionsMenu(); openHeadcountModal();"><span data-i18n="headcount_button">👥 Set headcount…</span></button>
 <button onclick="closeWeekActionsMenu(); openRenameWeekModal();"><span data-i18n="nav_full_name_week">🏷️ Name This Week</span></button>
 <button onclick="closeWeekActionsMenu(); openCopyWeekModal();"><span data-i18n="nav_full_copy_forward">📆 Copy Week To...</span></button>
 <button onclick="closeWeekActionsMenu(); openSaveTemplateModal();"><span data-i18n="nav_full_save_template">💾 Save as Template</span></button>
@@ -3378,6 +3425,38 @@ Close
 <br>
 
 <button data-i18n="close" onclick="closeWeekActionsMenu()">Close</button>
+
+</div>
+
+</div>
+
+<!-- SET HEADCOUNT FOR MANY MEALS -->
+
+<div class="modal" role="dialog" aria-modal="true" id="headcountModal">
+
+<div class="modal-box">
+
+<h2 data-i18n="headcount_title">👥 Set headcount</h2>
+
+<p class="small" data-i18n="headcount_intro">Set the number of people for many meals in this week at once. Meals that use leftovers are skipped.</p>
+
+<label for="headcountInput"><span data-i18n="headcount_people_label">Number of people</span></label>
+<input id="headcountInput" type="number" inputmode="numeric" min="1" max="9999" oninput="renderHeadcountPreview()">
+
+<fieldset class="hc-group">
+<legend data-i18n="headcount_meals_label">Meals</legend>
+<div id="headcountTypes" class="ap-types"></div>
+</fieldset>
+
+<fieldset class="hc-group">
+<legend data-i18n="headcount_days_label">Days</legend>
+<div id="headcountDays" class="ap-types"></div>
+</fieldset>
+
+<p class="small" id="headcountPreview" role="status" aria-live="polite"></p>
+
+<button data-primary onclick="applyHeadcount()" data-i18n="headcount_apply">Apply</button>
+<button onclick="closeHeadcountModal()" data-i18n="cancel">Cancel</button>
 
 </div>
 
@@ -3581,6 +3660,24 @@ const translations = {
         aria_edit: "Edit",
         aria_delete: "Delete",
         tag_pick_label: "Pick from existing tags",
+        nav_tab_planner: "Planner",
+        nav_tab_recipes: "Recipes",
+        nav_tab_shopping: "Shopping",
+        headcount_button: "👥 Set headcount…",
+        headcount_title: "👥 Set headcount",
+        headcount_intro: "Set the number of people for many meals in this week at once. Meals that use leftovers are skipped.",
+        headcount_people_label: "Number of people",
+        headcount_meals_label: "Meals",
+        headcount_days_label: "Days",
+        headcount_apply: "Apply",
+        headcount_preview: "{n} meals will change.",
+        headcount_invalid: "Enter a number of people, 1 or more.",
+        headcount_none: "No meals match your choices",
+        headcount_done: "Set {people} people on {n} meals",
+        gentle_spices_label: "Scale seasonings gently for big batches",
+        gentle_spices_description: "Salt, spices and baking powder grow more slowly than the rest: for 5 times the people they are about 2.2 times. Taste before adding more. Applies to the shopping list and scaled recipes. Use the ⚖️ button in the recipe editor to scale one ingredient in full.",
+        scale_full_label: "Scale in full (not gently)",
+        scaled_gently_note: "🧂 Salt, spices and leavening are scaled gently. Taste before adding more.",
         aria_at_home: "Have at home",
         aria_put_back: "Put back on list",
         aria_pantry_add: "Always have at home (add to staples)",
@@ -4085,6 +4182,24 @@ const translations = {
         aria_edit: "Redigera",
         aria_delete: "Ta bort",
         tag_pick_label: "Välj bland befintliga taggar",
+        nav_tab_planner: "Planerare",
+        nav_tab_recipes: "Recept",
+        nav_tab_shopping: "Inköp",
+        headcount_button: "👥 Ange antal personer…",
+        headcount_title: "👥 Ange antal personer",
+        headcount_intro: "Ange antal personer för flera måltider den här veckan på en gång. Måltider som använder rester hoppas över.",
+        headcount_people_label: "Antal personer",
+        headcount_meals_label: "Måltider",
+        headcount_days_label: "Dagar",
+        headcount_apply: "Använd",
+        headcount_preview: "{n} måltider ändras.",
+        headcount_invalid: "Ange antal personer, minst 1.",
+        headcount_none: "Inga måltider matchar dina val",
+        headcount_done: "{people} personer på {n} måltider",
+        gentle_spices_label: "Skala kryddor försiktigt vid stora portioner",
+        gentle_spices_description: "Salt, kryddor och bakpulver ökar långsammare än resten: för 5 gånger så många personer blir det ungefär 2,2 gånger. Smaka av innan du tillsätter mer. Gäller inköpslistan och skalade recept. Använd ⚖️-knappen i receptredigeraren för att skala en ingrediens fullt ut.",
+        scale_full_label: "Skala fullt (inte försiktigt)",
+        scaled_gently_note: "🧂 Salt, kryddor och jäsmedel skalas försiktigt. Smaka av innan du tillsätter mer.",
         aria_at_home: "Har hemma",
         aria_put_back: "Lägg tillbaka på listan",
         aria_pantry_add: "Har alltid hemma (lägg i basvaror)",
@@ -8872,6 +8987,127 @@ function confirmAutoPlan(){
 
 
 // =======================
+// SET HEADCOUNT for many meals at once
+// =======================
+
+let headcountTypes = [];
+let headcountDays = [];
+
+function openHeadcountModal(){
+
+    headcountTypes = mealCategories.slice();
+    headcountDays = days.slice();
+
+    // Pre-fill with the most common headcount already in the week
+    const counts = {};
+    days.forEach(d => (meals[d] || []).forEach(m => { const n = Number(m.people); if(n > 0) counts[n] = (counts[n] || 0) + 1; }));
+    const common = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+    document.getElementById("headcountInput").value = common || "";
+
+    renderHeadcountChoices();
+    renderHeadcountPreview();
+
+    document.getElementById("headcountModal").style.display = "flex";
+
+}
+
+function closeHeadcountModal(){
+
+    document.getElementById("headcountModal").style.display = "none";
+
+}
+
+function renderHeadcountChoices(){
+
+    document.getElementById("headcountTypes").innerHTML = mealCategories.map((cat, i) => `
+        <label class="ap-type"><input type="checkbox" ${headcountTypes.includes(cat) ? "checked" : ""}
+            onchange="toggleHeadcountChoice('types', ${i}, this.checked)"><span>${escapeHtml(cat)}</span></label>`).join("");
+
+    document.getElementById("headcountDays").innerHTML = days.map((d, i) => `
+        <label class="ap-type"><input type="checkbox" ${headcountDays.includes(d) ? "checked" : ""}
+            onchange="toggleHeadcountChoice('days', ${i}, this.checked)"><span>${escapeHtml(translateDayName(d))}</span></label>`).join("");
+
+}
+
+function toggleHeadcountChoice(kind, i, on){
+
+    const list = kind === "types" ? headcountTypes : headcountDays;
+    const val = kind === "types" ? mealCategories[i] : days[i];
+    const next = list.filter(x => x !== val);
+    if(on) next.push(val);
+
+    if(kind === "types") headcountTypes = next; else headcountDays = next;
+
+    renderHeadcountPreview();
+
+}
+
+function headcountTargets(){
+
+    const out = [];
+
+    days.forEach(d => {
+        if(!headcountDays.includes(d)) return;
+        (meals[d] || []).forEach(m => {
+            if(m.usingLeftoversFrom) return;
+            if(!headcountTypes.includes(m.type)) return;
+            out.push(m);
+        });
+    });
+
+    return out;
+
+}
+
+function renderHeadcountPreview(){
+
+    const el = document.getElementById("headcountPreview");
+    if(!el) return;
+
+    el.innerText = t("headcount_preview").replace("{n}", headcountTargets().length);
+
+}
+
+function applyHeadcount(){
+
+    const input = document.getElementById("headcountInput");
+    const n = Math.round(Number(input.value));
+
+    if(!(n >= 1)){
+        flagInvalid("headcountInput", "headcount_invalid");
+        return;
+    }
+
+    const targets = headcountTargets();
+
+    if(targets.length === 0){
+        showToast(t("headcount_none"), { type:"error" });
+        return;
+    }
+
+    const before = targets.map(m => [m, m.people]);
+
+    targets.forEach(m => { m.people = String(n); });
+
+    closeHeadcountModal();
+    saveData();
+    render();
+    renderShoppingList();
+
+    showToast(t("headcount_done").replace("{n}", targets.length).replace("{people}", n), {
+        actionLabel: t("undo"),
+        onAction: () => {
+            before.forEach(([m, p]) => { m.people = p; });
+            saveData();
+            render();
+            renderShoppingList();
+        }
+    });
+
+}
+
+
+// =======================
 // COPY DAY
 // =======================
 
@@ -9068,6 +9304,9 @@ if(atToggle) atToggle.checked = askTypeOn();
 let roundToggle = document.getElementById("roundShoppingToggle");
 if(roundToggle) roundToggle.checked = shoppingRoundingOn();
 
+let gentleToggle = document.getElementById("gentleSpicesToggle");
+if(gentleToggle) gentleToggle.checked = gentleSpicesOn();
+
 updateBackupStatus();
 
 }
@@ -9135,6 +9374,7 @@ const foodflowStorageKeys = [
     "foodflowShoppingCheckedByWeek",
     "foodflowShoppingRemoved",
     "foodflowPantry",
+    "foodflowGentleSpices",
     "foodflowShoppingOverridesByWeek",
     "foodflowShoppingExtrasByWeek",
     "foodflowShoppingRangeStart",
@@ -9856,6 +10096,9 @@ canScale
 ${t("ingredients_heading")}
 </strong>
 
+${ factor > 1 && gentleSpicesOn() && recipe.ingredients.some(i => i.scale !== "linear" && isSeasoningName(i.name))
+    ? `<div class="small" style="opacity:.75;margin:4px 0;">${t("scaled_gently_note")}</div>` : "" }
+
 <ul>
 
 ${
@@ -9864,7 +10107,7 @@ recipe.ingredients.map(item=>`
 <li>
 ${
 item.amount
-? formatAmount(Number(item.amount) * factor)
+? formatAmount(Number(item.amount) * ingredientFactor(item, factor))
 : ""
 }
 ${escapeHtml(item.unit || "")}
@@ -10406,7 +10649,8 @@ recipe.ingredients.forEach(ingredient=>{
         addIngredientRow(
             ingredient.name,
             ingredient.amount,
-            ingredient.unit
+            ingredient.unit,
+            ingredient.scale || ""
         );
 
     }
@@ -10539,7 +10783,29 @@ renderRecipes();
 // =======================
 
 
-function addIngredientRow(name="", amount="", unit=""){
+function refreshScaleBtn(row){
+
+    const btn = row.querySelector(".scale-btn");
+    if(!btn) return;
+
+    const show = gentleSpicesOn() && isSeasoningName(row.querySelector(".ingredientName").value);
+    btn.hidden = !show;
+
+    const full = row.dataset.scale === "linear";
+    btn.setAttribute("aria-pressed", full ? "true" : "false");
+    btn.classList.toggle("on", full);
+
+}
+
+function toggleScaleOverride(btn){
+
+    const row = btn.parentElement;
+    if(row.dataset.scale === "linear") delete row.dataset.scale; else row.dataset.scale = "linear";
+    refreshScaleBtn(row);
+
+}
+
+function addIngredientRow(name="", amount="", unit="", scale=""){
 
     const list =
     document.getElementById("ingredientList");
@@ -10576,6 +10842,17 @@ function addIngredientRow(name="", amount="", unit=""){
 
         <button
             type="button"
+            class="scale-btn"
+            hidden
+            aria-pressed="false"
+            title="${t("scale_full_label")}"
+            aria-label="${t("scale_full_label")}"
+            onclick="toggleScaleOverride(this)"
+            style="flex-shrink:0;margin:0;"
+        >⚖️</button>
+
+        <button
+            type="button"
             class="delete"
             title="${t("remove_ingredient")}"
             onclick="this.parentElement.remove(); renumberIngredientRows()"
@@ -10587,6 +10864,10 @@ function addIngredientRow(name="", amount="", unit=""){
 
     list.appendChild(row);
 
+    if(scale === "linear") row.dataset.scale = "linear";
+    row.querySelector(".ingredientName").addEventListener("input", () => refreshScaleBtn(row));
+    refreshScaleBtn(row);
+
     renumberIngredientRows();
 
 }
@@ -10595,6 +10876,9 @@ function addIngredientRow(name="", amount="", unit=""){
 function renumberIngredientRows(){
 
     document.querySelectorAll("#ingredientList > div").forEach((row, i) => {
+
+        const sb = row.querySelector("button.scale-btn");
+        if(sb){ const lbl = t("scale_full_label") + " " + (i + 1); sb.setAttribute("aria-label", lbl); sb.title = lbl; }
 
         let n = i + 1;
 
@@ -10632,11 +10916,14 @@ function getIngredientsFromRows(){
             return;
         }
 
-        ingredients.push({
+        const entry = {
             name: name,
             amount: amounts[index].value,
             unit: units[index].value
-        });
+        };
+        const rowEl = nameInput.parentElement;
+        if(rowEl && rowEl.dataset && rowEl.dataset.scale === "linear") entry.scale = "linear";
+        ingredients.push(entry);
 
     });
 
@@ -11156,6 +11443,37 @@ function toCombinableUnit(amount, unit){
 // SHOPPING LIST: round amounts up to buyable quantities
 // (shopping list only - planner and recipes keep exact amounts)
 // =======================
+// =======================
+// SCALING: seasonings grow more slowly than the rest of a recipe
+// (salt, spices, leavening). Off by default; synced in the household.
+// =======================
+function gentleSpicesOn(){
+    try{ return JSON.parse(localStorage.getItem("foodflowGentleSpices")) === true; }
+    catch(e){ return false; }
+}
+
+function toggleGentleSpices(on){
+    try{ localStorage.setItem("foodflowGentleSpices", JSON.stringify(!!on)); }catch(e){}
+    renderShoppingList();
+    if(typeof render === "function") render();
+}
+
+const seasoningRegex = /\bsalt\b|peppar|pepper|baking powder|baking soda|bicarbonate|bikarbonat|bakpulver|\byeast\b|\bjäst\b|\bchil[il]|cayenne|\bkrydd|spice|seasoning|spiskummin|cumin|curry|paprikapulver|paprika powder|kanel|cinnamon|kardemumma|cardamom|muskot|nutmeg|vanilj|vanilla|gurkmeja|turmeric|oregano|timjan|thyme|rosmarin|rosemary|lagerblad|bay leaf|bay leaves|koriander|coriander|saffran|saffron|ingefära|ginger|nejlikor|cloves/i;
+
+function isSeasoningName(name){
+    const n = normalizeIngredientName(String(name || "")).toLowerCase();
+    if(!n || /lemon|citron|lime|juice|saft|\bfresh\b|färsk/.test(n)) return false;
+    return getIngredientCategory(n) === "Herbs & Spices" || seasoningRegex.test(n);
+}
+
+// factor: people / recipe servings. Seasonings use sqrt() above 1.
+function ingredientFactor(ingredient, factor){
+    if(factor > 1 && gentleSpicesOn() && ingredient.scale !== "linear" && isSeasoningName(ingredient.name)){
+        return Math.sqrt(factor);
+    }
+    return factor;
+}
+
 function shoppingRoundingOn(){
     try{ return localStorage.getItem("foodflowRoundShopping") !== "0"; }
     catch(e){ return true; }
@@ -11504,7 +11822,7 @@ function generateShoppingList(){
 
                     let unit = normalizeUnit(ingredient.unit || "");
                     let amount = Number(ingredient.amount) || 0;
-                    let scaled = amount * factor;
+                    let scaled = amount * ingredientFactor(ingredient, factor);
 
                     let normalizedName = normalizeIngredientName(rawName);
 
@@ -14247,7 +14565,8 @@ const SYNC_KEYS = {
     foodflowCategories: "whole",
     foodflowCategoryOrder: "whole",
     foodflowWeekTemplates: "whole",
-    foodflowPantry: "whole"
+    foodflowPantry: "whole",
+    foodflowGentleSpices: "whole"
 };
 const WS_KEY = "foodflowWorkspaces";
 const WS_PREFIX = "foodflowWS_";
