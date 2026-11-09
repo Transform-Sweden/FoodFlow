@@ -3332,7 +3332,7 @@ Close
 
 <pre id="printSheetText" tabindex="0" style="white-space:pre-wrap;font:inherit;font-size:14px;max-height:38vh;overflow:auto;background:var(--surface-inner,var(--card));border:1px solid var(--soft-border);border-radius:var(--radius-sm);padding:10px 12px;margin:8px 0 12px;"></pre>
 
-<button type="button" onclick="printSheetPrint()" data-i18n="print_sheet_print">🖨️ Print</button>
+<button type="button" onclick="printSheetPrint()" data-i18n="print_sheet_print">🖨️ Print / PDF</button>
 <button type="button" onclick="printSheetShare()" data-i18n="print_sheet_share">📤 Share</button>
 <button type="button" onclick="printSheetCopy()" data-i18n="print_sheet_copy">📋 Copy</button>
 <button type="button" class="modal-close" onclick="closePrintSheet()" data-i18n="close">Close</button>
@@ -3984,8 +3984,8 @@ const translations = {
         action_share: "📤 Share",
         action_print: "🖨️ Print / Save as PDF",
         print_sheet_title: "Print or share",
-        print_sheet_hint: "iPhone can't print from an installed home-screen app. Use Share (then Print or Save to Files) or Copy, or open FoodFlow in Safari and press Print here.",
-        print_sheet_print: "🖨️ Print",
+        print_sheet_hint: "iPhone can't print straight from the app. Tap Print / PDF to make a PDF, then choose Print in the share menu. Share and Copy send the plain text.",
+        print_sheet_print: "🖨️ Print / PDF",
         print_sheet_share: "📤 Share",
         print_sheet_copy: "📋 Copy",
 
@@ -4506,8 +4506,8 @@ const translations = {
         action_share: "📤 Dela",
         action_print: "🖨️ Skriv ut / Spara som PDF",
         print_sheet_title: "Skriv ut eller dela",
-        print_sheet_hint: "iPhone kan inte skriva ut från en installerad hemskärmsapp. Använd Dela (sedan Skriv ut eller Spara i Filer) eller Kopiera, eller öppna FoodFlow i Safari och tryck på Skriv ut här.",
-        print_sheet_print: "🖨️ Skriv ut",
+        print_sheet_hint: "iPhone kan inte skriva ut direkt från appen. Tryck på Skriv ut / PDF för att skapa en PDF och välj sedan Skriv ut i delningsmenyn. Dela och Kopiera skickar ren text.",
+        print_sheet_print: "🖨️ Skriv ut / PDF",
         print_sheet_share: "📤 Dela",
         print_sheet_copy: "📋 Kopiera",
 
@@ -13482,8 +13482,115 @@ function closePrintSheet(){
     document.getElementById("printSheetModal").style.display = "none";
 }
 
-function printSheetPrint(){
-    try{ window.print(); }catch(e){}
+// Minimal text-to-PDF writer (A4, built-in Helvetica, no libraries). iPhone's share sheet has a
+// Print option for PDF files, which is the reliable way to print from an installed home-screen app.
+function pdfEncodeText(str){
+    const cp = { "–":0x96, "—":0x97, "‘":0x91, "’":0x92, "“":0x93, "”":0x94, "•":0x95, "…":0x85, "€":0x80 };
+    let out = "";
+    for(const ch of String(str)){
+        const c = ch.codePointAt(0);
+        if(c >= 0x20 && c <= 0x7e) out += ch;
+        else if(c >= 0xa0 && c <= 0xff) out += ch;
+        else if(cp[ch]) out += String.fromCharCode(cp[ch]);
+        else if(c === 0x09) out += "    ";
+        // anything else (emoji, symbols) is left out: the built-in font cannot draw it
+    }
+    return out;
+}
+
+function pdfEscape(s){
+    return s.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+}
+
+function textToPdfBlob(title, text){
+
+    const W = 595, H = 842, M = 50, size = 11, lead = 15, maxChars = 84;
+    const lines = [];
+
+    String(text).split("\n").forEach(raw => {
+        let line = pdfEncodeText(raw).replace(/\s+$/, "");
+        if(/^\s/.test(line) && !/^\s/.test(raw)) line = line.trimStart();   // an emoji bullet was dropped
+        if(line.trim() === ""){ lines.push(""); return; }
+        const indent = line.match(/^\s*/)[0];
+        let guard = 0;
+        while(line.length > maxChars && guard++ < 200){
+            let cut = line.lastIndexOf(" ", maxChars);
+            if(cut <= indent.length) cut = maxChars;
+            lines.push(line.slice(0, cut).replace(/\s+$/, ""));
+            line = indent + "  " + line.slice(cut).trim();
+        }
+        lines.push(line);
+    });
+
+    // the text usually starts with the title already: draw it once, as the heading
+    if(lines.length && lines[0].trim() === pdfEncodeText(title).trim()){
+        lines.shift();
+        while(lines.length && lines[0] === "") lines.shift();
+    }
+
+    const perPage = Math.floor((H - 2 * M) / lead);
+    const pages = [];
+    let i = 0;
+    pages.push(lines.slice(i, i += perPage - 2));
+    while(i < lines.length) pages.push(lines.slice(i, i += perPage));
+
+    const objs = [];
+    const kids = pages.map((_, n) => (5 + 2 * n) + " 0 R").join(" ");
+    objs[1] = "<< /Type /Catalog /Pages 2 0 R >>";
+    objs[2] = "<< /Type /Pages /Kids [" + kids + "] /Count " + pages.length + " >>";
+    objs[3] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
+    objs[4] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>";
+
+    pages.forEach((pl, n) => {
+        let c = "BT\n";
+        if(n === 0){
+            c += "/F2 16 Tf 20 TL " + M + " " + (H - M) + " Td (" + pdfEscape(pdfEncodeText(title)) + ") Tj\n0 -12 Td\n";
+            c += "/F1 " + size + " Tf " + lead + " TL\nT*\n";
+        }else{
+            c += "/F1 " + size + " Tf " + lead + " TL " + M + " " + (H - M) + " Td\n";
+        }
+        pl.forEach(l => { c += l === "" ? "T*\n" : "(" + pdfEscape(l) + ") Tj T*\n"; });
+        c += "ET";
+        objs[5 + 2 * n] = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + W + " " + H + "] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents " + (6 + 2 * n) + " 0 R >>";
+        objs[6 + 2 * n] = "<< /Length " + c.length + " >>\nstream\n" + c + "\nendstream";
+    });
+
+    let pdf = "%PDF-1.4\n";
+    const offsets = [];
+    for(let k = 1; k < objs.length; k++){
+        offsets[k] = pdf.length;
+        pdf += k + " 0 obj\n" + objs[k] + "\nendobj\n";
+    }
+    const xref = pdf.length;
+    pdf += "xref\n0 " + objs.length + "\n0000000000 65535 f \n";
+    for(let k = 1; k < objs.length; k++) pdf += String(offsets[k]).padStart(10, "0") + " 00000 n \n";
+    pdf += "trailer\n<< /Size " + objs.length + " /Root 1 0 R >>\nstartxref\n" + xref + "\n%%EOF";
+
+    const bytes = new Uint8Array(pdf.length);
+    for(let k = 0; k < pdf.length; k++) bytes[k] = pdf.charCodeAt(k) & 255;
+    return new Blob([bytes], { type:"application/pdf" });
+
+}
+
+async function printSheetPrint(){
+
+    const blob = textToPdfBlob(printSheetContent.title, printSheetContent.text);
+    const name = (printSheetContent.title || "FoodFlow").replace(/[^\p{L}\p{N} _-]+/gu, "").trim() + ".pdf";
+    const file = new File([blob], name, { type:"application/pdf" });
+
+    try{
+        if(navigator.canShare && navigator.canShare({ files:[file] })){
+            await navigator.share({ files:[file], title: printSheetContent.title });
+            return;
+        }
+    }catch(err){
+        if(err && err.name === "AbortError") return;
+    }
+
+    // No file sharing: open the PDF so the viewer's own share / print button can be used
+    const url = URL.createObjectURL(blob);
+    if(!window.open(url, "_blank")) location.href = url;
+
 }
 
 async function printSheetShare(){
