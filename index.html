@@ -1491,6 +1491,20 @@ animation:checkPop .3s ease;
 
 }
 
+.ap-types{ display:flex; flex-wrap:wrap; gap:6px 14px; margin:8px 0 12px; }
+.ap-type{ display:inline-flex; align-items:center; gap:6px; font-weight:normal; margin:0; min-height:36px; }
+.ap-type input{ width:auto; margin:0; }
+.tag-picker{ flex-wrap:wrap; gap:6px; margin:-2px 0 12px; }
+.tag-pick{ margin:0; width:auto; padding:5px 12px; min-height:32px; font-size:.85em; border-radius:999px; background:transparent; color:var(--text); border:1px solid var(--primary); box-shadow:none; }
+.tag-pick.on{ background:var(--primary); color:#fff; }
+.tag-pick.on::before{ content:"✓ "; }
+@media (pointer:coarse){ .tag-pick{ min-height:40px; } }
+.home-section{ margin-top:22px; }
+.home-section > summary{ cursor:pointer; font-weight:700; padding:10px 4px; min-height:44px; display:flex; align-items:center; gap:8px; list-style:none; }
+.home-section > summary::-webkit-details-marker{ display:none; }
+.home-section > summary::before{ content:"▸"; display:inline-block; transition:transform .15s; }
+.home-section[open] > summary::before{ transform:rotate(90deg); }
+.home-section .meal{ opacity:.88; }
 #shoppingList .meal span{
 
 transition:opacity .25s ease;
@@ -2371,6 +2385,31 @@ Reorder the categories to match how your store is laid out.
 </details>
 
 <details class="settings-section">
+<summary><h3 data-i18n="settings_pantry">
+🏠 Home staples
+</h3></summary>
+<div class="section-body">
+<p class="small" data-i18n="pantry_description">
+Things you always have at home, like salt, oil or flour. They move to the "At home" section of the shopping list automatically whenever a recipe needs them.
+</p>
+
+<div id="pantryList"></div>
+
+<input
+    id="pantryInput"
+    placeholder="e.g. salt"
+    data-i18n-placeholder="pantry_placeholder"
+    data-i18n-aria-label="aria_pantry_input" aria-label="Staple item"
+    onkeydown="if(event.key==='Enter'){ event.preventDefault(); addPantryFromSettings(); }"
+>
+
+<button onclick="addPantryFromSettings()">
+<span data-i18n="pantry_add">➕ Add to staples</span>
+</button>
+</div>
+</details>
+
+<details class="settings-section">
 <summary><h3 data-i18n="settings_backup">
 💾 Backup
 </h3></summary>
@@ -3023,7 +3062,10 @@ placeholder="Example: Spaghetti Bolognese" data-i18n-placeholder="ph_recipe_name
 <input
 id="recipeTags"
 placeholder="e.g. quick, vegetarian, dessert" data-i18n-placeholder="ph_recipe_tags"
+oninput="renderTagPicker()"
 >
+
+<div id="recipeTagPicker" class="tag-picker" role="group" data-i18n-aria-label="tag_pick_label" aria-label="Pick from existing tags" style="display:none;"></div>
 
 
 
@@ -3302,6 +3344,8 @@ Close
 
 <p class="small" id="autoPlanIntro"></p>
 
+<div id="autoPlanTypes" class="ap-types" role="group" data-i18n-aria-label="autoplan_types_label" aria-label="Meals to fill"></div>
+
 <div id="autoPlanList"></div>
 
 <br>
@@ -3536,6 +3580,26 @@ const translations = {
         aria_move_category_down: "Move category down",
         aria_edit: "Edit",
         aria_delete: "Delete",
+        tag_pick_label: "Pick from existing tags",
+        aria_at_home: "Have at home",
+        aria_put_back: "Put back on list",
+        aria_pantry_add: "Always have at home (add to staples)",
+        aria_pantry_remove: "Remove from staples",
+        aria_pantry_input: "Staple item",
+        home_section: "At home",
+        home_pantry_tag: "staple",
+        all_at_home: "Everything on this list is already at home 🎉",
+        toast_marked_home: "Marked as at home",
+        toast_put_back: "Put back on the list",
+        toast_pantry_added: "Added to staples",
+        toast_pantry_removed: "Removed from staples",
+        enter_pantry_item: "Type an item first.",
+        sel_home: "🏠 At home",
+        settings_pantry: "🏠 Home staples",
+        pantry_description: "Things you always have at home, like salt, oil or flour. They move to the \"At home\" section of the shopping list automatically whenever a recipe needs them.",
+        pantry_placeholder: "e.g. salt",
+        pantry_add: "➕ Add to staples",
+        pantry_empty: "No staples yet.",
         aria_check_item: "Mark as bought",
         aria_switch_planner: "Switch planner",
         aria_range_start: "Shopping list from date",
@@ -3772,12 +3836,13 @@ const translations = {
         sync_invite_message: "You were invited to household {code}. It will be added as a new planner on this device and your current planner stays untouched.",
         autoplan_button: "✨ Fill empty days",
         autoplan_title: "✨ Fill empty days",
-        autoplan_intro: "A dinner suggestion for each empty day, picked from your favorite recipes. Untick any you don't want.",
+        autoplan_intro: "A suggestion for each empty meal slot, picked from your favorite recipes and matched to tags like Lunch or Dinner. Choose which meals to fill, and untick any you don't want.",
+        autoplan_types_label: "Meals to fill",
         autoplan_intro_all: "You have no favorite recipes yet, so these are picked from all your recipes. Untick any you don't want.",
         autoplan_shuffle: "🔀 Shuffle",
         autoplan_apply: "Add to planner",
         autoplan_no_recipes: "Add some recipes first",
-        autoplan_nothing_empty: "There are no empty days this week",
+        autoplan_nothing_empty: "Nothing to fill for the selected meals",
         autoplan_done: "Added {n} meals",
         shop_cat_produce: "Produce",
         shop_cat_dairy: "Dairy & Eggs",
@@ -4019,6 +4084,26 @@ const translations = {
         aria_move_category_down: "Flytta kategori nedåt",
         aria_edit: "Redigera",
         aria_delete: "Ta bort",
+        tag_pick_label: "Välj bland befintliga taggar",
+        aria_at_home: "Har hemma",
+        aria_put_back: "Lägg tillbaka på listan",
+        aria_pantry_add: "Har alltid hemma (lägg i basvaror)",
+        aria_pantry_remove: "Ta bort från basvaror",
+        aria_pantry_input: "Basvara",
+        home_section: "Hemma",
+        home_pantry_tag: "basvara",
+        all_at_home: "Allt på listan finns redan hemma 🎉",
+        toast_marked_home: "Markerad som hemma",
+        toast_put_back: "Tillbaka på listan",
+        toast_pantry_added: "Tillagd i basvaror",
+        toast_pantry_removed: "Borttagen från basvaror",
+        enter_pantry_item: "Skriv en vara först.",
+        sel_home: "🏠 Hemma",
+        settings_pantry: "🏠 Basvaror hemma",
+        pantry_description: "Saker du alltid har hemma, som salt, olja eller mjöl. De flyttas automatiskt till avsnittet \"Hemma\" i inköpslistan när ett recept behöver dem.",
+        pantry_placeholder: "t.ex. salt",
+        pantry_add: "➕ Lägg i basvaror",
+        pantry_empty: "Inga basvaror ännu.",
         aria_check_item: "Markera som köpt",
         aria_switch_planner: "Byt planerare",
         aria_range_start: "Inköpslista från datum",
@@ -4255,12 +4340,13 @@ const translations = {
         sync_invite_message: "Du har blivit inbjuden till hushållet {code}. Det läggs till som en ny planering på den här enheten och din nuvarande planering påverkas inte.",
         autoplan_button: "✨ Fyll tomma dagar",
         autoplan_title: "✨ Fyll tomma dagar",
-        autoplan_intro: "Ett middagsförslag för varje tom dag, valt bland dina favoritrecept. Avmarkera de du inte vill ha.",
+        autoplan_intro: "Ett förslag för varje tom måltid, valt bland dina favoritrecept och matchat mot taggar som Lunch eller Middag. Välj vilka måltider som ska fyllas och avmarkera de du inte vill ha.",
+        autoplan_types_label: "Måltider att fylla",
         autoplan_intro_all: "Du har inga favoritrecept ännu, så förslagen väljs bland alla dina recept. Avmarkera de du inte vill ha.",
         autoplan_shuffle: "🔀 Blanda",
         autoplan_apply: "Lägg till i planeraren",
         autoplan_no_recipes: "Lägg till några recept först",
-        autoplan_nothing_empty: "Det finns inga tomma dagar den här veckan",
+        autoplan_nothing_empty: "Inget att fylla för de valda måltiderna",
         autoplan_done: "{n} måltider tillagda",
         shop_cat_produce: "Frukt & grönt",
         shop_cat_dairy: "Mejeri & ägg",
@@ -5467,6 +5553,34 @@ let shoppingRemoved = JSON.parse(
     localStorage.getItem("foodflowShoppingRemoved")
 ) || {};
 
+// Pantry: ingredients the household always has (salt, oil, flour...).
+// They are moved to the collapsed "At home" part of the shopping list
+// automatically. Stored as normalized ingredient names, shared in sync.
+let pantry = (function(){
+    try{
+        const v = JSON.parse(localStorage.getItem("foodflowPantry"));
+        return Array.isArray(v) ? v.filter(x => typeof x === "string") : [];
+    }catch(e){ return []; }
+})();
+let homeSectionOpen = false;
+function savePantry(){
+    try{ localStorage.setItem("foodflowPantry", JSON.stringify(pantry)); }catch(e){}
+}
+// Per-trip "have at home" marks live in shoppingChecked under "home:<key>"
+// (and "need:<key>" = "I need this even though it's in the pantry"), so they
+// are saved and synced per week together with the check marks.
+function pantryNameOf(item){
+    return String(item.key).startsWith("extra:")
+        ? normalizeIngredientName(item.name || "")
+        : String(item.key).split("|")[0];
+}
+function shoppingHomeState(item){
+    if(shoppingChecked["need:" + item.key]) return null;
+    if(shoppingChecked["home:" + item.key]) return "home";
+    if(pantry.includes(pantryNameOf(item))) return "pantry";
+    return null;
+}
+
 
 // Load old FoodFlow v0.1 data
 function migrateOldData(){
@@ -6458,6 +6572,53 @@ function recipeIndexFor(ref){
     if(ref === null || ref === undefined || ref === "") return -1;
     if(typeof ref === "number") return recipes[ref] ? ref : -1;
     return recipes.findIndex(r => r.id === ref);
+}
+
+// Tags already used on any recipe, offered as tap-to-add chips under the tag field.
+function currentTagInputList(){
+    return document.getElementById("recipeTags").value.split(",").map(x => x.trim()).filter(Boolean);
+}
+
+function renderTagPicker(){
+
+    const box = document.getElementById("recipeTagPicker");
+    if(!box) return;
+
+    const seen = new Map();
+    recipes.forEach(r => (r.tags || []).forEach(tg => {
+        const k = String(tg).trim().toLowerCase();
+        if(k && !seen.has(k)) seen.set(k, String(tg).trim());
+    }));
+
+    const all = [...seen.values()].sort((a,b) => a.localeCompare(b));
+
+    if(all.length === 0){ box.style.display = "none"; box.innerHTML = ""; return; }
+
+    const chosen = new Set(currentTagInputList().map(x => x.toLowerCase()));
+
+    box.style.display = "flex";
+    box.innerHTML = all.map(tg => {
+        const on = chosen.has(tg.toLowerCase());
+        return `<button type="button" class="tag-pick${on ? " on" : ""}" aria-pressed="${on}"
+            onclick="toggleTagFromPicker(decodeURIComponent('${encodeURIComponent(tg).replace(/'/g,"%27")}'))">${escapeHtml(tg)}</button>`;
+    }).join("");
+
+}
+
+function toggleTagFromPicker(tag){
+
+    const input = document.getElementById("recipeTags");
+    const list = currentTagInputList();
+    const i = list.findIndex(x => x.toLowerCase() === tag.toLowerCase());
+
+    if(i >= 0) list.splice(i, 1); else list.push(tag);
+
+    input.value = list.join(", ");
+    renderTagPicker();
+
+    const again = document.querySelector('#recipeTagPicker .tag-pick[onclick*="' + encodeURIComponent(tag).replace(/'/g,"%27") + '"]');
+    if(again) again.focus();
+
 }
 
 function migrateRecipeIds(){
@@ -8491,13 +8652,59 @@ function confirmMoveDay(){
 
 let autoPlanPool = [];
 let autoPlanUsingAll = false;
-let autoPlanProposal = [];   // [{ day, recipeId, include }]
+let autoPlanProposal = [];   // [{ day, type, recipeId, include }]
+let autoPlanTypes = [];      // meal types the person wants filled
 
 function autoPlanMealType(){
 
     let found = mealCategories.find(c => /dinner|middag/i.test(c));
 
     return found || mealCategories[mealCategories.length - 1] || "🍝 Dinner";
+
+}
+
+// "🍝 Dinner" -> "dinner"
+function mealTypeWord(cat){
+    return String(cat).replace(/^[^\p{L}\p{N}]+/u, "").trim().toLowerCase();
+}
+
+// A recipe tag like "Lunch" or "middag" belongs to a meal type.
+function tagMatchesMealType(tag, cat){
+
+    const tg = String(tag).trim().toLowerCase();
+    const w = mealTypeWord(cat);
+    const synonyms = {
+        breakfast: ["breakfast", "frukost"],
+        lunch: ["lunch"],
+        dinner: ["dinner", "middag", "supper"],
+        fika: ["fika"]
+    };
+
+    return tg === w || (synonyms[w] || []).includes(tg);
+
+}
+
+function recipeFitsMealType(r, cat){
+    return (r.tags || []).some(tg => tagMatchesMealType(tg, cat));
+}
+
+function recipeHasAnyMealTag(r){
+    return mealCategories.some(cat => recipeFitsMealType(r, cat));
+}
+
+// Every (day, meal type) pair that has no meal of that type yet.
+function autoPlanEmptySlots(types){
+
+    const slots = [];
+
+    days.forEach(d => {
+        mealCategories.forEach(cat => {
+            if(!types.includes(cat)) return;
+            if(!(meals[d] || []).some(m => m.type === cat)) slots.push({ day:d, type:cat });
+        });
+    });
+
+    return slots;
 
 }
 
@@ -8508,9 +8715,9 @@ function openAutoPlan(){
         return;
     }
 
-    let emptyDays = days.filter(d => !meals[d] || meals[d].length === 0);
+    autoPlanTypes = [autoPlanMealType()];
 
-    if(emptyDays.length === 0){
+    if(autoPlanEmptySlots(autoPlanTypes).length === 0){
         showToast(t("autoplan_nothing_empty"));
         return;
     }
@@ -8522,6 +8729,7 @@ function openAutoPlan(){
         autoPlanPool = recipes.slice();
     }
 
+    renderAutoPlanTypes();
     shuffleAutoPlan();
 
     document.getElementById("autoPlanModal").style.display = "flex";
@@ -8534,9 +8742,33 @@ function closeAutoPlan(){
 
 }
 
+function renderAutoPlanTypes(){
+
+    const box = document.getElementById("autoPlanTypes");
+    if(!box) return;
+
+    box.innerHTML = mealCategories.map((cat, i) => `
+        <label class="ap-type">
+            <input type="checkbox" ${autoPlanTypes.includes(cat) ? "checked" : ""}
+                   onchange="toggleAutoPlanType(${i}, this.checked)">
+            <span>${escapeHtml(cat)}</span>
+        </label>`).join("");
+
+}
+
+function toggleAutoPlanType(i, on){
+
+    const cat = mealCategories[i];
+    autoPlanTypes = autoPlanTypes.filter(c => c !== cat);
+    if(on) autoPlanTypes.push(cat);
+
+    shuffleAutoPlan();
+
+}
+
 function shuffleAutoPlan(){
 
-    let emptyDays = days.filter(d => !meals[d] || meals[d].length === 0);
+    const slots = autoPlanEmptySlots(autoPlanTypes);
 
     // Prefer recipes that are not already planned somewhere this week
     let usedIds = new Set();
@@ -8551,15 +8783,23 @@ function shuffleAutoPlan(){
         return a;
     };
 
-    let fresh = shuffled(autoPlanPool.filter(r => !usedIds.has(r.id)));
-    let seen = shuffled(autoPlanPool.filter(r => usedIds.has(r.id)));
-    let order = fresh.concat(seen);
+    const taken = new Set();   // recipes already suggested in this proposal
 
-    autoPlanProposal = emptyDays.map((day, i) => ({
-        day,
-        recipeId: order[i % order.length].id,
-        include: true
-    }));
+    autoPlanProposal = slots.map(slot => {
+
+        // 1) tagged for this meal type, 2) not tagged for any meal type, 3) anything
+        let tagged = autoPlanPool.filter(r => recipeFitsMealType(r, slot.type));
+        let neutral = autoPlanPool.filter(r => !recipeHasAnyMealTag(r));
+        let pool = tagged.length ? tagged.concat(neutral) : (neutral.length ? neutral : autoPlanPool);
+
+        const rank = r => (taken.has(r.id) ? 2 : 0) + (usedIds.has(r.id) ? 1 : 0);
+        const best = shuffled(pool).sort((a, b) => rank(a) - rank(b) || (recipeFitsMealType(b, slot.type) - recipeFitsMealType(a, slot.type)))[0];
+
+        taken.add(best.id);
+
+        return { day: slot.day, type: slot.type, recipeId: best.id, include: true };
+
+    });
 
     renderAutoPlan();
 
@@ -8570,6 +8810,11 @@ function renderAutoPlan(){
     document.getElementById("autoPlanIntro").innerText =
         t(autoPlanUsingAll ? "autoplan_intro_all" : "autoplan_intro");
 
+    if(autoPlanProposal.length === 0){
+        document.getElementById("autoPlanList").innerHTML = `<p class="small">${t("autoplan_nothing_empty")}</p>`;
+        return;
+    }
+
     document.getElementById("autoPlanList").innerHTML = autoPlanProposal.map((row, i) => {
 
         let r = recipes[recipeIndexFor(row.recipeId)];
@@ -8579,7 +8824,7 @@ function renderAutoPlan(){
         <label style="display:flex;align-items:center;gap:10px;font-weight:normal;padding:6px 0;">
             <input type="checkbox" style="width:auto;margin:0;" ${row.include ? "checked" : ""}
                    onchange="autoPlanProposal[${i}].include = this.checked">
-            <span style="flex:1;"><strong>${translateDayName(row.day)}</strong> — ${name.replace(/</g,"&lt;")}</span>
+            <span style="flex:1;"><strong>${translateDayName(row.day)}</strong> · ${escapeHtml(row.type)} — ${escapeHtml(name)}</span>
         </label>`;
 
     }).join("");
@@ -8588,7 +8833,6 @@ function renderAutoPlan(){
 
 function confirmAutoPlan(){
 
-    let type = autoPlanMealType();
     let added = 0;
 
     autoPlanProposal.forEach(row=>{
@@ -8602,7 +8846,7 @@ function confirmAutoPlan(){
 
         meals[row.day].push({
             id: "m" + Date.now().toString(36) + Math.random().toString(36).slice(2,8),
-            type,
+            type: row.type,
             name: r.name,
             people: String(r.servings || 4),
             recipe: r.id,
@@ -8816,6 +9060,8 @@ renderCategoryOrderSettings();
 
 renderCustomIngredientTranslations();
 
+renderPantrySettings();
+
 let atToggle = document.getElementById("askTypeToggle");
 if(atToggle) atToggle.checked = askTypeOn();
 
@@ -8888,6 +9134,7 @@ const foodflowStorageKeys = [
     "foodflowCategories",
     "foodflowShoppingCheckedByWeek",
     "foodflowShoppingRemoved",
+    "foodflowPantry",
     "foodflowShoppingOverridesByWeek",
     "foodflowShoppingExtrasByWeek",
     "foodflowShoppingRangeStart",
@@ -9287,6 +9534,7 @@ document.getElementById("recipePeople")
 
 document.getElementById("recipeTags")
 .value="";
+renderTagPicker();
 
 
 document.getElementById("recipeInstructions")
@@ -10137,6 +10385,7 @@ document.getElementById("recipePeople")
 
 document.getElementById("recipeTags")
 .value = (recipe.tags || []).join(", ");
+renderTagPicker();
 
 
 document.getElementById("recipeInstructions")
@@ -11411,6 +11660,8 @@ function generateShoppingList(){
         )
         .sort((a,b) => a.name.localeCompare(b.name));
 
+    list.forEach(it => { it.atHome = shoppingHomeState(it); });
+
     return { list, manualMeals };
 
 }
@@ -11490,6 +11741,15 @@ function renderShoppingItemRow(item){
             <button
                 class="edit"
                 style="margin:0;padding:6px 10px;font-size:13px;"
+                aria-label="${t("aria_at_home")}: ${escapeHtml(item.name)}"
+                title="${t("aria_at_home")}"
+                onclick="setItemHome('${safeKey}', true)"
+            >
+                🏠
+            </button>
+            <button
+                class="edit"
+                style="margin:0;padding:6px 10px;font-size:13px;"
                 aria-label="${t("aria_edit")}: ${escapeHtml(item.name)}"
                 onclick="editShoppingItem('${safeKey}')"
             >
@@ -11505,6 +11765,149 @@ function renderShoppingItemRow(item){
             </button>
         </div>
     `;
+
+}
+
+
+function renderAtHomeRow(item){
+
+    let safeKey = String(item.key).replace(/\\/g,"\\\\").replace(/'/g,"\\x27").replace(/"/g,"\\x22").replace(/</g,"\\x3c").replace(/>/g,"\\x3e").replace(/&/g,"\\x26").replace(/\n/g,"\\n");
+    let accent = categoryAccents[item.category] || categoryAccents["Other"];
+    let amountText = item.amount > 0
+        ? `${formatAmount(item.amount)}${item.unit ? " " + item.unit : ""} `
+        : "";
+    let inPantry = pantry.includes(pantryNameOf(item));
+
+    return `
+        <div class="meal" style="--accent:${accent};display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span style="flex:1;">
+                ${escapeHtml(amountText)}${escapeHtml(item.name)}
+                ${inPantry ? `<span class="small" style="opacity:.6;">(${t("home_pantry_tag")})</span>` : ""}
+            </span>
+            <button class="edit" style="margin:0;padding:6px 10px;font-size:13px;"
+                aria-label="${t("aria_put_back")}: ${escapeHtml(item.name)}"
+                title="${t("aria_put_back")}"
+                onclick="setItemHome('${safeKey}', false)">↩️</button>
+            <button class="edit" style="margin:0;padding:6px 10px;font-size:13px;"
+                aria-pressed="${inPantry}"
+                aria-label="${inPantry ? t("aria_pantry_remove") : t("aria_pantry_add")}: ${escapeHtml(item.name)}"
+                title="${inPantry ? t("aria_pantry_remove") : t("aria_pantry_add")}"
+                onclick="togglePantryItem('${safeKey}')">${inPantry ? "📌" : "📍"}</button>
+        </div>
+    `;
+
+}
+
+
+function setItemHome(key, on){
+
+    const item = generateShoppingList().list.find(i => i.key === key);
+    if(!item) return;
+
+    const keys = ["home:" + key, "need:" + key, key];
+    const before = keys.map(k => shoppingChecked[k]);
+
+    if(on){
+        delete shoppingChecked["need:" + key];
+        shoppingChecked["home:" + key] = true;
+        delete shoppingChecked[key];
+    }else{
+        delete shoppingChecked["home:" + key];
+        if(pantry.includes(pantryNameOf(item))) shoppingChecked["need:" + key] = true;
+    }
+
+    saveShoppingState();
+    renderShoppingList();
+
+    showToast(on ? `${t("toast_marked_home")}: "${item.name}"` : `${t("toast_put_back")}: "${item.name}"`, {
+        actionLabel: t("undo"),
+        onAction: () => {
+            keys.forEach((k, i) => { if(before[i] === undefined) delete shoppingChecked[k]; else shoppingChecked[k] = before[i]; });
+            saveShoppingState();
+            renderShoppingList();
+        }
+    });
+
+}
+
+
+function togglePantryItem(key){
+
+    const item = generateShoppingList().list.find(i => i.key === key);
+    if(!item) return;
+
+    const name = pantryNameOf(item);
+
+    if(pantry.includes(name)){
+        pantry = pantry.filter(n => n !== name);
+        showToast(`${t("toast_pantry_removed")}: "${item.name}"`);
+    }else{
+        pantry.push(name);
+        delete shoppingChecked["need:" + key];
+        showToast(`${t("toast_pantry_added")}: "${item.name}"`);
+    }
+
+    savePantry();
+    saveShoppingState();
+    renderShoppingList();
+    renderPantrySettings();
+
+}
+
+
+function addPantryFromSettings(){
+
+    const inp = document.getElementById("pantryInput");
+    const raw = inp.value.trim();
+
+    if(!raw){
+        flagInvalid("pantryInput", "enter_pantry_item");
+        return;
+    }
+
+    const n = normalizeIngredientName(raw);
+
+    if(!pantry.includes(n)) pantry.push(n);
+
+    savePantry();
+    inp.value = "";
+    renderPantrySettings();
+    renderShoppingList();
+    showToast(t("toast_pantry_added"));
+
+}
+
+
+function removePantryName(name){
+
+    pantry = pantry.filter(n => n !== name);
+    savePantry();
+    renderPantrySettings();
+    renderShoppingList();
+
+}
+
+
+function renderPantrySettings(){
+
+    const box = document.getElementById("pantryList");
+    if(!box) return;
+
+    if(pantry.length === 0){
+        box.innerHTML = `<p class="empty-state">${t("pantry_empty")}</p>`;
+        return;
+    }
+
+    box.innerHTML = [...pantry].sort((a,b) => a.localeCompare(b)).map(n => `
+        <div class="list-row">
+            <span>${escapeHtml(n.charAt(0).toUpperCase() + n.slice(1))}</span>
+            <button
+                onclick="removePantryName(decodeURIComponent('${encodeURIComponent(n).replace(/'/g,"%27")}'))"
+                aria-label="${t("aria_pantry_remove")}: ${escapeHtml(n)}"
+                class="btn-sm delete"
+            >🗑</button>
+        </div>
+    `).join("");
 
 }
 
@@ -11722,6 +12125,12 @@ function renderShoppingList(){
         ? fullList.filter(item => item.name.toLowerCase().includes(search))
         : fullList;
 
+    // Items marked "at home" (or matched by the pantry) leave the active
+    // list and wait in a collapsed section at the bottom.
+    const homeItems = list.filter(i => i.atHome);
+    list = list.filter(i => !i.atHome);
+    const activeFull = fullList.filter(i => !i.atHome);
+
     // Progress bar reflects the FULL list (not just search results),
     // so it stays a true picture of the whole shopping trip.
     let progressText = document.getElementById("shoppingProgressText");
@@ -11729,8 +12138,8 @@ function renderShoppingList(){
 
     if(progressText && progressBar){
 
-        let total = fullList.length;
-        let checkedCount = fullList.filter(item => shoppingChecked[item.key]).length;
+        let total = activeFull.length;
+        let checkedCount = activeFull.filter(item => shoppingChecked[item.key]).length;
         let percent = total > 0 ? Math.round((checkedCount / total) * 100) : 0;
 
         progressText.innerText = total > 0
@@ -11752,11 +12161,11 @@ function renderShoppingList(){
             </div>
         `;
 
-    }else if(list.length === 0){
+    }else if(list.length === 0 && homeItems.length === 0){
 
         container.innerHTML = `
             <p class="small">
-            ${t("shopping_no_match")} "${search}".
+            ${t("shopping_no_match")} "${escapeHtml(search)}".
             </p>
         `;
 
@@ -11764,7 +12173,9 @@ function renderShoppingList(){
 
         let groups = groupItemsByCategory(list);
 
-        container.innerHTML = categoryOrder
+        let activeHtml = list.length === 0
+            ? (search ? "" : `<p class="small" style="margin:16px 0;">${t("all_at_home")}</p>`)
+            : categoryOrder
             .filter(cat => groups[cat] && groups[cat].length > 0)
             .map(cat => `
                 <h3 style="margin:20px 0 8px;">
@@ -11773,6 +12184,15 @@ function renderShoppingList(){
                 ${groups[cat].map(renderShoppingItemRow).join("")}
             `)
             .join("");
+
+        let homeHtml = homeItems.length === 0 ? "" : `
+            <details class="home-section" ${homeSectionOpen || search ? "open" : ""} ontoggle="if(!${search ? "true" : "false"}) homeSectionOpen = this.open;">
+                <summary>🏠 ${t("home_section")} (${homeItems.length})</summary>
+                ${homeItems.map(renderAtHomeRow).join("")}
+            </details>
+        `;
+
+        container.innerHTML = activeHtml + homeHtml;
 
         // Mobile: swipe left on an item to delete it
         container.querySelectorAll("[data-swipe-key]").forEach(row=>{
@@ -11819,7 +12239,10 @@ function toggleShoppingItem(key){
 
 function clearCheckedItems(){
 
-    shoppingChecked = {};
+    // keep the "at home" marks; only the ticked-off boxes are cleared
+    const keep = {};
+    Object.keys(shoppingChecked).forEach(k => { if(k.startsWith("home:") || k.startsWith("need:")) keep[k] = shoppingChecked[k]; });
+    shoppingChecked = keep;
 
     saveShoppingState();
 
@@ -11884,9 +12307,34 @@ function renderShoppingSelectionBar(){
     bar.innerHTML = `
         <span class="small">${t("selected_count").replace("{n}", shoppingSelectedKeys.size)}</span>
         <button onclick="bulkCheckSelected()" style="font-size:13px;padding:6px 10px;">${t("sel_check")}</button>
+        <button onclick="bulkHomeSelected()" style="font-size:13px;padding:6px 10px;">${t("sel_home")}</button>
         <button class="delete" onclick="bulkDeleteSelected()" style="font-size:13px;padding:6px 10px;">${t("btn_delete")}</button>
         <button onclick="toggleShoppingSelectionMode()" style="font-size:13px;padding:6px 10px;">${t("sel_cancel")}</button>
     `;
+
+}
+
+
+function bulkHomeSelected(){
+
+    if(shoppingSelectedKeys.size === 0) return;
+
+    const count = shoppingSelectedKeys.size;
+
+    shoppingSelectedKeys.forEach(key => {
+        delete shoppingChecked["need:" + key];
+        shoppingChecked["home:" + key] = true;
+        delete shoppingChecked[key];
+    });
+
+    saveShoppingState();
+
+    shoppingSelectionMode = false;
+    shoppingSelectedKeys.clear();
+
+    renderShoppingList();
+
+    showToast(t("toast_marked_home") + " (" + count + ")");
 
 }
 
@@ -12612,7 +13060,7 @@ async function resetShoppingEdits(){
 // category, same as everywhere else) for sharing or copying.
 function buildShoppingListText(){
 
-    const { list } = generateShoppingList();
+    const list = generateShoppingList().list.filter(i => !i.atHome);
 
     if(list.length === 0){
         return "Shopping list is empty.";
@@ -12769,7 +13217,7 @@ function buildPlannerText(){
 
 function printShoppingList(){
 
-    const { list } = generateShoppingList();
+    const list = generateShoppingList().list.filter(i => !i.atHome);
 
     let dateStr = new Date().toLocaleDateString();
 
@@ -13445,6 +13893,7 @@ function parsePastedRecipe(){
     document.getElementById("recipeName").value = title;
     document.getElementById("recipePeople").value = servings;
     document.getElementById("recipeTags").value = "";
+    renderTagPicker();
 
     document.getElementById("ingredientList").innerHTML = "";
 
@@ -13702,6 +14151,9 @@ window.ffSoftRefresh = function(opts){
         }));
     }
 
+    const pn = read("foodflowPantry", reset ? [] : null);
+    if(Array.isArray(pn)) pantry = pn.filter(x => typeof x === "string");
+
     const wk = read("foodflowWeeks", reset ? {} : null);
     if(wk && typeof wk === "object" && !Array.isArray(wk)) weeks = wk;
     meals = ensureWeek(currentWeekKey);
@@ -13794,7 +14246,8 @@ const SYNC_KEYS = {
     foodflowRecipes: "whole",
     foodflowCategories: "whole",
     foodflowCategoryOrder: "whole",
-    foodflowWeekTemplates: "whole"
+    foodflowWeekTemplates: "whole",
+    foodflowPantry: "whole"
 };
 const WS_KEY = "foodflowWorkspaces";
 const WS_PREFIX = "foodflowWS_";
