@@ -1513,7 +1513,7 @@ animation:checkPop .3s ease;
 .ap-types{ display:flex; flex-wrap:wrap; gap:6px 14px; margin:8px 0 12px; }
 .ap-type{ display:inline-flex; align-items:center; gap:6px; font-weight:normal; margin:0; min-height:36px; }
 .ap-type input{ width:auto; margin:0; }
-.tag-picker{ flex-wrap:wrap; gap:6px; margin:-2px 0 12px; }
+.tag-picker{ gap:6px; margin:-2px 0 12px; }
 .tag-pick{ margin:0; width:auto; padding:5px 12px; min-height:32px; font-size:.85em; border-radius:999px; background:transparent; color:var(--text); border:1px solid var(--primary); box-shadow:none; }
 .tag-pick.on{ background:var(--primary); color:#fff; }
 .tag-pick.on::before{ content:"✓ "; }
@@ -1674,7 +1674,7 @@ bottom:calc(96px + env(safe-area-inset-bottom));
 }
 
 
-/* FLOATING QUICK-ADD BUTTON (phones, planner page only) */
+/* FLOATING QUICK-ADD BUTTON (phones; planner, recipes and shopping list) */
 
 #quickAddFab {
 
@@ -1972,6 +1972,8 @@ box-shadow:0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
 select {
 appearance:none; -webkit-appearance:none;
 padding-right:38px;
+/* iOS Safari clips the bottom of letters (g, p, y) in styled selects when the line height is "normal" */
+line-height:1.5; height:auto; min-height:48px; padding-top:10px; padding-bottom:10px; overflow:visible; text-overflow:ellipsis;
 background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238a948e' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
 background-repeat:no-repeat; background-position:right 14px center; background-size:14px;
 }
@@ -2179,6 +2181,10 @@ Automatically built from every recipe in your meal planner, scaled to the number
 <div id="shoppingMealBanner" style="display:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:10px;padding:8px 12px;border-radius:var(--radius-field);border:1px solid var(--primary);background:var(--primary-light);">
 <span id="shoppingMealBannerText" style="font-weight:600;"></span>
 <button type="button" class="btn-soft" onclick="clearShoppingMealFilter()" data-i18n="shop_meal_clear" style="margin:0;">✕ Show full list</button>
+</div>
+
+<div class="meal-only" style="margin-top:8px;">
+<button class="btn-soft" onclick="openShoppingMealsModal()"><span data-i18n="choose_meals_btn">🍽️ Choose meals…</span></button>
 </div>
 
 <div class="week-nav-secondary meal-only" style="margin-top:8px;">
@@ -2750,6 +2756,8 @@ Meal
 
 <button id="mealDetailShopBtn" onclick="shopForMealFromDetail()" data-i18n="shop_meal_btn">🛒 Shopping list for this meal</button>
 
+<button id="mealDetailNoShopBtn" onclick="toggleMealNoShop()">🚫 Leave out of shopping list</button>
+
 <button class="delete" onclick="deleteMealFromDetail()" data-i18n="btn_delete">🗑 Delete</button>
 
 </div>
@@ -3158,7 +3166,7 @@ placeholder="e.g. quick, vegetarian, dessert" data-i18n-placeholder="ph_recipe_t
 oninput="renderTagPicker()"
 >
 
-<div id="recipeTagPicker" class="tag-picker" role="group" data-i18n-aria-label="tag_pick_label" aria-label="Pick from existing tags" style="display:none;"></div>
+<div id="recipeTagPicker" class="tag-picker tag-scroll" role="group" data-i18n-aria-label="tag_pick_label" aria-label="Pick from existing tags" style="display:none;"></div>
 
 
 
@@ -3423,7 +3431,7 @@ Close
 
 </div>
 
-<button id="quickAddFab" onclick="openQuickAddDayPicker()" title="Add a meal" data-i18n-aria-label="aria_add_meal" aria-label="Add a meal">➕</button>
+<button id="quickAddFab" onclick="quickAddFabAction()" title="Add a meal" data-i18n-aria-label="aria_add_meal" aria-label="Add a meal">➕</button>
 
 <div id="printArea"></div>
 
@@ -3472,6 +3480,24 @@ Close
 <br>
 
 <button data-i18n="close" onclick="closeWeekActionsMenu()">Close</button>
+
+</div>
+
+</div>
+
+<!-- CHOOSE WHICH MEALS GO ON THE SHOPPING LIST -->
+
+<div class="modal" role="dialog" aria-modal="true" id="shoppingMealsModal" aria-labelledby="shoppingMealsTitle">
+
+<div class="modal-box">
+
+<h2 id="shoppingMealsTitle" data-i18n="choose_meals_title">🍽️ Meals on the shopping list</h2>
+
+<p class="small" data-i18n="choose_meals_intro">Untick meals (or a whole day) you already have the ingredients for. They stay in your planner but add nothing to the list.</p>
+
+<div id="shoppingMealsList"></div>
+
+<button data-primary onclick="closeShoppingMealsModal()" data-i18n="close">Close</button>
 
 </div>
 
@@ -3702,11 +3728,23 @@ const translations = {
         aria_previous_week: "Previous week",
         aria_next_week: "Next week",
         aria_add_meal: "Add a meal",
+        aria_add_recipe: "Add a recipe",
+        aria_add_item: "Add a shopping item",
         aria_move_category_up: "Move category up",
         aria_move_category_down: "Move category down",
         aria_edit: "Edit",
         aria_delete: "Delete",
         tag_pick_label: "Pick from existing tags",
+        choose_meals_btn: "🍽️ Choose meals…",
+        choose_meals_title: "🍽️ Meals on the shopping list",
+        choose_meals_intro: "Untick meals (or a whole day) you already have the ingredients for. They stay in your planner but add nothing to the list.",
+        choose_meals_none: "There are no meals with recipes in this date range.",
+        meals_skipped_summary: "{n} left out",
+        meal_leave_out_shop: "🚫 Leave out of shopping list",
+        meal_add_back_shop: "🛒 Add back to shopping list",
+        meal_not_on_list: "Not on shopping list",
+        toast_meal_left_out: "Left out of the shopping list",
+        toast_meal_added_back: "Added back to the shopping list",
         settings_allergies: "⚠️ Allergies & intolerances",
         allergy_description: "Add allergies and intolerances in your household. FoodFlow then flags recipes, planned meals and shopping items whose ingredients match.",
         allergy_disclaimer: "This is only a reminder. It reads ingredient names, so it can miss hidden ingredients (sauces, stock cubes, \"may contain\"). Always check labels.",
@@ -4246,11 +4284,23 @@ const translations = {
         aria_previous_week: "Föregående vecka",
         aria_next_week: "Nästa vecka",
         aria_add_meal: "Lägg till en måltid",
+        aria_add_recipe: "Lägg till ett recept",
+        aria_add_item: "Lägg till en vara",
         aria_move_category_up: "Flytta kategori uppåt",
         aria_move_category_down: "Flytta kategori nedåt",
         aria_edit: "Redigera",
         aria_delete: "Ta bort",
         tag_pick_label: "Välj bland befintliga taggar",
+        choose_meals_btn: "🍽️ Välj måltider…",
+        choose_meals_title: "🍽️ Måltider på inköpslistan",
+        choose_meals_intro: "Avmarkera måltider (eller en hel dag) som du redan har ingredienserna till. De ligger kvar i planeringen men lägger inget på listan.",
+        choose_meals_none: "Det finns inga måltider med recept i det här datumintervallet.",
+        meals_skipped_summary: "{n} utelämnade",
+        meal_leave_out_shop: "🚫 Utelämna från inköpslistan",
+        meal_add_back_shop: "🛒 Lägg tillbaka på inköpslistan",
+        meal_not_on_list: "Inte på inköpslistan",
+        toast_meal_left_out: "Utelämnad från inköpslistan",
+        toast_meal_added_back: "Tillbaka på inköpslistan",
         settings_allergies: "⚠️ Allergier & intoleranser",
         allergy_description: "Lägg till allergier och intoleranser i hushållet. FoodFlow markerar sedan recept, planerade måltider och varor på inköpslistan vars ingredienser matchar.",
         allergy_disclaimer: "Detta är bara en påminnelse. Den läser ingrediensnamn och kan missa dolda ingredienser (såser, buljong, \"kan innehålla\"). Kontrollera alltid förpackningen.",
@@ -6802,12 +6852,17 @@ function renderTagPicker(){
 
     const chosen = new Set(currentTagInputList().map(x => x.toLowerCase()));
 
+    const keepScroll = box.scrollLeft;   // re-rendering must not jump the row back to the start
+
     box.style.display = "flex";
     box.innerHTML = all.map(tg => {
         const on = chosen.has(tg.toLowerCase());
         return `<button type="button" class="tag-pick${on ? " on" : ""}" aria-pressed="${on}"
             onclick="toggleTagFromPicker(decodeURIComponent('${encodeURIComponent(tg).replace(/'/g,"%27")}'))">${escapeHtml(tg)}</button>`;
     }).join("");
+
+    box.scrollLeft = keepScroll;
+    setupTagScrollers(box.parentElement || document);
 
 }
 
@@ -7107,6 +7162,152 @@ function refreshAllergyEverywhere(){
     renderRecipes();
     render();
     renderShoppingList();
+}
+
+// =======================
+// CHOOSE WHICH MEALS GO ON THE SHOPPING LIST (meal.noShop = left out)
+// =======================
+function shoppingRangeMeals(){
+
+    const out = [];
+
+    getDateRangeDays(shoppingRangeStart, shoppingRangeEnd).forEach(({ weekKey, day, dateKey }) => {
+        const list = (weeks[weekKey] && weeks[weekKey][day]) || [];
+        const withRecipe = [];
+        list.forEach((meal, index) => { if(recipeIndexFor(meal.recipe) >= 0) withRecipe.push({ meal, index }); });
+        if(withRecipe.length) out.push({ weekKey, day, dateKey, entries: withRecipe });
+    });
+
+    return out;
+
+}
+
+function shoppingSkippedCount(){
+    let n = 0;
+    shoppingRangeMeals().forEach(d => d.entries.forEach(e => { if(e.meal.noShop) n++; }));
+    return n;
+}
+
+function openShoppingMealsModal(){
+    renderShoppingMealsModal();
+    document.getElementById("shoppingMealsModal").style.display = "flex";
+}
+
+function closeShoppingMealsModal(){
+    document.getElementById("shoppingMealsModal").style.display = "none";
+}
+
+function renderShoppingMealsModal(){
+
+    const box = document.getElementById("shoppingMealsList");
+    const data = shoppingRangeMeals();
+
+    if(data.length === 0){
+        box.innerHTML = `<p class="small">${t("choose_meals_none")}</p>`;
+        return;
+    }
+
+    box.innerHTML = data.map((d, di) => {
+
+        const allOn = d.entries.every(e => !e.meal.noShop);
+        const someOn = d.entries.some(e => !e.meal.noShop);
+
+        return `
+        <fieldset class="hc-group sm-day" data-di="${di}">
+            <legend>
+                <label class="ap-type" style="font-weight:700;">
+                    <input type="checkbox" class="sm-day-box" ${allOn ? "checked" : ""} data-indeterminate="${!allOn && someOn}"
+                           onchange="toggleShoppingDay(${di}, this.checked)">
+                    <span>${escapeHtml(translateDayName(d.day))} <span class="small" style="font-weight:400;">${escapeHtml(d.dateKey)}</span></span>
+                </label>
+            </legend>
+            ${d.entries.map((e, ei) => `
+                <label class="ap-type" style="display:flex;margin:2px 0 2px 22px;">
+                    <input type="checkbox" class="sm-meal-box" ${e.meal.noShop ? "" : "checked"}
+                           onchange="toggleShoppingMeal(${di}, ${ei}, this.checked)">
+                    <span>${escapeHtml(e.meal.type)} — ${escapeHtml(e.meal.name)}</span>
+                </label>`).join("")}
+        </fieldset>`;
+
+    }).join("");
+
+    box.querySelectorAll(".sm-day-box").forEach(cb => { cb.indeterminate = cb.getAttribute("data-indeterminate") === "true"; });
+
+}
+
+function applyShoppingMealChange(){
+    saveData();
+    renderShoppingList();
+    updateShoppingRangeInputs();
+    render();
+}
+
+function toggleShoppingMeal(di, ei, on){
+
+    const d = shoppingRangeMeals()[di];
+    if(!d) return;
+    const e = d.entries[ei];
+    if(!e) return;
+
+    if(on) delete e.meal.noShop; else e.meal.noShop = true;
+
+    // refresh the day checkbox (checked / mixed / unchecked) without rebuilding the list
+    const fs = document.querySelector('#shoppingMealsList .sm-day[data-di="' + di + '"]');
+    if(fs){
+        const boxes = [...fs.querySelectorAll(".sm-meal-box")];
+        const on2 = boxes.filter(b => b.checked).length;
+        const dayBox = fs.querySelector(".sm-day-box");
+        dayBox.checked = on2 === boxes.length;
+        dayBox.indeterminate = on2 > 0 && on2 < boxes.length;
+    }
+
+    applyShoppingMealChange();
+
+}
+
+function toggleShoppingDay(di, on){
+
+    const d = shoppingRangeMeals()[di];
+    if(!d) return;
+
+    d.entries.forEach(e => { if(on) delete e.meal.noShop; else e.meal.noShop = true; });
+
+    const fs = document.querySelector('#shoppingMealsList .sm-day[data-di="' + di + '"]');
+    if(fs){
+        fs.querySelectorAll(".sm-meal-box").forEach(b => { b.checked = on; });
+        const dayBox = fs.querySelector(".sm-day-box");
+        dayBox.indeterminate = false;
+    }
+
+    applyShoppingMealChange();
+
+}
+
+// from the meal's own view
+function toggleMealNoShop(){
+
+    const meal = meals[mealDetailDay] && meals[mealDetailDay][mealDetailIndex];
+    if(!meal) return;
+
+    if(meal.noShop) delete meal.noShop; else meal.noShop = true;
+
+    saveData();
+    renderShoppingList();
+    render();
+    showToast(t(meal.noShop ? "toast_meal_left_out" : "toast_meal_added_back"));
+    updateMealNoShopBtn();
+
+}
+
+function updateMealNoShopBtn(){
+
+    const btn = document.getElementById("mealDetailNoShopBtn");
+    const meal = meals[mealDetailDay] && meals[mealDetailDay][mealDetailIndex];
+    if(!btn || !meal) return;
+
+    btn.style.display = recipeIndexFor(meal.recipe) >= 0 ? "block" : "none";
+    btn.textContent = t(meal.noShop ? "meal_add_back_shop" : "meal_leave_out_shop");
+
 }
 
 function migrateRecipeIds(){
@@ -8140,6 +8341,7 @@ if(meals[day] && meals[day].length > 0){
             <span class="meal-chip" title="${peopleFull}">👥 ${meal.people}<span class="meal-chip-lbl"> ${peopleWord}</span></span>
             ${leftoverChip}
             ${allergenChipHtml(meal.recipe)}
+            ${meal.noShop ? `<span class="meal-chip" title="${t("meal_not_on_list")}"><span aria-hidden="true">🚫🛒</span><span class="meal-chip-lbl"> ${t("meal_not_on_list")}</span><span class="sr-only">${t("meal_not_on_list")}</span></span>` : ""}
             <span class="meal-chevron" aria-hidden="true">›</span>
         </div>
         `;
@@ -8294,6 +8496,8 @@ document.getElementById("mealDetailShopBtn").style.display =
     (recipeIndexFor(meal.recipe) >= 0 && meal.id) ? "block" : "none";
 
 document.getElementById("mealDetailModal").style.display = "flex";
+
+updateMealNoShopBtn();
 
 }
 
@@ -12192,6 +12396,10 @@ function generateShoppingList(){
             // "shopping list for one meal": skip every other meal
             if(shoppingMealFilter && meal.id !== shoppingMealFilter.id) return;
 
+            // meals the person already has the ingredients for are left out
+            // (unless this is the single-meal list for exactly that meal)
+            if(meal.noShop && !shoppingMealFilter) return;
+
             let mealRecipeIndex = recipeIndexFor(meal.recipe);
             let hasRecipe = mealRecipeIndex >= 0;
 
@@ -12711,6 +12919,9 @@ function updateShoppingRangeInputs(){
         summary.innerText = count === 1
             ? t("day_selected_one")
             : t("day_selected_other").replace("{n}", count);
+
+        const skipped = shoppingSkippedCount();
+        if(skipped > 0) summary.innerText += " · " + t("meals_skipped_summary").replace("{n}", skipped);
 
     }
 
@@ -15082,9 +15293,24 @@ renderShoppingList();
 let quickAddFab = document.getElementById("quickAddFab");
 
 if(quickAddFab){
-    quickAddFab.classList.toggle("show-fab", page === "planner");
+    // one round + button on every main page; what it adds depends on the page
+    quickAddFab.classList.toggle("show-fab", page === "planner" || page === "recipes" || page === "shopping");
+    quickAddFab.dataset.page = page;
+    const fabKey = page === "recipes" ? "aria_add_recipe" : (page === "shopping" ? "aria_add_item" : "aria_add_meal");
+    quickAddFab.setAttribute("aria-label", t(fabKey));
+    quickAddFab.title = t(fabKey);
 }
 
+
+}
+
+function quickAddFabAction(){
+
+    const page = document.getElementById("quickAddFab").dataset.page;
+
+    if(page === "recipes") openRecipeModal();
+    else if(page === "shopping") openAddShoppingItem();
+    else openQuickAddDayPicker();
 
 }
 
