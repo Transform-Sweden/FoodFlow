@@ -1182,6 +1182,8 @@ margin:12mm;
 flow — using visibility alone leaves invisible elements still
 taking up vertical space, which is what was causing the extra
 blank page at the end. */
+body { background:#fff !important; }
+
 body > *:not(#printArea) {
 
 display:none !important;
@@ -1313,6 +1315,16 @@ margin-bottom:6px;
 
 }
 
+#printArea .pp-table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:9px; }
+#printArea .pp-table th, #printArea .pp-table td { border:1px solid #222; padding:4px 5px; vertical-align:top; text-align:left; overflow-wrap:anywhere; }
+#printArea .pp-table thead th { background:#eee; font-size:12px; }
+#printArea .pp-table .pp-type { width:62px; font-size:11px; font-style:italic; }
+#printArea .pp-table tr { break-inside:avoid; }
+#printArea .pp-meal + .pp-meal { border-top:1px solid #aaa; margin-top:4px; padding-top:4px; }
+#printArea .pp-name { font-size:11px; font-weight:bold; margin-bottom:2px; }
+#printArea .pp-ppl { font-weight:normal; color:#444; }
+#printArea .pp-ing { font-size:9px; line-height:1.25; }
+#printArea .pp-note { font-size:9px; font-weight:normal; font-style:italic; color:#444; }
 #printArea .print-planner-empty {
 
 font-size:13px;
@@ -1791,6 +1803,14 @@ font-size:12.5px; line-height:1.5; color:var(--text-soft); border-radius:var(--r
 .hint-card button { flex:none; }
 /* day titles shrink to fit their card (long names like "Wednesday" in the 7-column week) */
 .week .day { container-type:inline-size; }
+/* Wide week: one block per meal type in every day (empty ones are spacers), heights equalised in JS, so a type sits on the same line in every column */
+.meal-group{ display:contents; }
+.meal-group.gap{ display:none; }
+@media(min-width:901px){
+    .week .day > .meal-group{ display:block; min-width:0; }
+    .week .day > .meal-group.gap{ display:block; margin-top:10px; }
+}
+}
 @container (max-width: 230px){
     .week .day h2 { font-size:clamp(13px, calc(100cqw / 6.4), 24px); }
 }
@@ -8310,6 +8330,12 @@ document.getElementById("week");
 week.innerHTML="";
 let mealOrder = getMealOrder();
 
+// Meal types used anywhere this week, in order: each gets its own row so e.g. Dinner lines up across days
+let weekTypes = [];
+days.forEach(d => (meals[d] || []).forEach(m => { if(!weekTypes.includes(m.type)) weekTypes.push(m.type); }));
+weekTypes.sort((a, b) => (mealOrder[a] ?? 99) - (mealOrder[b] ?? 99));
+let typeGroups = {};
+
 
 days.forEach(day=>{
 
@@ -8317,6 +8343,7 @@ days.forEach(day=>{
 let card =
 document.createElement("div");
 
+typeGroups = {};
 
 card.className="day";
 card.dataset.day = day;
@@ -8427,7 +8454,16 @@ if(meals[day] && meals[day].length > 0){
         box.setAttribute("aria-keyshortcuts", "Delete");
 
 
-        card.appendChild(box);
+        // one row per meal type (side-by-side week); several of the same type stack inside it
+        let grp = typeGroups[meal.type];
+        if(!grp){
+            grp = document.createElement("div");
+            grp.className = "meal-group";
+            grp.dataset.type = meal.type;
+            typeGroups[meal.type] = grp;
+            card.appendChild(grp);
+        }
+        grp.appendChild(box);
 
         // Desktop: drag this meal onto another day to move it there
         setupMealDragSource(box, day, originalIndex);
@@ -8457,6 +8493,21 @@ if(meals[day] && meals[day].length > 0){
 
 week.appendChild(card);
 
+// Spacers for the meal types this day doesn't have, so the rest line up; kept in type order
+if(weekTypes.length > 1 && meals[day] && meals[day].length > 0){
+    weekTypes.forEach(ty => {
+        if(typeGroups[ty]) return;
+        let sp = document.createElement("div");
+        sp.className = "meal-group gap";
+        sp.dataset.type = ty;
+        sp.setAttribute("aria-hidden", "true");
+        card.appendChild(sp);
+    });
+    let groups = [...card.querySelectorAll(":scope > .meal-group")];
+    groups.sort((a, b) => weekTypes.indexOf(a.dataset.type) - weekTypes.indexOf(b.dataset.type));
+    groups.forEach(g => card.appendChild(g));
+}
+
 // Desktop: let this day accept a dragged meal from another day
 setupDayDropZone(card, day);
 
@@ -8465,9 +8516,25 @@ setupDayTapDropZone(card, day);
 
 });
 
+alignWeekRows();
+requestAnimationFrame(alignWeekRows);
+
 
 }
 
+
+// Make every meal-type block the same height across the week's day columns (wide screens only)
+function alignWeekRows(){
+    const week = document.getElementById("week");
+    if(!week) return;
+    const groups = [...week.querySelectorAll(".meal-group")];
+    groups.forEach(g => g.style.minHeight = "");
+    if(!window.matchMedia("(min-width: 901px)").matches || plannerView !== "week") return;
+    const tallest = {};
+    groups.forEach(g => { tallest[g.dataset.type] = Math.max(tallest[g.dataset.type] || 0, g.offsetHeight); });
+    groups.forEach(g => { g.style.minHeight = tallest[g.dataset.type] + "px"; });
+}
+window.addEventListener("resize", () => { clearTimeout(alignWeekRows._t); alignWeekRows._t = setTimeout(alignWeekRows, 120); });
 
 function toggleMeal(day,index){
 
@@ -11649,6 +11716,8 @@ const ingredientTranslations = {
     "smör":"butter", "butter":"butter",
     "ägg":"egg", "egg":"egg", "eggs":"egg",
     "ost":"cheese", "cheese":"cheese",
+    "riven ost":"grated cheese", "rivet ost":"grated cheese", "rivna ostar":"grated cheese", "rivost":"grated cheese",
+    "grated cheese":"grated cheese", "shredded cheese":"grated cheese",
     "parmesan":"parmesan", "riven parmesan":"parmesan",
     "yoghurt":"yogurt", "yogurt":"yogurt",
     "crème fraiche":"creme fraiche", "creme fraiche":"creme fraiche", "crème fraîche":"creme fraiche",
@@ -11845,7 +11914,7 @@ const ingredientCategories = {
     "zucchini":"Produce", "cabbage":"Produce", "olives":"Pantry",
 
     "milk":"Dairy & Eggs", "cream":"Dairy & Eggs", "butter":"Dairy & Eggs",
-    "egg":"Dairy & Eggs", "cheese":"Dairy & Eggs", "yogurt":"Dairy & Eggs",
+    "egg":"Dairy & Eggs", "cheese":"Dairy & Eggs", "grated cheese":"Dairy & Eggs", "yogurt":"Dairy & Eggs",
     "creme fraiche":"Dairy & Eggs", "parmesan":"Dairy & Eggs",
     "coconut milk":"Dairy & Eggs", "mozzarella":"Dairy & Eggs",
     "feta cheese":"Dairy & Eggs", "hummus":"Dairy & Eggs", "guacamole":"Dairy & Eggs",
@@ -14260,7 +14329,7 @@ function pdfWrap(str, size, bold, maxW){
 
 class PdfDoc{
 
-    constructor(){ this.W = 595; this.H = 842; this.pages = []; this.newPage(); }
+    constructor(landscape){ this.W = landscape ? 842 : 595; this.H = landscape ? 595 : 842; this.pages = []; this.newPage(); }
 
     newPage(){ this.cur = []; this.pages.push(this.cur); }
 
@@ -14370,71 +14439,95 @@ function shoppingModelToPdf(m){
 
 function plannerModelToPdf(m){
 
-    const d = new PdfDoc(), M = 48, gap = 14, colW = (d.W - 2 * M - gap) / 2, pad = 10, inner = colW - 2 * pad;
-    let y = M;
+    // Landscape A4 table: meal types down the side, days across, ingredients under each meal name
+    const d = new PdfDoc(true), M = 26, labelW = 58, colW = (d.W - 2 * M - labelW) / m.days.length, pad = 4, inner = colW - 2 * pad;
+    const topY = M + 40;
 
-    d.text(M, y + 20, m.title, 20, { bold:true }); y += 30;
-    d.text(M, y + 10, m.subtitle, 10, { gray:0.33 }); y += 26;
+    // largest text size at which every row still fits on one page
+    const sizes = m.showIngredients ? [8.5, 7.5, 6.5, 5.8] : [10];
+    let sz = sizes[sizes.length - 1], layout = null;
 
-    const drawDay = (day, x, top, height) => {
-
-        d.box(x, top, colW, height, { r:8, gray:0.6, lw:0.8 });
-
-        const L = layoutDayOffsets(day);
-        L.forEach(op => {
-            if(op.kind === "text") d.text(x + pad, top + op.y, op.s, op.size, op.o);
-            else d.line(x + pad, top + op.y, x + pad + inner, top + op.y, 0.6, 0.8);
-        });
-
+    const build = size => {
+        const nameSize = Math.min(size + 2, 10.5), lead = size + 2.2, nameLead = nameSize + 2.6;
+        const cellH = c => {
+            let h = pad;
+            c.forEach((me, k) => {
+                if(k > 0) h += 4;
+                h += pdfWrap(me.name + (me.people ? " (" + me.people + ")" : ""), nameSize, true, inner).length * nameLead;
+                if(m.showIngredients) me.ingredients.forEach(t => { h += pdfWrap(t, size, false, inner - 6).length * lead; });
+            });
+            return h + pad;
+        };
+        const rows = m.rows.map(r => ({ r, h: Math.max(26, ...r.cells.map(cellH)) }));
+        const headH = Math.max(24, ...m.days.map(dd => 8 + 13 + (dd.note ? pdfWrap(dd.note, 7.5, false, inner).length * 10 : 0) + 4));
+        return { size, nameSize, lead, nameLead, rows, headH };
     };
 
-    // simple second pass that returns absolute offsets within a box (kept separate for clarity)
-    const layoutDayOffsets = day => {
-
-        const out = [];
-        let h = pad;
-
-        out.push({ kind:"text", y:h + 13, s:day.name, size:13, o:{ bold:true } });
-        h += 18;
-        out.push({ kind:"line", y:h });
-        h += 10;
-
-        if(day.note){
-            pdfWrap(day.note, 9, false, inner).forEach(ln => { out.push({ kind:"text", y:h + 9, s:ln, size:9, o:{ italic:true, gray:0.33 } }); h += 12; });
-            h += 4;
-        }
-
-        if(day.meals.length === 0){
-            out.push({ kind:"text", y:h + 10, s:m.noMeals, size:10, o:{ italic:true, gray:0.6 } });
-            h += 14;
-        }
-
-        day.meals.forEach(me => {
-            out.push({ kind:"text", y:h + 8, s:me.type, size:7.5, o:{ gray:0.4 } }); h += 11;
-            pdfWrap(me.name, 11, true, inner).forEach(ln => { out.push({ kind:"text", y:h + 11, s:ln, size:11, o:{ bold:true } }); h += 14; });
-            out.push({ kind:"text", y:h + 8, s:me.people, size:8.5, o:{ gray:0.47 } }); h += 12;
-            h += 6;
-        });
-
-        out.height = h + pad - 4;
-
-        return out;
-
-    };
-
-    for(let i = 0; i < m.days.length; i += 2){
-
-        const pair = m.days.slice(i, i + 2);
-        const heights = pair.map(dd => layoutDayOffsets(dd).height);
-        const rowH = Math.max(...heights);
-
-        if(y + rowH > d.H - M){ d.newPage(); y = M; }
-
-        pair.forEach((dd, k) => drawDay(dd, M + k * (colW + gap), y, rowH));
-
-        y += rowH + gap;
-
+    for(const size of sizes){
+        const L = build(size);
+        if(L.rows.every(r => r.h + L.headH <= d.H - topY - M + 40)){ sz = size; layout = L; break; }
     }
+    if(!layout) layout = build(sizes[sizes.length - 1]);
+
+    const drawTitle = () => {
+        d.text(M, M + 16, m.title, 17, { bold:true });
+        d.text(M, M + 31, m.subtitle, 9, { gray:0.33 });
+    };
+
+    const drawHead = y => {
+        d.box(M, y, d.W - 2 * M, layout.headH, { r:0, gray:0.2, lw:0.8, fill:0.93 });
+        m.days.forEach((dd, k) => {
+            const x = M + labelW + k * colW;
+            if(k >= 0) d.line(x, y, x, y + layout.headH, 0.8, 0.2);
+            d.text(x + pad, y + 13, dd.name, 10.5, { bold:true });
+            if(dd.note) pdfWrap(dd.note, 7.5, false, inner).forEach((ln, q) => d.text(x + pad, y + 23 + q * 10, ln, 7.5, { italic:true, gray:0.35 }));
+        });
+        d.line(M + labelW, y, M + labelW, y + layout.headH, 0.8, 0.2);
+        return y + layout.headH;
+    };
+
+    drawTitle();
+    let y = drawHead(topY);
+
+    if(m.rows.length === 0) d.text(M, y + 20, m.noMeals, 11, { italic:true, gray:0.5 });
+
+    layout.rows.forEach(row => {
+
+        if(y + row.h > d.H - M){
+            d.newPage();
+            drawTitle();
+            y = drawHead(topY);
+        }
+
+        d.box(M, y, d.W - 2 * M, row.h, { r:0, gray:0.2, lw:0.8 });
+        d.line(M + labelW, y, M + labelW, y + row.h, 0.8, 0.2);
+        d.text(M + pad, y + 14, row.r.type, 9.5, { bold:true });
+
+        row.r.cells.forEach((c, k) => {
+
+            const x = M + labelW + k * colW;
+            if(k > 0) d.line(x, y, x, y + row.h, 0.8, 0.2);
+
+            let cy = y + pad;
+            c.forEach((me, n) => {
+                if(n > 0){ cy += 2; d.line(x + pad, cy, x + colW - pad, cy, 0.4, 0.7); cy += 2; }
+                pdfWrap(me.name + (me.people ? " (" + me.people + ")" : ""), layout.nameSize, true, inner).forEach(ln => {
+                    d.text(x + pad, cy + layout.nameSize, ln, layout.nameSize, { bold:true });
+                    cy += layout.nameLead;
+                });
+                if(m.showIngredients) me.ingredients.forEach(t => {
+                    pdfWrap(t, layout.size, false, inner - 6).forEach((ln, q) => {
+                        d.text(x + pad + (q ? 6 : 0), cy + layout.size, (q ? "" : "") + ln, layout.size);
+                        cy += layout.lead;
+                    });
+                });
+            });
+
+        });
+
+        y += row.h;
+
+    });
 
     return d.blob();
 
@@ -14515,6 +14608,8 @@ function buildPlannerText(){
 
 function printShoppingList(){
 
+    setPrintOrientation(false);
+
     const list = generateShoppingList().list.filter(i => !i.atHome);
 
     let dateStr = new Date().toLocaleDateString();
@@ -14583,7 +14678,28 @@ function printShoppingList(){
 }
 
 
-function printMealPlanner(){
+// What a planner meal needs, scaled to the people it feeds (same maths as the shopping list)
+function plannerMealIngredientLines(meal){
+
+    let idx = recipeIndexFor(meal.recipe);
+    if(idx < 0) return [];
+
+    let recipe = recipes[idx];
+    let servings = Number(recipe.servings) || 1;
+    let people = Number(meal.people) || servings;
+    let factor = people / servings;
+
+    return (recipe.ingredients || [])
+        .filter(ing => (ing.name || "").trim() !== "")
+        .map(ing => {
+            let amount = (Number(ing.amount) || 0) * ingredientFactor(ing, factor);
+            let unit = (ing.unit || "").trim();
+            return (amount > 0 ? formatAmount(amount) + (unit ? " " + unit : "") + " " : "") + ing.name.trim();
+        });
+
+}
+
+function buildPlannerPrintModel(){
 
     let start = parseDateKey(currentWeekKey);
     let end = parseDateKey(currentWeekKey);
@@ -14596,63 +14712,62 @@ function printMealPlanner(){
 
     let mealOrder = getMealOrder();
 
-    let dayColumns = days.map(day=>{
+    let types = [];
+    days.forEach(day => (meals[day] || []).forEach(me => { if(!types.includes(me.type)) types.push(me.type); }));
+    types.sort((a, b) => (mealOrder[a] ?? 99) - (mealOrder[b] ?? 99));
 
-        let dayMeals = meals[day] || [];
-
-        let sortedMeals = [...dayMeals].sort((a,b)=>
-            (mealOrder[a.type] ?? 99) - (mealOrder[b.type] ?? 99)
-        );
-
-        let mealsHtml = sortedMeals.length > 0
-
-            ? sortedMeals.map(meal => `
-                <div class="print-planner-meal">
-                    <div class="print-planner-meal-type">${escapeHtml(meal.type)}</div>
-                    <div class="print-planner-meal-name">${escapeHtml(meal.name)}</div>
-                    <div class="print-planner-meal-people">👥 ${meal.people}</div>
-                </div>
-            `).join("")
-
-            : `<div class="print-planner-empty">${t("print_no_meals_day")}</div>`;
-
-        let note = dayNotes[dayNoteKey(day)];
-
-        let noteHtml = note
-            ? `<div class="print-planner-note">📝 ${escapeHtml(note)}</div>`
-            : "";
-
-        return `
-            <div class="print-planner-day">
-                <div class="print-planner-day-name">${translateDayName(day)}</div>
-                ${noteHtml}
-                ${mealsHtml}
-            </div>
-        `;
-
-    }).join("");
-
-    document.getElementById("printArea").innerHTML = `
-        <h1>${t("meal_plan_title")}${weekNames[currentWeekKey] ? " — " + weekNames[currentWeekKey] : ""}</h1>
-        <p class="print-planner-subtitle">${startStr} – ${endStr}</p>
-        <div class="print-planner-grid">
-            ${dayColumns}
-        </div>
-    `;
-
-    printOrSheet(t("meal_plan_title"), buildPlannerText(), {
+    return {
         kind: "planner",
         title: t("meal_plan_title") + (weekNames[currentWeekKey] ? " - " + weekNames[currentWeekKey] : ""),
         subtitle: startStr + " - " + endStr,
         noMeals: t("print_no_meals_day"),
-        days: days.map(day => ({
-            name: translateDayName(day),
-            note: dayNotes[dayNoteKey(day)] || "",
-            meals: [...(meals[day] || [])]
-                .sort((a,b) => (mealOrder[a.type] ?? 99) - (mealOrder[b.type] ?? 99))
-                .map(me => ({ type: pdfEncodeText(me.type).trim().toUpperCase(), name: me.name, people: me.people + " " + t("print_people_word") }))
+        showIngredients: true,
+        days: days.map(day => ({ name: translateDayName(day), note: dayNotes[dayNoteKey(day)] || "" })),
+        rows: types.map(type => ({
+            type: type,
+            cells: days.map(day => (meals[day] || [])
+                .filter(me => me.type === type)
+                .map(me => ({ name: me.name, people: me.people, ingredients: plannerMealIngredientLines(me) })))
         }))
-    });
+    };
+
+}
+
+function setPrintOrientation(landscape){
+    let el = document.getElementById("printPageStyle");
+    if(!el){ el = document.createElement("style"); el.id = "printPageStyle"; document.head.appendChild(el); }
+    el.textContent = landscape ? "@page{ size:A4 landscape; margin:8mm; }" : "";
+}
+
+window.addEventListener("afterprint", () => setPrintOrientation(false));
+
+function printMealPlanner(){
+
+    const model = buildPlannerPrintModel();
+
+    const th = model.days.map(dd =>
+        `<th>${escapeHtml(dd.name)}${dd.note ? `<div class="pp-note">${escapeHtml(dd.note)}</div>` : ""}</th>`
+    ).join("");
+
+    const body = model.rows.map(r => `
+        <tr>
+            <th class="pp-type">${escapeHtml(r.type)}</th>
+            ${r.cells.map(c => `<td>${c.map(me => `
+                <div class="pp-meal">
+                    <div class="pp-name">${escapeHtml(me.name)}${me.people ? ` <span class="pp-ppl">(${me.people})</span>` : ""}</div>
+                    ${model.showIngredients ? me.ingredients.map(i => `<div class="pp-ing">${escapeHtml(i)}</div>`).join("") : ""}
+                </div>`).join("")}</td>`).join("")}
+        </tr>`).join("");
+
+    document.getElementById("printArea").innerHTML = `
+        <h1>${escapeHtml(t("meal_plan_title"))}${weekNames[currentWeekKey] ? " — " + escapeHtml(weekNames[currentWeekKey]) : ""}</h1>
+        <p class="print-planner-subtitle">${escapeHtml(model.subtitle)}</p>
+        ${model.rows.length ? `<table class="pp-table"><thead><tr><th></th>${th}</tr></thead><tbody>${body}</tbody></table>` : `<p>${escapeHtml(model.noMeals)}</p>`}
+    `;
+
+    setPrintOrientation(true);
+
+    printOrSheet(t("meal_plan_title"), buildPlannerText(), model);
 
 }
 
