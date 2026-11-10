@@ -3660,6 +3660,7 @@ const translations = {
         aria_edit: "Edit",
         aria_delete: "Delete",
         tag_pick_label: "Pick from existing tags",
+        print_people_word: "people",
         nav_tab_planner: "Planner",
         nav_tab_recipes: "Recipes",
         nav_tab_shopping: "Shopping",
@@ -4182,6 +4183,7 @@ const translations = {
         aria_edit: "Redigera",
         aria_delete: "Ta bort",
         tag_pick_label: "Välj bland befintliga taggar",
+        print_people_word: "personer",
         nav_tab_planner: "Planerare",
         nav_tab_recipes: "Recept",
         nav_tab_shopping: "Inköp",
@@ -13466,11 +13468,11 @@ function isIOSDevice(){
     return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 }
 
-let printSheetContent = { title:"", text:"" };
+let printSheetContent = { title:"", text:"", model:null };
 
-function printOrSheet(title, text){
+function printOrSheet(title, text, model){
     if(isIOSDevice()){
-        printSheetContent = { title, text };
+        printSheetContent = { title, text, model: model || null };
         document.getElementById("printSheetText").textContent = text;
         document.getElementById("printSheetModal").style.display = "flex";
     }else{
@@ -13572,9 +13574,222 @@ function textToPdfBlob(title, text){
 
 }
 
+
+// ---- Layout PDF: draws the same designs as the desktop print (boxed day grid, checkbox list) ----
+const HELV_W = [278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
+
+function pdfTextWidth(str, size, bold){
+    let w = 0;
+    for(const ch of str){
+        const c = ch.charCodeAt(0);
+        w += (c >= 32 && c <= 126) ? HELV_W[c - 32] : 556;
+    }
+    return w * size / 1000 * (bold ? 1.07 : 1);
+}
+
+function pdfWrap(str, size, bold, maxW){
+    const words = str.split(/\s+/).filter(Boolean);
+    const out = [];
+    let line = "";
+    words.forEach(w => {
+        const test = line ? line + " " + w : w;
+        if(pdfTextWidth(test, size, bold) <= maxW || !line){ line = test; }
+        else{ out.push(line); line = w; }
+    });
+    if(line) out.push(line);
+    return out.length ? out : [""];
+}
+
+class PdfDoc{
+
+    constructor(){ this.W = 595; this.H = 842; this.pages = []; this.newPage(); }
+
+    newPage(){ this.cur = []; this.pages.push(this.cur); }
+
+    n(v){ return (Math.round(v * 100) / 100).toString(); }
+
+    text(x, y, str, size, o = {}){
+        const font = o.bold ? "/F2" : (o.italic ? "/F3" : "/F1");
+        const g = o.gray === undefined ? 0 : o.gray;
+        this.cur.push("BT " + font + " " + size + " Tf " + g + " g " + this.n(x) + " " + this.n(this.H - y) + " Td (" + pdfEscape(pdfEncodeText(str).trim()) + ") Tj ET");
+    }
+
+    line(x1, y1, x2, y2, w, gray){
+        this.cur.push(gray + " G " + w + " w " + this.n(x1) + " " + this.n(this.H - y1) + " m " + this.n(x2) + " " + this.n(this.H - y2) + " l S");
+    }
+
+    box(x, y, w, h, o = {}){
+        const r = o.r || 0, yb = this.H - y - h, k = r * 0.5523, n = v => this.n(v);
+        let p = (o.gray === undefined ? 0.6 : o.gray) + " G " + (o.lw || 0.8) + " w ";
+        if(o.fill !== undefined) p += o.fill + " g ";
+        if(r > 0){
+            p += n(x + r) + " " + n(yb) + " m " + n(x + w - r) + " " + n(yb) + " l " +
+                n(x + w - r + k) + " " + n(yb) + " " + n(x + w) + " " + n(yb + r - k) + " " + n(x + w) + " " + n(yb + r) + " c " +
+                n(x + w) + " " + n(yb + h - r) + " l " +
+                n(x + w) + " " + n(yb + h - r + k) + " " + n(x + w - r + k) + " " + n(yb + h) + " " + n(x + w - r) + " " + n(yb + h) + " c " +
+                n(x + r) + " " + n(yb + h) + " l " +
+                n(x + r - k) + " " + n(yb + h) + " " + n(x) + " " + n(yb + h - r + k) + " " + n(x) + " " + n(yb + h - r) + " c " +
+                n(x) + " " + n(yb + r) + " l " +
+                n(x) + " " + n(yb + r - k) + " " + n(x + r - k) + " " + n(yb) + " " + n(x + r) + " " + n(yb) + " c h ";
+        }else{
+            p += n(x) + " " + n(yb) + " " + n(w) + " " + n(h) + " re ";
+        }
+        this.cur.push(p + (o.fill !== undefined ? "B" : "S"));
+    }
+
+    blob(){
+
+        const objs = [];
+        const kids = this.pages.map((_, i) => (6 + 2 * i) + " 0 R").join(" ");
+        objs[1] = "<< /Type /Catalog /Pages 2 0 R >>";
+        objs[2] = "<< /Type /Pages /Kids [" + kids + "] /Count " + this.pages.length + " >>";
+        objs[3] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
+        objs[4] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>";
+        objs[5] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding >>";
+
+        this.pages.forEach((ops, i) => {
+            const c = ops.join("\n");
+            objs[6 + 2 * i] = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + this.W + " " + this.H + "] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents " + (7 + 2 * i) + " 0 R >>";
+            objs[7 + 2 * i] = "<< /Length " + c.length + " >>\nstream\n" + c + "\nendstream";
+        });
+
+        let pdf = "%PDF-1.4\n";
+        const offsets = [];
+        for(let k = 1; k < objs.length; k++){ offsets[k] = pdf.length; pdf += k + " 0 obj\n" + objs[k] + "\nendobj\n"; }
+        const xref = pdf.length;
+        pdf += "xref\n0 " + objs.length + "\n0000000000 65535 f \n";
+        for(let k = 1; k < objs.length; k++) pdf += String(offsets[k]).padStart(10, "0") + " 00000 n \n";
+        pdf += "trailer\n<< /Size " + objs.length + " /Root 1 0 R >>\nstartxref\n" + xref + "\n%%EOF";
+
+        const bytes = new Uint8Array(pdf.length);
+        for(let k = 0; k < pdf.length; k++) bytes[k] = pdf.charCodeAt(k) & 255;
+        return new Blob([bytes], { type:"application/pdf" });
+
+    }
+
+}
+
+function shoppingModelToPdf(m){
+
+    const d = new PdfDoc(), M = 48, W = d.W - 2 * M;
+    let y = M;
+
+    d.text(M, y + 20, m.title, 20, { bold:true }); y += 30;
+    d.text(M, y + 10, m.date, 10, { gray:0.33 }); y += 26;
+
+    if(m.groups.length === 0) d.text(M, y + 12, m.empty, 12);
+
+    m.groups.forEach(g => {
+
+        if(y + 70 > d.H - M){ d.newPage(); y = M; }
+
+        y += 10;
+        d.text(M, y + 13, g.label, 13, { bold:true }); y += 22;
+
+        g.items.forEach(it => {
+
+            const lines = pdfWrap(it.text, 11, false, W - 22);
+            const h = 10 + lines.length * 14 + 4;
+
+            if(y + h > d.H - M){ d.newPage(); y = M; }
+
+            d.box(M, y + 8, 9, 9, { lw:0.8, gray:0.25, fill: it.checked ? 0.6 : undefined });
+            lines.forEach((ln, i) => {
+                const ty = y + 17 + i * 14;
+                d.text(M + 20, ty, ln, 11, { gray: it.checked ? 0.5 : 0 });
+                if(it.checked) d.line(M + 20, ty - 3.5, M + 20 + pdfTextWidth(ln, 11, false), ty - 3.5, 0.7, 0.5);
+            });
+            d.line(M, y + h, M + W, y + h, 0.5, 0.82);
+            y += h;
+
+        });
+
+    });
+
+    return d.blob();
+
+}
+
+function plannerModelToPdf(m){
+
+    const d = new PdfDoc(), M = 48, gap = 14, colW = (d.W - 2 * M - gap) / 2, pad = 10, inner = colW - 2 * pad;
+    let y = M;
+
+    d.text(M, y + 20, m.title, 20, { bold:true }); y += 30;
+    d.text(M, y + 10, m.subtitle, 10, { gray:0.33 }); y += 26;
+
+    const drawDay = (day, x, top, height) => {
+
+        d.box(x, top, colW, height, { r:8, gray:0.6, lw:0.8 });
+
+        const L = layoutDayOffsets(day);
+        L.forEach(op => {
+            if(op.kind === "text") d.text(x + pad, top + op.y, op.s, op.size, op.o);
+            else d.line(x + pad, top + op.y, x + pad + inner, top + op.y, 0.6, 0.8);
+        });
+
+    };
+
+    // simple second pass that returns absolute offsets within a box (kept separate for clarity)
+    const layoutDayOffsets = day => {
+
+        const out = [];
+        let h = pad;
+
+        out.push({ kind:"text", y:h + 13, s:day.name, size:13, o:{ bold:true } });
+        h += 18;
+        out.push({ kind:"line", y:h });
+        h += 10;
+
+        if(day.note){
+            pdfWrap(day.note, 9, false, inner).forEach(ln => { out.push({ kind:"text", y:h + 9, s:ln, size:9, o:{ italic:true, gray:0.33 } }); h += 12; });
+            h += 4;
+        }
+
+        if(day.meals.length === 0){
+            out.push({ kind:"text", y:h + 10, s:m.noMeals, size:10, o:{ italic:true, gray:0.6 } });
+            h += 14;
+        }
+
+        day.meals.forEach(me => {
+            out.push({ kind:"text", y:h + 8, s:me.type, size:7.5, o:{ gray:0.4 } }); h += 11;
+            pdfWrap(me.name, 11, true, inner).forEach(ln => { out.push({ kind:"text", y:h + 11, s:ln, size:11, o:{ bold:true } }); h += 14; });
+            out.push({ kind:"text", y:h + 8, s:me.people, size:8.5, o:{ gray:0.47 } }); h += 12;
+            h += 6;
+        });
+
+        out.height = h + pad - 4;
+
+        return out;
+
+    };
+
+    for(let i = 0; i < m.days.length; i += 2){
+
+        const pair = m.days.slice(i, i + 2);
+        const heights = pair.map(dd => layoutDayOffsets(dd).height);
+        const rowH = Math.max(...heights);
+
+        if(y + rowH > d.H - M){ d.newPage(); y = M; }
+
+        pair.forEach((dd, k) => drawDay(dd, M + k * (colW + gap), y, rowH));
+
+        y += rowH + gap;
+
+    }
+
+    return d.blob();
+
+}
+
 async function printSheetPrint(){
 
-    const blob = textToPdfBlob(printSheetContent.title, printSheetContent.text);
+    let blob;
+    try{
+        const mdl = printSheetContent.model;
+        blob = mdl ? (mdl.kind === "planner" ? plannerModelToPdf(mdl) : shoppingModelToPdf(mdl)) : null;
+    }catch(err){ blob = null; }
+    if(!blob) blob = textToPdfBlob(printSheetContent.title, printSheetContent.text);
     const name = (printSheetContent.title || "FoodFlow").replace(/[^\p{L}\p{N} _-]+/gu, "").trim() + ".pdf";
     const file = new File([blob], name, { type:"application/pdf" });
 
@@ -13693,7 +13908,19 @@ function printShoppingList(){
         ${itemsHtml}
     `;
 
-    printOrSheet("Shopping List", buildShoppingListText());
+    const groupsForPdf = list.length === 0 ? [] : (g => categoryOrder
+        .filter(cat => g[cat] && g[cat].length > 0)
+        .map(cat => ({
+            label: categoryLabel(cat),
+            items: g[cat].map(item => ({
+                text: (item.amount > 0 ? formatAmount(item.amount) + (item.unit ? " " + item.unit : "") + " - " : "") + item.name,
+                checked: !!shoppingChecked[item.key]
+            }))
+        })))(groupItemsByCategory(list));
+
+    printOrSheet("Shopping List", buildShoppingListText(), {
+        kind: "shopping", title: "FoodFlow - Shopping List", date: dateStr, groups: groupsForPdf, empty: "No items on the list."
+    });
 
 }
 
@@ -13755,7 +13982,19 @@ function printMealPlanner(){
         </div>
     `;
 
-    printOrSheet(t("meal_plan_title"), buildPlannerText());
+    printOrSheet(t("meal_plan_title"), buildPlannerText(), {
+        kind: "planner",
+        title: t("meal_plan_title") + (weekNames[currentWeekKey] ? " - " + weekNames[currentWeekKey] : ""),
+        subtitle: startStr + " - " + endStr,
+        noMeals: t("print_no_meals_day"),
+        days: days.map(day => ({
+            name: translateDayName(day),
+            note: dayNotes[dayNoteKey(day)] || "",
+            meals: [...(meals[day] || [])]
+                .sort((a,b) => (mealOrder[a.type] ?? 99) - (mealOrder[b.type] ?? 99))
+                .map(me => ({ type: pdfEncodeText(me.type).trim().toUpperCase(), name: me.name, people: me.people + " " + t("print_people_word") }))
+        }))
+    });
 
 }
 
