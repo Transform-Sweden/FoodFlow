@@ -1513,7 +1513,9 @@ animation:checkPop .3s ease;
 .ap-types{ display:flex; flex-wrap:wrap; gap:6px 14px; margin:8px 0 12px; }
 .ap-type{ display:inline-flex; align-items:center; gap:6px; font-weight:normal; margin:0; min-height:36px; }
 .ap-type input{ width:auto; margin:0; }
-.tag-picker{ gap:6px; margin:-2px 0 12px; }
+/* the row owns sideways swipes: on iPhone a swipe that starts on it must not scroll the form behind it */
+.tag-picker{ gap:6px; margin:-2px 0 12px; touch-action:pan-x; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
+.tag-picker .tag-pick{ touch-action:pan-x; }
 .tag-pick{ margin:0; width:auto; padding:5px 12px; min-height:32px; font-size:.85em; border-radius:999px; background:transparent; color:var(--text); border:1px solid var(--primary); box-shadow:none; }
 .tag-pick.on{ background:var(--primary); color:#fff; }
 .tag-pick.on::before{ content:"✓ "; }
