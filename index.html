@@ -1516,6 +1516,15 @@ animation:checkPop .3s ease;
 /* the row owns sideways swipes: on iPhone a swipe that starts on it must not scroll the form behind it */
 .tag-picker{ gap:6px; margin:-2px 0 12px; touch-action:pan-x; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
 .tag-picker .tag-pick{ touch-action:pan-x; }
+/* scrolls sideways at every width (the shared .tag-scroll rules only apply on phones) */
+.tag-picker{ flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; padding:3px 2px; cursor:grab; }
+.tag-picker::-webkit-scrollbar{ display:none; }
+.tag-picker > *{ flex:0 0 auto; white-space:nowrap; }
+.tag-picker.fade-r{ -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 36px),transparent); mask-image:linear-gradient(to right,#000 calc(100% - 36px),transparent); }
+.tag-picker.fade-l{ -webkit-mask-image:linear-gradient(to left,#000 calc(100% - 36px),transparent); mask-image:linear-gradient(to left,#000 calc(100% - 36px),transparent); }
+.tag-picker.fade-l.fade-r{ -webkit-mask-image:linear-gradient(to right,transparent,#000 36px,#000 calc(100% - 36px),transparent); mask-image:linear-gradient(to right,transparent,#000 36px,#000 calc(100% - 36px),transparent); }
+.tag-picker.dragging{ cursor:grabbing; user-select:none; -webkit-user-select:none; }
+.tag-picker.dragging .tag-pick{ pointer-events:none; }
 .tag-pick{ margin:0; width:auto; padding:5px 12px; min-height:32px; font-size:.85em; border-radius:999px; background:transparent; color:var(--text); border:1px solid var(--primary); box-shadow:none; }
 .tag-pick.on{ background:var(--primary); color:#fff; }
 .tag-pick.on::before{ content:"✓ "; }
@@ -6865,7 +6874,50 @@ function renderTagPicker(){
     }).join("");
 
     box.scrollLeft = keepScroll;
+    enableDesktopRowScroll(box);
     setupTagScrollers(box.parentElement || document);
+
+}
+
+// Desktop: drag the row with the mouse, and let the ordinary mouse wheel move it sideways while it can.
+// (Trackpad two-finger sideways swipes already work natively; phones use touch.)
+function enableDesktopRowScroll(el){
+
+    if(el._rowScroll) return;
+    el._rowScroll = true;
+
+    let down = false, startX = 0, startLeft = 0, moved = false;
+
+    el.addEventListener("pointerdown", e => {
+        if(e.pointerType !== "mouse" || e.button !== 0) return;
+        down = true; moved = false; startX = e.clientX; startLeft = el.scrollLeft;
+    });
+
+    window.addEventListener("pointermove", e => {
+        if(!down) return;
+        const dx = e.clientX - startX;
+        if(!moved && Math.abs(dx) > 4){ moved = true; el.classList.add("dragging"); }
+        if(moved) el.scrollLeft = startLeft - dx;
+    });
+
+    window.addEventListener("pointerup", () => {
+        if(!down) return;
+        down = false;
+        el.classList.remove("dragging");
+        if(moved) el._justDragged = true, setTimeout(() => { el._justDragged = false; }, 0);
+    });
+
+    // a drag that ends over a chip must not also tick it
+    el.addEventListener("click", e => { if(el._justDragged){ e.preventDefault(); e.stopPropagation(); } }, true);
+
+    el.addEventListener("wheel", e => {
+        const max = el.scrollWidth - el.clientWidth;
+        if(max <= 0 || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+        const next = el.scrollLeft + e.deltaY;
+        if(next < 0 || next > max) return;     // at an end: let the form scroll as usual
+        e.preventDefault();
+        el.scrollLeft = next;
+    }, { passive:false });
 
 }
 
