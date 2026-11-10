@@ -1493,6 +1493,18 @@ animation:checkPop .3s ease;
 
 }
 
+.allergen-badges{ display:flex; flex-wrap:wrap; gap:4px; margin:6px 0 2px; }
+.allergen-badge, .allergen-inline{ border-radius:999px; }
+.allergen-badge{ padding:2px 8px; font-size:.75em; border:1px solid; color:var(--text); }
+.allergen-avoid{ border-color:#c0392b; background:rgba(192,57,43,.14); }
+.allergen-prefer{ border-color:#d68910; background:rgba(214,137,16,.16); }
+.allergen-box{ margin:8px 0 12px; display:flex; flex-direction:column; gap:8px; }
+.allergen-hit{ border:1px solid; border-radius:var(--radius-sm,10px); padding:8px 10px; display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; color:var(--text); }
+.allergen-hit.is-checked{ opacity:.65; }
+.allergen-ok{ margin:0; padding:6px 10px; font-size:13px; width:auto; }
+.allergen-chip{ border:1px solid #c0392b; }
+.allergen-inline{ opacity:.9; }
+.sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
 .scale-btn{ width:44px; min-width:44px; padding:0 !important; display:inline-flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--primary); }
 .scale-btn.on{ background:color-mix(in srgb, var(--primary) 22%, transparent); border-width:2px; }
 .scale-btn[hidden]{ display:none; }
@@ -1639,6 +1651,12 @@ line-height:1.1;
 #navbar .nav-lbl-full { display:none; }
 #navbar .nav-lbl-tab { display:flex; flex-direction:column; align-items:center; gap:2px; }
 #navbar .nav-ico { font-size:20px; line-height:1; }
+
+/* keep the bar absolutely still on phones */
+html, body { overscroll-behavior-y:none; }
+#navbar button, #navbar button:hover, #navbar button:active { transform:none !important; }
+/* iOS moves/floats fixed bars when the keyboard opens: hide the bar (and add button) while typing */
+body.kb-open #navbar, body.kb-open #quickAddFab { display:none !important; }
 
 body {
 
@@ -2427,6 +2445,35 @@ Reorder the categories to match how your store is laid out.
 <span class="small" data-i18n="gentle_spices_description">Salt, spices and baking powder grow more slowly than the rest: for 5 times the people they are about 2.2 times. Taste before adding more. Applies to the shopping list and scaled recipes. Use the ⚖️ button in the recipe editor to scale one ingredient in full.</span>
 </span>
 </label>
+</div>
+</details>
+
+<details class="settings-section">
+<summary><h3 data-i18n="settings_allergies">
+⚠️ Allergies &amp; intolerances
+</h3></summary>
+<div class="section-body">
+<p class="small" data-i18n="allergy_description">Add allergies and intolerances in your household. FoodFlow then flags recipes, planned meals and shopping items whose ingredients match.</p>
+<p class="small"><strong data-i18n="allergy_disclaimer">This is only a reminder. It reads ingredient names, so it can miss hidden ingredients (sauces, stock cubes, "may contain"). Always check labels.</strong></p>
+
+<div id="allergyList"></div>
+
+<label for="allergyType"><span data-i18n="allergy_type_label">Allergy or intolerance</span></label>
+<select id="allergyType" onchange="onAllergyTypeChange()"></select>
+
+<div id="allergyCustomWrap" hidden>
+<input id="allergyCustomName" data-i18n-placeholder="allergy_custom_name" placeholder="Name, e.g. Garlic" data-i18n-aria-label="allergy_custom_name" aria-label="Name">
+<input id="allergyCustomWords" data-i18n-placeholder="allergy_custom_words" placeholder="Words to look for, comma separated (optional)" data-i18n-aria-label="allergy_custom_words" aria-label="Words to look for">
+</div>
+
+<input id="allergyWho" data-i18n-placeholder="allergy_who" placeholder="Who? (optional)" data-i18n-aria-label="allergy_who" aria-label="Who?">
+
+<select id="allergyLevel" data-i18n-aria-label="allergy_level_aria" aria-label="Level">
+<option value="avoid" data-i18n="allergy_level_avoid">Avoid completely</option>
+<option value="prefer" data-i18n="allergy_level_prefer">Prefer to avoid</option>
+</select>
+
+<button onclick="addAllergy()"><span data-i18n="allergy_add">➕ Add</span></button>
 </div>
 </details>
 
@@ -3660,6 +3707,27 @@ const translations = {
         aria_edit: "Edit",
         aria_delete: "Delete",
         tag_pick_label: "Pick from existing tags",
+        settings_allergies: "⚠️ Allergies & intolerances",
+        allergy_description: "Add allergies and intolerances in your household. FoodFlow then flags recipes, planned meals and shopping items whose ingredients match.",
+        allergy_disclaimer: "This is only a reminder. It reads ingredient names, so it can miss hidden ingredients (sauces, stock cubes, \"may contain\"). Always check labels.",
+        allergy_type_label: "Allergy or intolerance",
+        allergy_custom_option: "Other (type your own)…",
+        allergy_custom_name: "Name, e.g. Garlic",
+        allergy_custom_words: "Words to look for, comma separated (optional)",
+        allergy_who: "Who? (optional)",
+        allergy_level_avoid: "Avoid completely",
+        allergy_level_prefer: "Prefer to avoid",
+        allergy_level_aria: "Level",
+        allergy_add: "➕ Add",
+        allergy_empty: "No allergies added.",
+        allergy_need_name: "Type a name first.",
+        allergy_contains: "Contains",
+        allergy_checked_btn: "I've checked this",
+        allergy_checked_done: "✓ Checked, fine (undo)",
+        allergy_remove: "Remove allergy",
+        allergy_check_label: "Check the label",
+        allergen_gluten: "Gluten", allergen_milk: "Milk", allergen_lactose: "Lactose", allergen_nuts: "Tree nuts", allergen_peanuts: "Peanuts", allergen_egg: "Egg",
+        allergen_shellfish: "Shellfish", allergen_fish: "Fish", allergen_soy: "Soy", allergen_sesame: "Sesame", allergen_celery: "Celery", allergen_mustard: "Mustard",
         print_people_word: "people",
         nav_tab_planner: "Planner",
         nav_tab_recipes: "Recipes",
@@ -4183,6 +4251,27 @@ const translations = {
         aria_edit: "Redigera",
         aria_delete: "Ta bort",
         tag_pick_label: "Välj bland befintliga taggar",
+        settings_allergies: "⚠️ Allergier & intoleranser",
+        allergy_description: "Lägg till allergier och intoleranser i hushållet. FoodFlow markerar sedan recept, planerade måltider och varor på inköpslistan vars ingredienser matchar.",
+        allergy_disclaimer: "Detta är bara en påminnelse. Den läser ingrediensnamn och kan missa dolda ingredienser (såser, buljong, \"kan innehålla\"). Kontrollera alltid förpackningen.",
+        allergy_type_label: "Allergi eller intolerans",
+        allergy_custom_option: "Annan (skriv själv)…",
+        allergy_custom_name: "Namn, t.ex. Vitlök",
+        allergy_custom_words: "Ord att leta efter, kommaseparerade (valfritt)",
+        allergy_who: "Vem? (valfritt)",
+        allergy_level_avoid: "Undvik helt",
+        allergy_level_prefer: "Helst undvika",
+        allergy_level_aria: "Nivå",
+        allergy_add: "➕ Lägg till",
+        allergy_empty: "Inga allergier tillagda.",
+        allergy_need_name: "Skriv ett namn först.",
+        allergy_contains: "Innehåller",
+        allergy_checked_btn: "Jag har kontrollerat",
+        allergy_checked_done: "✓ Kontrollerad, ok (ångra)",
+        allergy_remove: "Ta bort allergi",
+        allergy_check_label: "Kolla förpackningen",
+        allergen_gluten: "Gluten", allergen_milk: "Mjölk", allergen_lactose: "Laktos", allergen_nuts: "Trädnötter", allergen_peanuts: "Jordnötter", allergen_egg: "Ägg",
+        allergen_shellfish: "Skaldjur", allergen_fish: "Fisk", allergen_soy: "Soja", allergen_sesame: "Sesam", allergen_celery: "Selleri", allergen_mustard: "Senap",
         print_people_word: "personer",
         nav_tab_planner: "Planerare",
         nav_tab_recipes: "Recept",
@@ -6738,6 +6827,288 @@ function toggleTagFromPicker(tag){
 
 }
 
+// =======================
+// ALLERGIES & INTOLERANCES: a reminder that reads ingredient names (never a guarantee)
+// =======================
+let allergies = (function(){
+    try{
+        const v = JSON.parse(localStorage.getItem("foodflowAllergies"));
+        return Array.isArray(v) ? v.filter(x => x && typeof x.id === "string") : [];
+    }catch(e){ return []; }
+})();
+
+function saveAllergies(){
+    try{ localStorage.setItem("foodflowAllergies", JSON.stringify(allergies)); }catch(e){}
+}
+
+// Word fragments are matched at the START of a word (so "peanut" is not "nut" and "coconut" is not
+// "nut"), with anything allowed after it (Swedish compounds like "hasselnötter").
+const ALLERGEN_PREFIX = "(?:^|[^a-zåäö])";
+const PLANT_MILK = "(oat|almond|soy|soya|rice|plant|nut|coconut)\\s*(milk|drink|cream)|(havre|mandel|soja|ris|kokos)\\s*(mjölk|dryck|grädde|fraiche)|kokosgrädde|växtbaserad|vegan|dairy.?free|mjölkfri|peanut butter|nut butter|jordnötssmör|nötsmör|cocoa butter|kakaosmör|shea|butternut|butter ?bean|smörbön";
+const allergenCatalog = {
+    gluten:   { words:"wheat|vete|flour|mjöl|pasta|spaghetti|macaroni|makaron|nudl|noodle|bread|bröd|bulle|baguette|tortilla|couscous|bulgur|semolina|durum|rye|råg|barley|korn|spelt|dinkel|panko|breadcrumb|ströbröd|knäcke|crispbread|seitan|oat|havre|soy sauce|sojasås|ketjap|beer|pizza|cracker|kex|croissant|pannkak|pancake|dumpling|gnocchi|lasagn|ravioli|tortellini",
+                not:"gluten.?free|glutenfri|(rice|corn|maize|potato|almond|coconut|chickpea|tapioca|buckwheat)\\s*flour|rismjöl|majsmjöl|potatismjöl" },
+    milk:     { words:"milk|mjölk|cream|grädde|butter|smör|cheese|ost\\b|osten\\b|ostar\\b|ostkaka|yogh?urt|kvarg|quark|fraiche|fraîche|mozzarella|parmesan|parmigiano|cheddar|feta|halloumi|ricotta|mascarpone|gorgonzola|brie|camembert|gouda|emmental|whey|vassle|lactose|laktos|ghee|kefir|gräddfil|ice cream|glass|custard|vaniljsås|bechamel|béchamel|skyr|condensed|kondenserad|casein|kasein",
+                not:PLANT_MILK + "|glasnudl" },
+    lactose:  { words:null, same:"milk", not:PLANT_MILK + "|glasnudl|lactose.?free|laktosfri|ghee" },
+    nuts:     { words:"almond|mandel|hazelnut|hasselnöt|walnut|valnöt|cashew|pecan|pistachio|pistage|macadamia|brazil nut|paranöt|pine nut|pinjenöt|nuts?\\b|nötter|marzipan|marsipan|nutella|praline|praliné|nougat|nötmix|nötblandning", not:"" },
+    peanuts:  { words:"peanut|jordnöt|groundnut", not:"" },
+    egg:      { words:"egg|ägg|mayonnaise|majonnäs|mayo\\b|aioli|maräng|meringue", not:"eggplant|äggplanta|aubergine" },
+    shellfish:{ words:"shrimp|prawn|räk|crab|krabb|lobster|hummer|crayfish|kräft|scampi|mussel|mussla|musslor|oyster|ostron|clam|scallop|pilgrimsmussl|squid|bläckfisk|calamari|shellfish|skaldjur|langoustine|krill", not:"" },
+    fish:     { words:"fish|fisk|salmon|lax|cod\\b|torsk|tuna|tonfisk|herring|sill|anchov|ansjovis|haddock|sej\\b|mackerel|makrill|trout|forell|tilapia|sardin|pollock|halibut|kolja|rödspätta|plaice|sushi|worcestershire|surimi|kaviar|caviar|abborre|gös|gädda|roe\\b|rom\\b", not:"" },
+    soy:      { words:"soy|soja|tofu|tempeh|edamame|miso|tamari|shoyu|natto", not:"" },
+    sesame:   { words:"sesame|sesam|tahini|tahin|hummus", not:"" },
+    celery:   { words:"celery|selleri|celeriac", not:"" },
+    mustard:  { words:"mustard|senap|dijon", not:"" }
+};
+const allergenTypes = Object.keys(allergenCatalog);
+const allergenReCache = {};
+
+function allergenLabel(e){
+    return e.type === "custom" ? (e.name || "?") : t("allergen_" + e.type);
+}
+
+function allergenMatchers(e){
+
+    const key = e.id + "|" + (e.words || "") + "|" + e.type;
+    if(allergenReCache[key]) return allergenReCache[key];
+
+    let words, not = "";
+
+    if(e.type === "custom"){
+        const list = String(e.words || "").split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
+        if(e.name) list.push(String(e.name).trim().toLowerCase());
+        words = list.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+    }else{
+        const c = allergenCatalog[e.type];
+        if(!c) return (allergenReCache[key] = null);
+        words = c.same ? allergenCatalog[c.same].words : c.words;
+        not = c.not;
+    }
+
+    let m = null;
+    try{
+        m = {
+            re: words ? new RegExp(ALLERGEN_PREFIX + "(?:" + words + ")", "i") : null,
+            not: not ? new RegExp(not, "i") : null
+        };
+    }catch(err){ m = null; }
+
+    return (allergenReCache[key] = m);
+
+}
+
+function allergenMatchesName(e, name){
+    const m = allergenMatchers(e);
+    if(!m || !m.re) return false;
+    const n = String(name || "").toLowerCase();
+    if(m.not && m.not.test(n)) return false;
+    return m.re.test(n);
+}
+
+// -> [{ entry, ingredients:[names], checked }] for one recipe
+function recipeAllergenHits(recipe){
+
+    if(!recipe || allergies.length === 0) return [];
+
+    const checked = recipe.allergyChecked || [];
+    const hits = [];
+
+    allergies.forEach(e => {
+        const names = (recipe.ingredients || [])
+            .map(i => typeof i === "string" ? i : i.name)
+            .filter(n => allergenMatchesName(e, n));
+        if(names.length) hits.push({ entry: e, ingredients: names, checked: checked.includes(e.id) });
+    });
+
+    return hits;
+
+}
+
+function allergenIcon(e){ return e.level === "prefer" ? "⚠️" : "⛔"; }
+function allergenLevelText(e){ return t(e.level === "prefer" ? "allergy_level_prefer" : "allergy_level_avoid"); }
+
+function allergenBadgeStyleClass(e){ return e.level === "prefer" ? "allergen-prefer" : "allergen-avoid"; }
+
+// small chips for recipe cards (unchecked warnings only)
+function allergenBadgesHtml(recipe){
+
+    const hits = recipeAllergenHits(recipe).filter(h => !h.checked);
+    if(hits.length === 0) return "";
+
+    return `<div class="allergen-badges">${hits.map(h => `
+        <span class="allergen-badge ${allergenBadgeStyleClass(h.entry)}"
+              title="${escapeHtml(allergenLevelText(h.entry))}: ${escapeHtml(h.ingredients.join(", "))}">${allergenIcon(h.entry)} ${escapeHtml(allergenLabel(h.entry))}<span class="sr-only"> (${escapeHtml(allergenLevelText(h.entry))})</span></span>`).join("")}</div>`;
+
+}
+
+// planner card chip (unchecked warnings only)
+function allergenChipHtml(recipeId){
+
+    const r = recipes[recipeIndexFor(recipeId)];
+    const hits = r ? recipeAllergenHits(r).filter(h => !h.checked) : [];
+    if(hits.length === 0) return "";
+
+    const worst = hits.some(h => h.entry.level !== "prefer") ? "⛔" : "⚠️";
+    const names = hits.map(h => allergenLabel(h.entry)).join(", ");
+
+    return `<span class="meal-chip allergen-chip" title="${escapeHtml(t("allergy_contains"))}: ${escapeHtml(names)}"><span aria-hidden="true">${worst}</span><span class="meal-chip-lbl"> ${escapeHtml(names)}</span><span class="sr-only">${escapeHtml(t("allergy_contains"))}: ${escapeHtml(names)}</span></span>`;
+
+}
+
+// full warning box for recipe / meal detail, with a "checked, fine" button per allergy
+function allergenBoxHtml(recipe){
+
+    const hits = recipeAllergenHits(recipe);
+    if(hits.length === 0) return "";
+
+    const rid = String(recipe.id).replace(/'/g, "");
+
+    return `<div class="allergen-box" data-rid="${escapeHtml(String(recipe.id))}">${hits.map(h => `
+        <div class="allergen-hit ${allergenBadgeStyleClass(h.entry)}${h.checked ? " is-checked" : ""}">
+            <div>
+                <span aria-hidden="true">${allergenIcon(h.entry)}</span>
+                <strong>${escapeHtml(allergenLabel(h.entry))}</strong>${h.entry.who ? " (" + escapeHtml(h.entry.who) + ")" : ""}
+                <span class="small"> · ${escapeHtml(allergenLevelText(h.entry))}</span><br>
+                <span class="small">${escapeHtml(t("allergy_contains"))}: ${escapeHtml(h.ingredients.join(", "))}</span>
+            </div>
+            <button type="button" class="allergen-ok" aria-pressed="${h.checked}"
+                onclick="toggleAllergyChecked('${rid}', '${String(h.entry.id).replace(/'/g, "")}')">${h.checked ? t("allergy_checked_done") : t("allergy_checked_btn")}</button>
+        </div>`).join("")}</div>`;
+
+}
+
+function refreshAllergenViews(){
+
+    document.querySelectorAll(".allergen-box").forEach(box => {
+        const r = recipes[recipeIndexFor(box.getAttribute("data-rid"))];
+        if(r) box.outerHTML = allergenBoxHtml(r) || "";
+    });
+
+    renderRecipes();
+    render();
+
+}
+
+function toggleAllergyChecked(recipeId, entryId){
+
+    const r = recipes[recipeIndexFor(recipeId)];
+    if(!r) return;
+
+    const list = (r.allergyChecked || []).filter(x => x !== entryId);
+    if(!(r.allergyChecked || []).includes(entryId)) list.push(entryId);
+    r.allergyChecked = list;
+
+    saveData();
+    refreshAllergenViews();
+
+}
+
+// shopping list: a small note on matching items ("check the label")
+function allergenInlineHtml(name){
+
+    if(allergies.length === 0) return "";
+
+    const hit = allergies.filter(e => allergenMatchesName(e, name));
+    if(hit.length === 0) return "";
+
+    const worst = hit.some(e => e.level !== "prefer") ? "⛔" : "⚠️";
+    const names = hit.map(allergenLabel).join(", ");
+
+    return ` <span class="small allergen-inline" title="${escapeHtml(t("allergy_check_label"))}"><span aria-hidden="true">${worst}</span> ${escapeHtml(names)}<span class="sr-only"> (${escapeHtml(t("allergy_check_label"))})</span></span>`;
+
+}
+
+// ---- Settings UI ----
+function renderAllergySettings(){
+
+    const sel = document.getElementById("allergyType");
+    if(sel && !sel.options.length){
+        sel.innerHTML = allergenTypes.map(k => `<option value="${k}">${escapeHtml(t("allergen_" + k))}</option>`).join("")
+            + `<option value="custom">${escapeHtml(t("allergy_custom_option"))}</option>`;
+    }else if(sel){
+        // keep labels in the current language
+        [...sel.options].forEach(o => { o.textContent = o.value === "custom" ? t("allergy_custom_option") : t("allergen_" + o.value); });
+    }
+
+    onAllergyTypeChange();
+
+    const box = document.getElementById("allergyList");
+    if(!box) return;
+
+    if(allergies.length === 0){
+        box.innerHTML = `<p class="empty-state">${t("allergy_empty")}</p>`;
+        return;
+    }
+
+    box.innerHTML = allergies.map(e => `
+        <div class="list-row">
+            <span>${allergenIcon(e)} <strong>${escapeHtml(allergenLabel(e))}</strong>${e.who ? " · " + escapeHtml(e.who) : ""}</span>
+            <select aria-label="${escapeHtml(t("allergy_level_aria"))} ${escapeHtml(allergenLabel(e))}"
+                    onchange="setAllergyLevel('${String(e.id).replace(/'/g, "")}', this.value)" style="width:auto;margin:0;">
+                <option value="avoid" ${e.level !== "prefer" ? "selected" : ""}>${escapeHtml(t("allergy_level_avoid"))}</option>
+                <option value="prefer" ${e.level === "prefer" ? "selected" : ""}>${escapeHtml(t("allergy_level_prefer"))}</option>
+            </select>
+            <button class="btn-sm delete" onclick="removeAllergy('${String(e.id).replace(/'/g, "")}')"
+                    aria-label="${escapeHtml(t("allergy_remove"))}: ${escapeHtml(allergenLabel(e))}">🗑</button>
+        </div>`).join("");
+
+}
+
+function onAllergyTypeChange(){
+    const sel = document.getElementById("allergyType");
+    const wrap = document.getElementById("allergyCustomWrap");
+    if(sel && wrap) wrap.hidden = sel.value !== "custom";
+}
+
+function addAllergy(){
+
+    const type = document.getElementById("allergyType").value;
+    const who = document.getElementById("allergyWho").value.trim();
+    const level = document.getElementById("allergyLevel").value;
+    const entry = { id: "al" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), type, level };
+
+    if(who) entry.who = who;
+
+    if(type === "custom"){
+        const name = document.getElementById("allergyCustomName").value.trim();
+        if(!name){ flagInvalid("allergyCustomName", "allergy_need_name"); return; }
+        entry.name = name;
+        entry.words = document.getElementById("allergyCustomWords").value.trim();
+    }
+
+    allergies.push(entry);
+    saveAllergies();
+
+    ["allergyWho", "allergyCustomName", "allergyCustomWords"].forEach(id => { document.getElementById(id).value = ""; });
+
+    renderAllergySettings();
+    refreshAllergyEverywhere();
+
+}
+
+function setAllergyLevel(id, level){
+    const e = allergies.find(x => x.id === id);
+    if(!e) return;
+    e.level = level;
+    saveAllergies();
+    renderAllergySettings();
+    refreshAllergyEverywhere();
+}
+
+function removeAllergy(id){
+    allergies = allergies.filter(x => x.id !== id);
+    saveAllergies();
+    renderAllergySettings();
+    refreshAllergyEverywhere();
+}
+
+function refreshAllergyEverywhere(){
+    renderRecipes();
+    render();
+    renderShoppingList();
+}
+
 function migrateRecipeIds(){
 
     let recipesChanged = false;
@@ -7768,6 +8139,7 @@ if(meals[day] && meals[day].length > 0){
         <div class="meal-foot">
             <span class="meal-chip" title="${peopleFull}">👥 ${meal.people}<span class="meal-chip-lbl"> ${peopleWord}</span></span>
             ${leftoverChip}
+            ${allergenChipHtml(meal.recipe)}
             <span class="meal-chevron" aria-hidden="true">›</span>
         </div>
         `;
@@ -7898,6 +8270,8 @@ if(meal.usingLeftoversFrom){
 }
 
 document.getElementById("mealDetailContent").innerHTML = `
+
+${allergenBoxHtml(recipes[recipeIndexFor(meal.recipe)])}
 
 <div class="small">
 👥 ${t("people_count").replace("{n}", meal.people)}
@@ -9300,6 +9674,8 @@ renderCustomIngredientTranslations();
 
 renderPantrySettings();
 
+renderAllergySettings();
+
 let atToggle = document.getElementById("askTypeToggle");
 if(atToggle) atToggle.checked = askTypeOn();
 
@@ -9376,6 +9752,7 @@ const foodflowStorageKeys = [
     "foodflowShoppingCheckedByWeek",
     "foodflowShoppingRemoved",
     "foodflowPantry",
+    "foodflowAllergies",
     "foodflowGentleSpices",
     "foodflowShoppingOverridesByWeek",
     "foodflowShoppingExtrasByWeek",
@@ -10079,6 +10456,8 @@ document.getElementById("viewRecipeTitle")
 document.getElementById("viewRecipeContent")
 .innerHTML = `
 
+${allergenBoxHtml(recipe)}
+
 <div class="small">
 👥 ${people} ${t("servings_label")}
 ${isScaled ? ` <span style="opacity:0.7;">(${t("recipe_scaled_note").replace("{servings}", servings)})</span>` : ""}
@@ -10364,6 +10743,8 @@ ${escapeHtml(recipe.name)}
 
 </h3>
 
+${allergenBadgesHtml(recipe)}
+
 ${
     (recipe.tags && recipe.tags.length > 0)
     ? `<div class="tag-scroll" style="display:flex; flex-wrap:wrap; gap:4px; margin:6px 0 4px;">` + recipe.tags.map(tag => `
@@ -10437,6 +10818,8 @@ document.getElementById("recipeDetailTags").innerHTML =
         `).join("")}
        </div>`
     : "";
+
+document.getElementById("recipeDetailTags").insertAdjacentHTML("beforeend", allergenBoxHtml(recipe));
 
 document.getElementById("recipeDetailContent").innerHTML = `
 
@@ -11445,6 +11828,14 @@ function toCombinableUnit(amount, unit){
 // SHOPPING LIST: round amounts up to buyable quantities
 // (shopping list only - planner and recipes keep exact amounts)
 // =======================
+// Phones: hide the floating bottom bar while a text field has focus (the on-screen keyboard)
+(function(){
+    const textField = el => el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) && !/^(checkbox|radio|button|submit|range|color|file)$/.test(el.type || "");
+    const phone = () => window.matchMedia("(max-width:600px) and (pointer:coarse)").matches;
+    document.addEventListener("focusin", e => { if(phone() && textField(e.target)) document.body.classList.add("kb-open"); });
+    document.addEventListener("focusout", () => { setTimeout(() => { if(!textField(document.activeElement)) document.body.classList.remove("kb-open"); }, 60); });
+})();
+
 // =======================
 // SCALING: seasonings grow more slowly than the rest of a recipe
 // (salt, spices, leavening). Off by default; synced in the household.
@@ -12057,6 +12448,7 @@ function renderShoppingItemRow(item){
                 ${item.needText ? `<span class="small" style="opacity:.55;">(${t("need_exact")} ${item.needText})</span>` : ""}
                 ${item.isExtra ? `<span class="small">(added by you)</span>` : ""}
                 ${hasSources ? `<span class="small" style="opacity:0.6;"> 📖</span>` : ""}
+                ${allergenInlineHtml(item.name)}
             </span>
             <button
                 class="edit"
@@ -14815,6 +15207,9 @@ window.ffSoftRefresh = function(opts){
         }));
     }
 
+    const al = read("foodflowAllergies", reset ? [] : null);
+    if(Array.isArray(al)) allergies = al.filter(x => x && typeof x.id === "string");
+
     const pn = read("foodflowPantry", reset ? [] : null);
     if(Array.isArray(pn)) pantry = pn.filter(x => typeof x === "string");
 
@@ -14912,7 +15307,8 @@ const SYNC_KEYS = {
     foodflowCategoryOrder: "whole",
     foodflowWeekTemplates: "whole",
     foodflowPantry: "whole",
-    foodflowGentleSpices: "whole"
+    foodflowGentleSpices: "whole",
+    foodflowAllergies: "whole"
 };
 const WS_KEY = "foodflowWorkspaces";
 const WS_PREFIX = "foodflowWS_";
