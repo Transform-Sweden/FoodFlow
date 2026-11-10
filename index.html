@@ -6516,15 +6516,23 @@ function ensureWeekShoppingExtras(weekKey){
 // The ticks, "at home" marks, corrections and extras belong to the date range being shopped for
 // (keyed by its start date), not to whichever planner week happens to be on screen.
 // For the default Monday-Sunday range this is the same key as before, so saved marks carry over.
-let shoppingStateKey = shoppingRangeStart;
+// A range starting on a Monday keeps the plain date key (what it has always been). Any other start
+// gets a prefix: a bare Sunday date would be "repaired" into the next day at startup (the week-key fix-up),
+// which silently moved the marks to another key and made them disappear after a reload.
+function shoppingKeyForRange(start){
+    let d = parseDateKey(start);
+    return (!isNaN(d.getTime()) && d.getDay() === 1) ? start : "r:" + start;
+}
+
+let shoppingStateKey = shoppingKeyForRange(shoppingRangeStart);
 let shoppingChecked = ensureWeekShoppingChecked(shoppingStateKey);
 let shoppingOverrides = ensureWeekShoppingOverrides(shoppingStateKey);
 let shoppingExtras = ensureWeekShoppingExtras(shoppingStateKey);
 
 // Called wherever the list is read or drawn: if the range moved, load that range's marks
 function syncShoppingStateToRange(){
-    if(shoppingStateKey === shoppingRangeStart) return;
-    shoppingStateKey = shoppingRangeStart;
+    if(shoppingStateKey === shoppingKeyForRange(shoppingRangeStart)) return;
+    shoppingStateKey = shoppingKeyForRange(shoppingRangeStart);
     shoppingChecked = ensureWeekShoppingChecked(shoppingStateKey);
     shoppingOverrides = ensureWeekShoppingOverrides(shoppingStateKey);
     shoppingExtras = ensureWeekShoppingExtras(shoppingStateKey);
@@ -16014,7 +16022,7 @@ window.ffSoftRefresh = function(opts){
     shoppingCheckedByWeek = read("foodflowShoppingCheckedByWeek", {}) || {};
     shoppingOverridesByWeek = read("foodflowShoppingOverridesByWeek", {}) || {};
     shoppingExtrasByWeek = read("foodflowShoppingExtrasByWeek", {}) || {};
-    shoppingStateKey = shoppingRangeStart;
+    shoppingStateKey = shoppingKeyForRange(shoppingRangeStart);
     shoppingChecked = ensureWeekShoppingChecked(shoppingStateKey);
     shoppingOverrides = ensureWeekShoppingOverrides(shoppingStateKey);
     shoppingExtras = ensureWeekShoppingExtras(shoppingStateKey);
