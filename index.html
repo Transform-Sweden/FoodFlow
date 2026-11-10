@@ -842,6 +842,10 @@ color:var(--text); font-size:14px; font-weight:500; border-radius:8px; transform
 .list-tabs { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 10px; margin:4px 0 6px; scrollbar-width:none; }
 .list-tabs::-webkit-scrollbar { display:none; }
 .list-tabs button { white-space:nowrap; flex:0 0 auto; margin:0; }
+.all-only { display:none; }
+.all-list-active .all-only { display:inline-block; }
+.all-list-active .list-edit-only, .all-list-active #quickAddFab { display:none !important; }
+.all-list-active p.meal-only { display:none; }
 .custom-list-active .meal-only, .custom-list-active #shoppingMealBanner { display:none !important; }
 #newListIcons button { width:42px; height:42px; padding:0; font-size:20px; border-radius:var(--radius-field); }
 
@@ -1897,6 +1901,16 @@ body:not(.dark) .small { opacity:.9; }
 border-bottom:1px solid rgba(120,120,120,.25);
 }
 
+/* main groups, each holding several sub sections */
+.settings-group { border-bottom:1px solid rgba(120,120,120,.35); }
+.settings-group > summary { list-style:none; cursor:pointer; display:flex; justify-content:space-between; align-items:center; padding:16px 4px; user-select:none; }
+.settings-group > summary::-webkit-details-marker { display:none; }
+.settings-group > summary h3 { margin:0; font-size:1.15em; }
+.settings-group > summary::after { content:"▾"; opacity:.6; transition:transform .2s ease; }
+.settings-group[open] > summary::after { transform:rotate(180deg); }
+.settings-group > .group-body { margin:0 0 12px 6px; padding-left:10px; border-left:3px solid var(--primary-light, rgba(120,120,120,.25)); }
+.settings-group > .group-body > .settings-section:last-child { border-bottom:none; }
+
 .settings-section > summary {
 list-style:none;
 cursor:pointer;
@@ -2190,8 +2204,9 @@ input[type="radio"] { width:18px; height:18px; }
 Automatically built from every recipe in your meal planner, scaled to the number of people you set for each meal.
 </p>
 
-<button class="btn-sm-primary" onclick="openAddShoppingItem()"><span data-i18n="add_item">➕ Add Item</span></button>
-<button class="btn-soft" onclick="openPasteShoppingModal()"><span data-i18n="paste_items_btn">📋 Paste items</span></button>
+<button class="btn-sm-primary list-edit-only" onclick="openAddShoppingItem()"><span data-i18n="add_item">➕ Add Item</span></button>
+<button class="btn-soft list-edit-only" onclick="openPasteShoppingModal()"><span data-i18n="paste_items_btn">📋 Paste items</span></button>
+<button class="btn-sm-primary all-only" onclick="openCombinedChooser()"><span data-i18n="all_lists_choose">📑 Choose lists…</span></button>
 <button class="btn-soft" onclick="openShoppingMoreMenu()"><span data-i18n="more_actions">⋯ More</span></button>
 
 <div class="small meal-only" style="margin-top:12px;" data-i18n="shopping_for">
@@ -2267,6 +2282,11 @@ oninput="renderShoppingList()"
 
 
 
+<details class="settings-group">
+<summary><h3 data-i18n="settings_group_household">
+👨‍👩‍👧 Household & data
+</h3></summary>
+<div class="group-body">
 <details class="settings-section">
 <summary><h3 data-i18n="ws_title">
 📅 My Planners
@@ -2351,48 +2371,132 @@ data-i18n-placeholder="sync_code_placeholder" placeholder="XXXX-XXXX-XXXX" data-
 </details>
 
 <details class="settings-section">
-<summary><h3 data-i18n="settings_language">
-🌍 Language
+<summary><h3 data-i18n="settings_allergies">
+⚠️ Allergies &amp; intolerances
 </h3></summary>
 <div class="section-body">
-<button onclick="changeLanguage('en')">
+<p class="small" data-i18n="allergy_description">Add allergies and intolerances in your household. FoodFlow then flags recipes, planned meals and shopping items whose ingredients match.</p>
+<p class="small"><strong data-i18n="allergy_disclaimer">This is only a reminder. It reads ingredient names, so it can miss hidden ingredients (sauces, stock cubes, "may contain"). Always check labels.</strong></p>
 
-🇬🇧 English
+<div id="allergyList"></div>
 
-</button>
-    
+<label for="allergyType"><span data-i18n="allergy_type_label">Allergy or intolerance</span></label>
+<select id="allergyType" onchange="onAllergyTypeChange()"></select>
 
-<button onclick="changeLanguage('sv')">
+<div id="allergyCustomWrap" hidden>
+<input id="allergyCustomName" data-i18n-placeholder="allergy_custom_name" placeholder="Name, e.g. Garlic" data-i18n-aria-label="allergy_custom_name" aria-label="Name">
+<input id="allergyCustomWords" data-i18n-placeholder="allergy_custom_words" placeholder="Words to look for, comma separated (optional)" data-i18n-aria-label="allergy_custom_words" aria-label="Words to look for">
+</div>
 
-🇸🇪 Svenska
+<input id="allergyWho" data-i18n-placeholder="allergy_who" placeholder="Who? (optional)" data-i18n-aria-label="allergy_who" aria-label="Who?">
 
-</button>
+<select id="allergyLevel" data-i18n-aria-label="allergy_level_aria" aria-label="Level">
+<option value="avoid" data-i18n="allergy_level_avoid">Avoid completely</option>
+<option value="prefer" data-i18n="allergy_level_prefer">Prefer to avoid</option>
+</select>
+
+<button onclick="addAllergy()"><span data-i18n="allergy_add">➕ Add</span></button>
 </div>
 </details>
 
 <details class="settings-section">
-<summary><h3 data-i18n="settings_theme">
-🎨 Theme
+<summary><h3 data-i18n="settings_backup">
+💾 Backup
 </h3></summary>
 <div class="section-body">
-<button onclick="setTheme('auto')">
+<p class="small" data-i18n="backup_description">
+Your data lives only in this browser. Export it now and then to keep a safe copy, or to move it to another device.
+</p>
 
-<span data-i18n="theme_auto">🌗 Auto (match device)</span>
-
+<button onclick="exportData()">
+<span data-i18n="export_data">⬇️ Export Data</span>
 </button>
 
-
-<button onclick="setTheme('light')">
-
-<span data-i18n="theme_light">☀️ Light</span>
-
+<button onclick="triggerImport()">
+<span data-i18n="import_data">⬆️ Import Data</span>
 </button>
 
+<button id="undoImportBtn" onclick="undoLastImport()" style="display:none;">
+<span data-i18n="backup_undo_import">↩️ Undo last import</span>
+</button>
 
-<button onclick="setTheme('dark')">
+<p class="small" id="backupStatus" style="opacity:0.75;"></p>
 
-<span data-i18n="theme_dark">🌙 Dark</span>
+<input
+type="file"
+id="importFileInput"
+accept="application/json"
+style="display:none;"
+onchange="importData(event)"
+>
+</div>
+</details>
+</div>
+</details>
 
+<details class="settings-group">
+<summary><h3 data-i18n="settings_group_food">
+🛒 Shopping & food
+</h3></summary>
+<div class="group-body">
+<details class="settings-section">
+<summary><h3 data-i18n="settings_shopping_categories">
+🛒 Shopping List Order
+</h3></summary>
+<div class="section-body">
+<p class="small" data-i18n="shopping_category_order_description">
+Reorder the categories to match how your store is laid out.
+</p>
+
+<div id="categoryOrderList"></div>
+</div>
+</details>
+
+<details class="settings-section">
+<summary><h3 data-i18n="settings_amounts">
+⚖️ Amounts
+</h3></summary>
+<div class="section-body">
+
+<label style="display:flex;align-items:flex-start;gap:10px;margin-top:6px;cursor:pointer;">
+<input type="checkbox" id="roundShoppingToggle" style="width:auto;margin:3px 0 0;" onchange="toggleShoppingRounding(this.checked)">
+<span>
+<strong data-i18n="round_shopping_label">Round up shopping amounts</strong><br>
+<span class="small" data-i18n="round_shopping_description">80 g becomes 100 g, 1.2 kg becomes 1.5 kg. The exact amount stays visible in gray. Recipes and the planner are not changed.</span>
+</span>
+</label>
+
+<label style="display:flex;align-items:flex-start;gap:10px;margin-top:18px;cursor:pointer;">
+<input type="checkbox" id="gentleSpicesToggle" style="width:auto;margin:3px 0 0;" onchange="toggleGentleSpices(this.checked)">
+<span>
+<strong data-i18n="gentle_spices_label">Scale seasonings gently for big batches</strong><br>
+<span class="small" data-i18n="gentle_spices_description">Salt, spices and baking powder grow more slowly than the rest: for 5 times the people they are about 2.2 times. Taste before adding more. Applies to the shopping list and scaled recipes. Use the ⚖️ button in the recipe editor to scale one ingredient in full.</span>
+</span>
+</label>
+</div>
+</details>
+
+<details class="settings-section">
+<summary><h3 data-i18n="settings_pantry">
+🏠 Home staples
+</h3></summary>
+<div class="section-body">
+<p class="small" data-i18n="pantry_description">
+Things you always have at home, like salt, oil or flour. They move to the "At home" section of the shopping list automatically whenever a recipe needs them.
+</p>
+
+<div id="pantryList"></div>
+
+<input
+    id="pantryInput"
+    placeholder="e.g. salt"
+    data-i18n-placeholder="pantry_placeholder"
+    data-i18n-aria-label="aria_pantry_input" aria-label="Staple item"
+    onkeydown="if(event.key==='Enter'){ event.preventDefault(); addPantryFromSettings(); }"
+>
+
+<button onclick="addPantryFromSettings()">
+<span data-i18n="pantry_add">➕ Add to staples</span>
 </button>
 </div>
 </details>
@@ -2456,120 +2560,76 @@ Add your own word so it always combines on the shopping list, no matter which la
 </button>
 </div>
 </details>
+</div>
+</details>
 
+<details class="settings-group">
+<summary><h3 data-i18n="settings_group_look">
+🎨 Appearance & printing
+</h3></summary>
+<div class="group-body">
 <details class="settings-section">
-<summary><h3 data-i18n="settings_shopping_categories">
-🛒 Shopping List Order
+<summary><h3 data-i18n="settings_language">
+🌍 Language
 </h3></summary>
 <div class="section-body">
-<p class="small" data-i18n="shopping_category_order_description">
-Reorder the categories to match how your store is laid out.
-</p>
+<button onclick="changeLanguage('en')">
 
-<div id="categoryOrderList"></div>
+🇬🇧 English
 
-<label style="display:flex;align-items:flex-start;gap:10px;margin-top:18px;cursor:pointer;">
-<input type="checkbox" id="roundShoppingToggle" style="width:auto;margin:3px 0 0;" onchange="toggleShoppingRounding(this.checked)">
+</button>
+    
+
+<button onclick="changeLanguage('sv')">
+
+🇸🇪 Svenska
+
+</button>
+</div>
+</details>
+
+<details class="settings-section">
+<summary><h3 data-i18n="settings_theme">
+🎨 Theme
+</h3></summary>
+<div class="section-body">
+<button onclick="setTheme('auto')">
+
+<span data-i18n="theme_auto">🌗 Auto (match device)</span>
+
+</button>
+
+
+<button onclick="setTheme('light')">
+
+<span data-i18n="theme_light">☀️ Light</span>
+
+</button>
+
+
+<button onclick="setTheme('dark')">
+
+<span data-i18n="theme_dark">🌙 Dark</span>
+
+</button>
+</div>
+</details>
+
+<details class="settings-section">
+<summary><h3 data-i18n="settings_printing">
+🖨️ Printing
+</h3></summary>
+<div class="section-body">
+
+<label style="display:flex;align-items:flex-start;gap:10px;margin-top:6px;cursor:pointer;">
+<input type="checkbox" id="printIngredientsToggle" style="width:auto;margin:3px 0 0;" onchange="togglePrintIngredients(this.checked)">
 <span>
-<strong data-i18n="round_shopping_label">Round up shopping amounts</strong><br>
-<span class="small" data-i18n="round_shopping_description">80 g becomes 100 g, 1.2 kg becomes 1.5 kg. The exact amount stays visible in gray. Recipes and the planner are not changed.</span>
+<strong data-i18n="print_ingredients_label">Show ingredients when printing the meal plan</strong><br>
+<span class="small" data-i18n="print_ingredients_description">Lists each meal's ingredients, scaled to the number of people, under its name. Turn off for a short plan with just the meal names.</span>
 </span>
 </label>
-
-<label style="display:flex;align-items:flex-start;gap:10px;margin-top:18px;cursor:pointer;">
-<input type="checkbox" id="gentleSpicesToggle" style="width:auto;margin:3px 0 0;" onchange="toggleGentleSpices(this.checked)">
-<span>
-<strong data-i18n="gentle_spices_label">Scale seasonings gently for big batches</strong><br>
-<span class="small" data-i18n="gentle_spices_description">Salt, spices and baking powder grow more slowly than the rest: for 5 times the people they are about 2.2 times. Taste before adding more. Applies to the shopping list and scaled recipes. Use the ⚖️ button in the recipe editor to scale one ingredient in full.</span>
-</span>
-</label>
 </div>
 </details>
-
-<details class="settings-section">
-<summary><h3 data-i18n="settings_allergies">
-⚠️ Allergies &amp; intolerances
-</h3></summary>
-<div class="section-body">
-<p class="small" data-i18n="allergy_description">Add allergies and intolerances in your household. FoodFlow then flags recipes, planned meals and shopping items whose ingredients match.</p>
-<p class="small"><strong data-i18n="allergy_disclaimer">This is only a reminder. It reads ingredient names, so it can miss hidden ingredients (sauces, stock cubes, "may contain"). Always check labels.</strong></p>
-
-<div id="allergyList"></div>
-
-<label for="allergyType"><span data-i18n="allergy_type_label">Allergy or intolerance</span></label>
-<select id="allergyType" onchange="onAllergyTypeChange()"></select>
-
-<div id="allergyCustomWrap" hidden>
-<input id="allergyCustomName" data-i18n-placeholder="allergy_custom_name" placeholder="Name, e.g. Garlic" data-i18n-aria-label="allergy_custom_name" aria-label="Name">
-<input id="allergyCustomWords" data-i18n-placeholder="allergy_custom_words" placeholder="Words to look for, comma separated (optional)" data-i18n-aria-label="allergy_custom_words" aria-label="Words to look for">
-</div>
-
-<input id="allergyWho" data-i18n-placeholder="allergy_who" placeholder="Who? (optional)" data-i18n-aria-label="allergy_who" aria-label="Who?">
-
-<select id="allergyLevel" data-i18n-aria-label="allergy_level_aria" aria-label="Level">
-<option value="avoid" data-i18n="allergy_level_avoid">Avoid completely</option>
-<option value="prefer" data-i18n="allergy_level_prefer">Prefer to avoid</option>
-</select>
-
-<button onclick="addAllergy()"><span data-i18n="allergy_add">➕ Add</span></button>
-</div>
-</details>
-
-<details class="settings-section">
-<summary><h3 data-i18n="settings_pantry">
-🏠 Home staples
-</h3></summary>
-<div class="section-body">
-<p class="small" data-i18n="pantry_description">
-Things you always have at home, like salt, oil or flour. They move to the "At home" section of the shopping list automatically whenever a recipe needs them.
-</p>
-
-<div id="pantryList"></div>
-
-<input
-    id="pantryInput"
-    placeholder="e.g. salt"
-    data-i18n-placeholder="pantry_placeholder"
-    data-i18n-aria-label="aria_pantry_input" aria-label="Staple item"
-    onkeydown="if(event.key==='Enter'){ event.preventDefault(); addPantryFromSettings(); }"
->
-
-<button onclick="addPantryFromSettings()">
-<span data-i18n="pantry_add">➕ Add to staples</span>
-</button>
-</div>
-</details>
-
-<details class="settings-section">
-<summary><h3 data-i18n="settings_backup">
-💾 Backup
-</h3></summary>
-<div class="section-body">
-<p class="small" data-i18n="backup_description">
-Your data lives only in this browser. Export it now and then to keep a safe copy, or to move it to another device.
-</p>
-
-<button onclick="exportData()">
-<span data-i18n="export_data">⬇️ Export Data</span>
-</button>
-
-<button onclick="triggerImport()">
-<span data-i18n="import_data">⬆️ Import Data</span>
-</button>
-
-<button id="undoImportBtn" onclick="undoLastImport()" style="display:none;">
-<span data-i18n="backup_undo_import">↩️ Undo last import</span>
-</button>
-
-<p class="small" id="backupStatus" style="opacity:0.75;"></p>
-
-<input
-type="file"
-id="importFileInput"
-accept="application/json"
-style="display:none;"
-onchange="importData(event)"
->
 </div>
 </details>
 
@@ -3034,6 +3094,30 @@ style="width:100%;padding:12px;border-radius:var(--radius-field);border:1px soli
 </div>
 
 <!-- CUSTOM LIST MENU -->
+
+<div class="modal" role="dialog" aria-modal="true" id="combinedMenu">
+<div class="modal-box">
+<h2 data-i18n="list_tab_all">🧺 All lists</h2>
+<div class="action-list">
+<button data-i18n="all_lists_choose" onclick="document.getElementById('combinedMenu').style.display='none'; openCombinedChooser();">📑 Choose lists…</button>
+<button data-i18n="list_uncheck_all" onclick="document.getElementById('combinedMenu').style.display='none'; uncheckAllCombined();">↩️ Uncheck all</button>
+<button data-i18n="action_share" onclick="document.getElementById('combinedMenu').style.display='none'; shareShoppingList();">📤 Share</button>
+<button data-i18n="action_print" onclick="document.getElementById('combinedMenu').style.display='none'; printShoppingList();">🖨️ Print / Save as PDF</button>
+</div>
+<br>
+<button data-i18n="close" onclick="document.getElementById('combinedMenu').style.display='none'">Close</button>
+</div>
+</div>
+
+<div class="modal" role="dialog" aria-modal="true" id="combinedChooserModal" aria-labelledby="combinedChooserTitle">
+<div class="modal-box">
+<h2 id="combinedChooserTitle" data-i18n="all_lists_choose_title">Lists in the combined list</h2>
+<p class="small" data-i18n="all_lists_choose_hint">Untick a list to leave it out for now. Nothing is deleted.</p>
+<div id="combinedChooserList"></div>
+<br>
+<button data-primary data-i18n="close" onclick="closeCombinedChooser()">Close</button>
+</div>
+</div>
 
 <div class="modal" role="dialog" aria-modal="true" id="customListMenu">
 <div class="modal-box">
@@ -3813,6 +3897,8 @@ const translations = {
         headcount_invalid: "Enter a number of people, 1 or more.",
         headcount_none: "No meals match your choices",
         headcount_done: "Set {people} people on {n} meals",
+        print_ingredients_label: "Show ingredients when printing the meal plan",
+        print_ingredients_description: "Lists each meal's ingredients, scaled to the number of people, under its name. Turn off for a short plan with just the meal names.",
         gentle_spices_label: "Scale seasonings gently for big batches",
         gentle_spices_description: "Salt, spices and baking powder grow more slowly than the rest: for 5 times the people they are about 2.2 times. Taste before adding more. Applies to the shopping list and scaled recipes. Use the ⚖️ button in the recipe editor to scale one ingredient in full.",
         scale_full_label: "Scale in full (not gently)",
@@ -3864,6 +3950,11 @@ const translations = {
         lbl_alias: "Your word",
         lbl_alias_target: "Combine with ingredient",
         settings_shopping_categories: "🛒 Shopping List Order",
+        settings_group_household: "👨‍👩‍👧 Household & data",
+        settings_group_food: "🛒 Shopping & food",
+        settings_group_look: "🎨 Appearance & printing",
+        settings_amounts: "⚖️ Amounts",
+        settings_printing: "🖨️ Printing",
         shopping_category_order_description: "Reorder the categories to match how your store is laid out.",
         sync_restore: "♻️ Restore data from before sync",
         sync_restore_title: "Restore backup?",
@@ -4009,6 +4100,11 @@ const translations = {
         paste_items_none: "Paste some items first.",
         paste_items_added: "Added {n} items",
         list_tab_meal: "🍽️ Meal plan",
+        list_tab_all: "🧺 All lists",
+        all_lists_choose: "📑 Choose lists…",
+        all_lists_choose_title: "Lists in the combined list",
+        all_lists_choose_hint: "Untick a list to leave it out for now. Nothing is deleted.",
+        all_lists_summary: "Combined from {n} of {total} lists. Tick items here and they are ticked in their own list too. Add and edit items in the individual lists.",
         list_new: "➕ New list",
         new_list_title: "➕ New list",
         new_list_description: "A separate shopping list for anything - pharmacy, hardware store, a party. It is shared with your household like everything else.",
@@ -4369,6 +4465,8 @@ const translations = {
         headcount_invalid: "Ange antal personer, minst 1.",
         headcount_none: "Inga måltider matchar dina val",
         headcount_done: "{people} personer på {n} måltider",
+        print_ingredients_label: "Visa ingredienser när veckomenyn skrivs ut",
+        print_ingredients_description: "Listar varje måltids ingredienser, anpassade till antal personer, under namnet. Stäng av för en kort meny med bara måltidsnamnen.",
         gentle_spices_label: "Skala kryddor försiktigt vid stora portioner",
         gentle_spices_description: "Salt, kryddor och bakpulver ökar långsammare än resten: för 5 gånger så många personer blir det ungefär 2,2 gånger. Smaka av innan du tillsätter mer. Gäller inköpslistan och skalade recept. Använd ⚖️-knappen i receptredigeraren för att skala en ingrediens fullt ut.",
         scale_full_label: "Skala fullt (inte försiktigt)",
@@ -4420,6 +4518,11 @@ const translations = {
         lbl_alias: "Ditt ord",
         lbl_alias_target: "Slå ihop med ingrediens",
         settings_shopping_categories: "🛒 Inköpslistans ordning",
+        settings_group_household: "👨‍👩‍👧 Hushåll & data",
+        settings_group_food: "🛒 Inköp & mat",
+        settings_group_look: "🎨 Utseende & utskrift",
+        settings_amounts: "⚖️ Mängder",
+        settings_printing: "🖨️ Utskrift",
         shopping_category_order_description: "Ändra ordningen på kategorierna så att den matchar din butik.",
         sync_restore: "♻️ Återställ data från före synk",
         sync_restore_title: "Återställa säkerhetskopia?",
@@ -4565,6 +4668,11 @@ const translations = {
         paste_items_none: "Klistra in några varor först.",
         paste_items_added: "Lade till {n} varor",
         list_tab_meal: "🍽️ Måltidsplan",
+        list_tab_all: "🧺 Alla listor",
+        all_lists_choose: "📑 Välj listor…",
+        all_lists_choose_title: "Listor i den samlade listan",
+        all_lists_choose_hint: "Avmarkera en lista för att lämna den utanför just nu. Inget tas bort.",
+        all_lists_summary: "Samlad från {n} av {total} listor. Bocka av varor här så bockas de av i sin egen lista också. Lägg till och ändra varor i de enskilda listorna.",
         list_new: "➕ Ny lista",
         new_list_title: "➕ Ny lista",
         new_list_description: "En separat inköpslista för vad som helst - apotek, järnhandel, en fest. Den delas med ditt hushåll precis som allt annat.",
@@ -6405,18 +6513,31 @@ function ensureWeekShoppingExtras(weekKey){
 }
 
 
-let shoppingChecked = ensureWeekShoppingChecked(currentWeekKey);
-let shoppingOverrides = ensureWeekShoppingOverrides(currentWeekKey);
-let shoppingExtras = ensureWeekShoppingExtras(currentWeekKey);
+// The ticks, "at home" marks, corrections and extras belong to the date range being shopped for
+// (keyed by its start date), not to whichever planner week happens to be on screen.
+// For the default Monday-Sunday range this is the same key as before, so saved marks carry over.
+let shoppingStateKey = shoppingRangeStart;
+let shoppingChecked = ensureWeekShoppingChecked(shoppingStateKey);
+let shoppingOverrides = ensureWeekShoppingOverrides(shoppingStateKey);
+let shoppingExtras = ensureWeekShoppingExtras(shoppingStateKey);
+
+// Called wherever the list is read or drawn: if the range moved, load that range's marks
+function syncShoppingStateToRange(){
+    if(shoppingStateKey === shoppingRangeStart) return;
+    shoppingStateKey = shoppingRangeStart;
+    shoppingChecked = ensureWeekShoppingChecked(shoppingStateKey);
+    shoppingOverrides = ensureWeekShoppingOverrides(shoppingStateKey);
+    shoppingExtras = ensureWeekShoppingExtras(shoppingStateKey);
+}
 
 
 // Saves all shopping-list state — the three per-week pieces plus
 // the global "always hide these" pantry-staples list.
 function saveShoppingState(){
 
-    shoppingCheckedByWeek[currentWeekKey] = shoppingChecked;
-    shoppingOverridesByWeek[currentWeekKey] = shoppingOverrides;
-    shoppingExtrasByWeek[currentWeekKey] = shoppingExtras;
+    shoppingCheckedByWeek[shoppingStateKey] = shoppingChecked;
+    shoppingOverridesByWeek[shoppingStateKey] = shoppingOverrides;
+    shoppingExtrasByWeek[shoppingStateKey] = shoppingExtras;
 
     localStorage.setItem(
         "foodflowShoppingCheckedByWeek",
@@ -6628,9 +6749,7 @@ function switchToWeek(weekKey){
     currentWeekKey = weekKey;
     meals = ensureWeek(weekKey);
 
-    shoppingChecked = ensureWeekShoppingChecked(weekKey);
-    shoppingOverrides = ensureWeekShoppingOverrides(weekKey);
-    shoppingExtras = ensureWeekShoppingExtras(weekKey);
+    syncShoppingStateToRange();
 
     updateWeekLabel();
     render();
@@ -9983,10 +10102,16 @@ if(window.matchMedia){
 
 
 // Settings menu: only one section open at a time
+// (main groups behave the same way among themselves; sub sections close their neighbours in the same group)
 document.addEventListener("toggle", function(e){
     let el = e.target;
-    if(!el.classList || !el.classList.contains("settings-section") || !el.open) return;
-    document.querySelectorAll(".settings-section[open]").forEach(o => { if(o !== el) o.open = false; });
+    if(!el.classList || !el.open) return;
+    if(el.classList.contains("settings-group")){
+        document.querySelectorAll(".settings-group[open]").forEach(o => { if(o !== el) o.open = false; });
+    }else if(el.classList.contains("settings-section")){
+        const scope = el.closest(".settings-group") || document;
+        scope.querySelectorAll(".settings-section[open]").forEach(o => { if(o !== el) o.open = false; });
+    }
 }, true);
 
 function openSettings(){
@@ -10007,6 +10132,9 @@ if(atToggle) atToggle.checked = askTypeOn();
 
 let roundToggle = document.getElementById("roundShoppingToggle");
 if(roundToggle) roundToggle.checked = shoppingRoundingOn();
+
+let printIngToggle = document.getElementById("printIngredientsToggle");
+if(printIngToggle) printIngToggle.checked = printIngredientsOn();
 
 let gentleToggle = document.getElementById("gentleSpicesToggle");
 if(gentleToggle) gentleToggle.checked = gentleSpicesOn();
@@ -12168,6 +12296,14 @@ function toCombinableUnit(amount, unit){
 // SCALING: seasonings grow more slowly than the rest of a recipe
 // (salt, spices, leavening). Off by default; synced in the household.
 // =======================
+function printIngredientsOn(){
+    try{ return localStorage.getItem("foodflowPrintIngredients") !== "0"; }catch(e){ return true; }
+}
+
+function togglePrintIngredients(on){
+    try{ localStorage.setItem("foodflowPrintIngredients", on ? "1" : "0"); }catch(e){}
+}
+
 function gentleSpicesOn(){
     try{ return JSON.parse(localStorage.getItem("foodflowGentleSpices")) === true; }
     catch(e){ return false; }
@@ -12503,6 +12639,8 @@ function normalizeIngredientName(name){
 
 
 function generateShoppingList(){
+
+    syncShoppingStateToRange();
 
     let items = {};
     let manualMeals = [];
@@ -13139,8 +13277,18 @@ let lastShoppingList = [];
 
 function renderShoppingList(){
 
+    syncShoppingStateToRange();
+
     renderListTabs();
     document.body.classList.toggle("custom-list-active", !!activeCustomList());
+
+    if(activeShoppingList === "all" && Object.keys(customLists).length === 0) activeShoppingList = "meal";
+    document.body.classList.toggle("all-list-active", activeShoppingList === "all");
+
+    if(activeShoppingList === "all"){
+        renderCombinedList();
+        return;
+    }
 
     if(activeCustomList()){
         renderCustomList();
@@ -13694,7 +13842,7 @@ function saveCustomLists(){
 }
 
 function activeCustomList(){
-    if(activeShoppingList === "meal") return null;
+    if(activeShoppingList === "meal" || activeShoppingList === "all") return null;
     let l = customLists[activeShoppingList];
     if(!l){ activeShoppingList = "meal"; return null; }
     if(!Array.isArray(l.items)) l.items = [];
@@ -13726,7 +13874,7 @@ function renderListTabs(){
         box.appendChild(b);
     };
 
-    let current = activeCustomList() ? activeShoppingList : "meal";
+    let current = activeCustomList() ? activeShoppingList : (activeShoppingList === "all" && Object.keys(customLists).length ? "all" : "meal");
 
     mk(t("list_tab_meal"), current === "meal", () => showShoppingList("meal"));
 
@@ -13735,7 +13883,13 @@ function renderListTabs(){
         mk((l.icon || "🛒") + " " + (l.name || "?"), current === id, () => showShoppingList(id));
     });
 
+    if(Object.keys(customLists).length > 0) mk(t("list_tab_all"), current === "all", () => showShoppingList("all"));
+
     mk(t("list_new"), false, openNewListModal);
+
+    // keep the open tab in view when there are many lists
+    let act = box.querySelector("[data-primary]");
+    if(act) box.scrollLeft = Math.max(0, act.offsetLeft - (box.clientWidth - act.offsetWidth) / 2);
 
 }
 
@@ -13983,6 +14137,246 @@ function renderCustomList(){
 
 }
 
+// =======================
+// COMBINED VIEW: the meal plan list and the custom lists as one list for the shop
+// =======================
+// Nothing is copied: every line points back at the items it came from, so ticking a line
+// ticks those items in their own lists. Lines with the same name and unit are merged.
+let combinedEntries = [];
+
+function combinedExcludedIds(){
+    try{ let v = JSON.parse(localStorage.getItem("foodflowCombinedExcluded") || "[]"); return Array.isArray(v) ? v : []; }
+    catch(e){ return []; }
+}
+
+function setCombinedExcluded(arr){
+    try{ localStorage.setItem("foodflowCombinedExcluded", JSON.stringify(arr)); }catch(e){}
+}
+
+function buildCombinedEntries(){
+
+    const excluded = combinedExcludedIds();
+    const byKey = {};
+    const order = [];
+
+    const add = (name, amount, unit, checked, source, tag) => {
+        const norm = normalizeIngredientName(name);
+        const u = String(unit || "").trim().toLowerCase();
+        const key = norm + "|" + u;
+        let e = byKey[key];
+        if(!e){
+            e = byKey[key] = { name: name, unit: unit || "", amount: 0, category: getIngredientCategory(norm), sources: [], tags: [], allChecked: true };
+            order.push(e);
+        }
+        e.amount += Number(amount) || 0;
+        e.sources.push(source);
+        if(!checked) e.allChecked = false;
+        if(tag && !e.tags.includes(tag)) e.tags.push(tag);
+    };
+
+    if(!excluded.includes("meal")){
+        generateShoppingList().list.filter(i => !i.atHome).forEach(i =>
+            add(i.name, i.amount, i.unit, !!shoppingChecked[i.key], { type:"meal", key:i.key }, t("list_tab_meal")));
+    }
+
+    Object.keys(customLists).forEach(id => {
+        if(excluded.includes(id)) return;
+        const l = customLists[id];
+        (l.items || []).forEach(i =>
+            add(i.name, i.amount, i.unit, !!i.checked, { type:"custom", listId:id, itemId:i.id }, (l.icon || "🛒") + " " + (l.name || "?")));
+    });
+
+    order.forEach((e, idx) => { e.idx = idx; e.checked = e.allChecked; });
+    order.sort((a, b) => a.name.localeCompare(b.name));
+
+    return order;
+
+}
+
+function combinedEntryText(e){
+    return (e.amount > 0 ? formatAmount(e.amount) + (e.unit ? " " + e.unit : "") + " " : "") + e.name;
+}
+
+function renderCombinedList(){
+
+    const container = document.getElementById("shoppingList");
+    const notes = document.getElementById("shoppingNotes");
+    const bar = document.getElementById("shoppingSelectionBar");
+    if(notes) notes.innerHTML = "";
+    if(bar) bar.style.display = "none";
+
+    updateShoppingRangeInputs();
+
+    combinedEntries = buildCombinedEntries();
+
+    const all = combinedEntries;
+    const total = all.length, done = all.filter(e => e.checked).length;
+    const pt = document.getElementById("shoppingProgressText"), pb = document.getElementById("shoppingProgressBar");
+    if(pt && pb){
+        pt.innerText = total > 0 ? t("progress_checked").replace("{checked}", done).replace("{total}", total) : "";
+        pb.style.width = (total > 0 ? Math.round(done / total * 100) : 0) + "%";
+        if(pb.parentElement) pb.parentElement.setAttribute("aria-valuenow", total > 0 ? Math.round(done / total * 100) : 0);
+    }
+
+    const excluded = combinedExcludedIds();
+    const ids = ["meal"].concat(Object.keys(customLists));
+    const usedCount = ids.filter(id => !excluded.includes(id)).length;
+    const summary = `<p class="small" style="margin:10px 0;">${t("all_lists_summary").replace("{n}", usedCount).replace("{total}", ids.length)}</p>`;
+
+    if(total === 0){
+        container.innerHTML = summary + `<p class="empty-state">${t("list_empty")}</p>`;
+        return;
+    }
+
+    const search = (document.getElementById("shoppingSearch") || { value:"" }).value.trim().toLowerCase();
+    const shown = search ? all.filter(e => e.name.toLowerCase().includes(search)) : all;
+
+    if(shown.length === 0){
+        container.innerHTML = summary + `<p class="small">${t("shopping_no_match")} "${escapeHtml(search)}".</p>`;
+        return;
+    }
+
+    const groups = groupItemsByCategory(shown);
+    const cats = categoryOrder.filter(c => groups[c] && groups[c].length > 0);
+    Object.keys(groups).forEach(c => { if(!cats.includes(c)) cats.push(c); });
+
+    const row = e => {
+        const accent = categoryAccents[e.category] || categoryAccents["Other"];
+        const mealOnly = e.sources.length === 1 && e.sources[0].type === "meal";
+        const txt = escapeHtml(combinedEntryText(e));
+        return `
+        <div class="meal" style="--accent:${accent};display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <input type="checkbox" style="width:auto;margin:0;" aria-label="${t("aria_check_item")}: ${txt}" ${e.checked ? "checked" : ""} onchange="toggleCombinedEntry(${e.idx})">
+            <span style="flex:1;${e.checked ? "opacity:.5;text-decoration:line-through;" : ""}">${txt}
+                <span class="small" style="opacity:.6;"> · ${e.tags.map(escapeHtml).join(", ")}</span>
+                ${allergenInlineHtml(e.name)}
+            </span>
+            ${mealOnly ? `<button class="edit" style="margin:0;padding:6px 10px;font-size:13px;" aria-label="${t("aria_at_home")}: ${escapeHtml(e.name)}" title="${t("aria_at_home")}" onclick="combinedItemHome(${e.idx})">🏠</button>` : ""}
+        </div>`;
+    };
+
+    container.innerHTML = summary + cats.map(cat => `
+        <h3 style="margin:18px 0 8px;">${categoryIcons[cat] || ""} ${escapeHtml(categoryLabel(cat))}</h3>
+        ${groups[cat].map(row).join("")}`).join("");
+
+}
+
+function toggleCombinedEntry(idx){
+
+    const e = combinedEntries.find(x => x.idx === idx);
+    if(!e) return;
+    const on = !e.checked;
+
+    e.sources.forEach(src => {
+        if(src.type === "meal"){
+            if(on) shoppingChecked[src.key] = true; else delete shoppingChecked[src.key];
+        }else{
+            const l = customLists[src.listId];
+            const it = l && (l.items || []).find(i => i.id === src.itemId);
+            if(it) it.checked = on;
+        }
+    });
+
+    if(on) hapticFeedback();
+    saveShoppingState();
+    saveCustomLists();
+    renderShoppingList();
+
+}
+
+function combinedItemHome(idx){
+    const e = combinedEntries.find(x => x.idx === idx);
+    if(e && e.sources[0] && e.sources[0].type === "meal") setItemHome(e.sources[0].key, true);
+}
+
+function uncheckAllCombined(){
+    combinedEntries.forEach(e => e.sources.forEach(src => {
+        if(src.type === "meal") delete shoppingChecked[src.key];
+        else{
+            const l = customLists[src.listId];
+            const it = l && (l.items || []).find(i => i.id === src.itemId);
+            if(it) it.checked = false;
+        }
+    }));
+    saveShoppingState();
+    saveCustomLists();
+    renderShoppingList();
+}
+
+// ---- choose which lists are included ----
+function openCombinedChooser(){
+    renderCombinedChooser();
+    document.getElementById("combinedChooserModal").style.display = "flex";
+}
+
+function closeCombinedChooser(){
+    document.getElementById("combinedChooserModal").style.display = "none";
+}
+
+function renderCombinedChooser(){
+    const box = document.getElementById("combinedChooserList");
+    if(!box) return;
+    const excluded = combinedExcludedIds();
+    const rows = [{ id:"meal", label:t("list_tab_meal") }].concat(Object.keys(customLists).map(id => ({ id, label:(customLists[id].icon || "🛒") + " " + (customLists[id].name || "?") })));
+    box.innerHTML = rows.map(r => `
+        <label style="display:flex;align-items:center;gap:10px;margin:10px 0;cursor:pointer;">
+            <input type="checkbox" style="width:auto;margin:0;" ${excluded.includes(r.id) ? "" : "checked"} onchange="toggleCombinedList('${r.id}', this.checked)">
+            <span>${escapeHtml(r.label)}</span>
+        </label>`).join("");
+}
+
+function toggleCombinedList(id, on){
+    let ex = combinedExcludedIds().filter(x => x !== id);
+    if(!on) ex.push(id);
+    setCombinedExcluded(ex);
+    renderShoppingList();
+}
+
+// ---- share / print the combined list ----
+function combinedGroups(){
+    const entries = buildCombinedEntries();
+    const groups = groupItemsByCategory(entries);
+    const cats = categoryOrder.filter(c => groups[c] && groups[c].length > 0);
+    Object.keys(groups).forEach(c => { if(!cats.includes(c)) cats.push(c); });
+    return cats.map(cat => ({ cat, items: groups[cat] }));
+}
+
+function buildCombinedText(){
+    const gs = combinedGroups();
+    if(gs.length === 0) return t("list_empty");
+    const lines = ["🛒 " + t("list_tab_all").replace(/^\S+\s*/, ""), ""];
+    gs.forEach(g => {
+        lines.push((categoryIcons[g.cat] || "") + " " + categoryLabel(g.cat));
+        g.items.forEach(e => lines.push((e.checked ? "[x] " : "[ ] ") + combinedEntryText(e)));
+        lines.push("");
+    });
+    return lines.join("\n").trim();
+}
+
+function printCombinedList(){
+
+    setPrintOrientation(false);
+
+    const gs = combinedGroups();
+    const dateStr = new Date().toLocaleDateString();
+    const title = t("list_tab_all").replace(/^\S+\s*/, "");
+
+    document.getElementById("printArea").innerHTML = `
+        <h1>🍃 FoodFlow — ${escapeHtml(title)}</h1>
+        <p style="color:#555;margin-top:0;">${dateStr}</p>
+        ${gs.length === 0 ? `<p>${escapeHtml(t("list_empty"))}</p>` : gs.map(g => `
+            <h3>${categoryIcons[g.cat] || ""} ${escapeHtml(categoryLabel(g.cat))}</h3>
+            ${g.items.map(e => `<div class="print-item ${e.checked ? "print-checked" : ""}">${e.checked ? "☑" : "☐"} &nbsp; ${escapeHtml(combinedEntryText(e))}</div>`).join("")}
+        `).join("")}
+    `;
+
+    printOrSheet(title, buildCombinedText(), {
+        kind: "shopping", title: "FoodFlow - " + title, date: dateStr, empty: t("list_empty"),
+        groups: gs.map(g => ({ label: categoryLabel(g.cat), items: g.items.map(e => ({ text: combinedEntryText(e), checked: e.checked })) }))
+    });
+
+}
+
 // ---- Paste several items at once ----
 function openPasteShoppingModal(){
     document.getElementById("pasteShoppingText").value = "";
@@ -14066,6 +14460,8 @@ function addPastedShoppingItems(){
 
 function openShoppingMoreMenu(){
 
+    if(activeShoppingList === "all"){ document.getElementById("combinedMenu").style.display = "flex"; return; }
+
     if(activeCustomList()){ openCustomListMenu(); return; }
 
     document.getElementById("shoppingMoreMenu")
@@ -14146,7 +14542,7 @@ function buildShoppingListText(){
 
 async function shareShoppingList(){
 
-    let text = buildShoppingListText();
+    let text = activeShoppingList === "all" ? buildCombinedText() : buildShoppingListText();
 
     if(navigator.share){
 
@@ -14608,6 +15004,8 @@ function buildPlannerText(){
 
 function printShoppingList(){
 
+    if(activeShoppingList === "all"){ printCombinedList(); return; }
+
     setPrintOrientation(false);
 
     const list = generateShoppingList().list.filter(i => !i.atHome);
@@ -14721,7 +15119,7 @@ function buildPlannerPrintModel(){
         title: t("meal_plan_title") + (weekNames[currentWeekKey] ? " - " + weekNames[currentWeekKey] : ""),
         subtitle: startStr + " - " + endStr,
         noMeals: t("print_no_meals_day"),
-        showIngredients: true,
+        showIngredients: printIngredientsOn(),
         days: days.map(day => ({ name: translateDayName(day), note: dayNotes[dayNoteKey(day)] || "" })),
         rows: types.map(type => ({
             type: type,
@@ -15616,9 +16014,10 @@ window.ffSoftRefresh = function(opts){
     shoppingCheckedByWeek = read("foodflowShoppingCheckedByWeek", {}) || {};
     shoppingOverridesByWeek = read("foodflowShoppingOverridesByWeek", {}) || {};
     shoppingExtrasByWeek = read("foodflowShoppingExtrasByWeek", {}) || {};
-    shoppingChecked = ensureWeekShoppingChecked(currentWeekKey);
-    shoppingOverrides = ensureWeekShoppingOverrides(currentWeekKey);
-    shoppingExtras = ensureWeekShoppingExtras(currentWeekKey);
+    shoppingStateKey = shoppingRangeStart;
+    shoppingChecked = ensureWeekShoppingChecked(shoppingStateKey);
+    shoppingOverrides = ensureWeekShoppingOverrides(shoppingStateKey);
+    shoppingExtras = ensureWeekShoppingExtras(shoppingStateKey);
 
     weekTemplates = loadWeekTemplates();
     weekNames = loadWeekNames();
