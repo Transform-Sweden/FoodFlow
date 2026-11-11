@@ -810,7 +810,7 @@ background:var(--brand); color:#fff;
 #dayMenu hr { border:none; border-top:1px solid rgba(120,120,120,.25); margin:6px 4px; }
 
 /* Recipe cards: only as tall as their content */
-#recipeList .meal-name-clamp { min-height:2.6em; margin:0; font-size:1.05em; }
+#recipeList .meal-name-clamp { display:block; min-height:1.3em; height:1.3em; margin:0; font-size:1.05em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 /* one fixed-height row for the allergy warning and the tags together, so every recipe card is the same size */
 .recipe-chips { display:flex; flex-wrap:nowrap; align-items:center; gap:4px; height:28px; margin:6px 0 4px; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; overscroll-behavior-x:contain; }
 .recipe-chips::-webkit-scrollbar { display:none; }
