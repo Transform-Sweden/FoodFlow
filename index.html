@@ -842,6 +842,23 @@ color:var(--text); font-size:14px; font-weight:500; border-radius:8px; transform
 .list-tabs { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 10px; margin:4px 0 6px; scrollbar-width:none; }
 .list-tabs::-webkit-scrollbar { display:none; }
 .list-tabs button { white-space:nowrap; flex:0 0 auto; margin:0; }
+.rc-box { max-width:380px; }
+.rc-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
+.rc-head strong { flex:1; text-align:center; text-transform:capitalize; }
+.rc-nav { margin:0; width:44px; min-height:44px; padding:0; font-size:1.4em; line-height:1; border-radius:12px; background:transparent; color:var(--text); border:1px solid var(--primary); box-shadow:none; }
+.rc-grid { display:grid; grid-template-columns:repeat(7,1fr); row-gap:2px; }
+.rc-weekdays span { text-align:center; font-size:.75em; opacity:.65; padding:4px 0; }
+.rc-day { position:relative; margin:0; width:100%; min-width:0; min-height:44px; padding:0; font-size:.95em; font-weight:500; border-radius:0; background:transparent; color:var(--text); border:none; box-shadow:none; filter:none; }
+.rc-day.pad { visibility:hidden; pointer-events:none; }
+.rc-day.in { background:var(--primary-light); }
+.rc-day.edge { background:var(--primary); color:#fff; border-radius:12px; }
+.rc-day.edge.s:not(.e) { border-top-right-radius:0; border-bottom-right-radius:0; }
+.rc-day.edge.e:not(.s) { border-top-left-radius:0; border-bottom-left-radius:0; }
+.rc-day.today { font-weight:800; text-decoration:underline; }
+.rc-day.has::after, .rc-dot-legend { content:""; }
+.rc-day.has::after { position:absolute; left:50%; bottom:5px; width:5px; height:5px; margin-left:-2.5px; border-radius:50%; background:var(--primary); }
+.rc-day.edge.has::after { background:#fff; }
+.rc-dot-legend { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--primary); vertical-align:middle; }
 .all-only { display:none; }
 .all-list-active .all-only { display:inline-block; }
 .all-list-active .list-edit-only, .all-list-active #quickAddFab { display:none !important; }
@@ -2215,11 +2232,11 @@ Automatically built from every recipe in your meal planner, scaled to the number
 
 <div class="shopping-range-row meal-only">
 
-<input type="date" id="shoppingRangeStartInput" data-i18n-aria-label="aria_range_start" aria-label="Shopping list from date" onchange="onShoppingRangeChange()">
+<input type="date" id="shoppingRangeStartInput" data-i18n-aria-label="aria_range_start" aria-label="Shopping list from date" readonly onclick="openRangeCalendar('start')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openRangeCalendar('start');}" onchange="onShoppingRangeChange()">
 
 <span class="small" data-i18n="range_to">to</span>
 
-<input type="date" id="shoppingRangeEndInput" data-i18n-aria-label="aria_range_end" aria-label="Shopping list to date" onchange="onShoppingRangeChange()">
+<input type="date" id="shoppingRangeEndInput" data-i18n-aria-label="aria_range_end" aria-label="Shopping list to date" readonly onclick="openRangeCalendar('end')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openRangeCalendar('end');}" onchange="onShoppingRangeChange()">
 
 </div>
 
@@ -3094,6 +3111,28 @@ style="width:100%;padding:12px;border-radius:var(--radius-field);border:1px soli
 </div>
 
 <!-- CUSTOM LIST MENU -->
+
+<div class="modal" role="dialog" aria-modal="true" id="rangeCalModal" aria-labelledby="rangeCalTitle">
+<div class="modal-box rc-box">
+<h2 id="rangeCalTitle" data-i18n="range_cal_title">📅 Choose dates</h2>
+<p class="small" id="rangeCalHint" role="status" aria-live="polite" style="margin:0 0 10px;"></p>
+<div class="rc-head">
+<button type="button" class="rc-nav" onclick="rangeCalMove(-1)" data-i18n-aria-label="range_cal_prev" aria-label="Previous month">‹</button>
+<strong id="rangeCalMonth"></strong>
+<button type="button" class="rc-nav" onclick="rangeCalMove(1)" data-i18n-aria-label="range_cal_next" aria-label="Next month">›</button>
+</div>
+<div class="rc-grid rc-weekdays" id="rangeCalWeekdays" aria-hidden="true"></div>
+<div class="rc-grid" id="rangeCalGrid"></div>
+<p class="small" style="margin:10px 0 0;"><span class="rc-dot-legend"></span> <span data-i18n="range_cal_legend">has meals planned</span></p>
+<div class="week-nav-secondary" style="margin-top:12px;">
+<button type="button" class="wrap-label btn-soft" onclick="rangeCalPreset('thisWeek')" data-i18n="preset_this_week">This Week</button>
+<button type="button" class="wrap-label btn-soft" onclick="rangeCalPreset('restOfWeek')" data-i18n="preset_rest_of_week">📍 Rest of Week</button>
+<button type="button" class="wrap-label btn-soft" onclick="rangeCalPreset('next7')" data-i18n="preset_next_7">Next 7 Days</button>
+</div>
+<br>
+<button type="button" data-i18n="close" onclick="closeRangeCalendar()">Close</button>
+</div>
+</div>
 
 <div class="modal" role="dialog" aria-modal="true" id="combinedMenu">
 <div class="modal-box">
@@ -4100,6 +4139,12 @@ const translations = {
         paste_items_none: "Paste some items first.",
         paste_items_added: "Added {n} items",
         list_tab_meal: "🍽️ Meal plan",
+        range_cal_title: "📅 Choose dates",
+        range_cal_pick_start: "Tap the first day.",
+        range_cal_pick_end: "Now tap the last day (tap the same day again for just one day).",
+        range_cal_prev: "Previous month",
+        range_cal_next: "Next month",
+        range_cal_legend: "has meals planned",
         list_tab_all: "🧺 All lists",
         all_lists_choose: "📑 Choose lists…",
         all_lists_choose_title: "Lists in the combined list",
@@ -4668,6 +4713,12 @@ const translations = {
         paste_items_none: "Klistra in några varor först.",
         paste_items_added: "Lade till {n} varor",
         list_tab_meal: "🍽️ Måltidsplan",
+        range_cal_title: "📅 Välj datum",
+        range_cal_pick_start: "Tryck på första dagen.",
+        range_cal_pick_end: "Tryck nu på sista dagen (tryck på samma dag igen för bara en dag).",
+        range_cal_prev: "Föregående månad",
+        range_cal_next: "Nästa månad",
+        range_cal_legend: "har måltider planerade",
         list_tab_all: "🧺 Alla listor",
         all_lists_choose: "📑 Välj listor…",
         all_lists_choose_title: "Listor i den samlade listan",
@@ -13197,6 +13248,117 @@ function updateShoppingRangeInputs(){
 
 }
 
+
+// ---- range calendar: tap the first day, then the last day ----
+let rcStart = null, rcEnd = null, rcMonth = null, rcHover = null, rcPhase = "start";
+
+function openRangeCalendar(which){
+    rcStart = shoppingRangeStart; rcEnd = shoppingRangeEnd;
+    rcPhase = "start"; rcHover = null;
+    let base = parseDateKey(which === "end" ? shoppingRangeEnd : shoppingRangeStart);
+    if(isNaN(base.getTime())) base = new Date();
+    rcMonth = new Date(base.getFullYear(), base.getMonth(), 1);
+    renderRangeCalendar();
+    document.getElementById("rangeCalModal").style.display = "flex";
+}
+
+function closeRangeCalendar(){
+    document.getElementById("rangeCalModal").style.display = "none";
+}
+
+function rangeCalMove(n){
+    rcMonth = new Date(rcMonth.getFullYear(), rcMonth.getMonth() + n, 1);
+    renderRangeCalendar();
+}
+
+function rangeCalHasMeals(d){
+    const w = weeks[getMondayKey(d)];
+    const list = w && w[days[(d.getDay() + 6) % 7]];
+    return !!(list && list.length);
+}
+
+function renderRangeCalendar(){
+
+    const locale = currentLanguage === "sv" ? "sv-SE" : "en-GB";
+    document.getElementById("rangeCalMonth").textContent = rcMonth.toLocaleDateString(locale, { month:"long", year:"numeric" });
+
+    // weekday letters, Monday first
+    const wd = document.getElementById("rangeCalWeekdays");
+    if(!wd.childElementCount){
+        for(let i = 0; i < 7; i++){
+            const d = new Date(2024, 0, 1 + i);   // 1 Jan 2024 was a Monday
+            const sp = document.createElement("span");
+            sp.textContent = d.toLocaleDateString(locale, { weekday:"short" }).slice(0, 3);
+            wd.appendChild(sp);
+        }
+    }
+
+    document.getElementById("rangeCalHint").textContent = t(rcPhase === "start" ? "range_cal_pick_start" : "range_cal_pick_end");
+
+    // the span being shown: the chosen range, or (while picking the end) start..hover
+    let a = rcStart, b = rcEnd;
+    if(rcPhase === "end"){ a = rcStart; b = rcHover || rcStart; }
+    if(a && b && parseDateKey(a).getTime() > parseDateKey(b).getTime()){ const x = a; a = b; b = x; }
+
+    const todayKey = formatDateKey(new Date());
+    const lead = (new Date(rcMonth.getFullYear(), rcMonth.getMonth(), 1).getDay() + 6) % 7;
+    const count = new Date(rcMonth.getFullYear(), rcMonth.getMonth() + 1, 0).getDate();
+    const grid = document.getElementById("rangeCalGrid");
+    grid.textContent = "";
+
+    for(let i = 0; i < lead; i++){
+        const pad = document.createElement("button");
+        pad.type = "button"; pad.className = "rc-day pad"; pad.tabIndex = -1; pad.setAttribute("aria-hidden", "true");
+        grid.appendChild(pad);
+    }
+
+    for(let n = 1; n <= count; n++){
+        const d = new Date(rcMonth.getFullYear(), rcMonth.getMonth(), n);
+        const key = formatDateKey(d);
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = String(n);
+        let cls = "rc-day";
+        if(a && b && key >= a && key <= b) cls += " in";
+        if(key === a) cls += " edge s";
+        if(key === b) cls += " edge e";
+        if(key === todayKey) cls += " today";
+        if(rangeCalHasMeals(d)) cls += " has";
+        btn.className = cls;
+        btn.setAttribute("aria-label", d.toLocaleDateString(locale, { weekday:"long", day:"numeric", month:"long" }) + (rangeCalHasMeals(d) ? ", " + t("range_cal_legend") : ""));
+        if(a && b && key >= a && key <= b) btn.setAttribute("aria-pressed", "true");
+        btn.onclick = () => rangeCalPick(key);
+        btn.onmouseenter = () => { if(rcPhase === "end" && rcHover !== key){ rcHover = key; renderRangeCalendar(); } };
+        grid.appendChild(btn);
+    }
+
+}
+
+function rangeCalPick(key){
+
+    if(rcPhase === "start"){
+        rcStart = key; rcEnd = null; rcHover = null; rcPhase = "end";
+        renderRangeCalendar();
+        return;
+    }
+
+    let a = rcStart, b = key;
+    if(parseDateKey(a).getTime() > parseDateKey(b).getTime()){ const x = a; a = b; b = x; }
+
+    shoppingRangeStart = a;
+    shoppingRangeEnd = b;
+    setShoppingMealFilter(null);
+    saveShoppingState();
+    updateShoppingRangeInputs();
+    renderShoppingList();
+    closeRangeCalendar();
+
+}
+
+function rangeCalPreset(p){
+    setShoppingRangePreset(p);
+    closeRangeCalendar();
+}
 
 function onShoppingRangeChange(){
 
