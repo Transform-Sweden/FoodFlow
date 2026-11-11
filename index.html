@@ -13333,10 +13333,25 @@ function renderRangeCalendar(){
         btn.setAttribute("aria-label", d.toLocaleDateString(locale, { weekday:"long", day:"numeric", month:"long" }) + (rangeCalHasMeals(d) ? ", " + t("range_cal_legend") : ""));
         if(a && b && key >= a && key <= b) btn.setAttribute("aria-pressed", "true");
         btn.onclick = () => rangeCalPick(key);
-        btn.onmouseenter = () => { if(rcPhase === "end" && rcHover !== key){ rcHover = key; renderRangeCalendar(); } };
+        btn.dataset.key = key;
+        // Mouse preview only, and it only repaints classes (never rebuilds the buttons): on a phone a tap also
+        // fires hover events, and rebuilding the day under the finger made the second tap's click get lost.
+        btn.addEventListener("pointerenter", ev => { if(ev.pointerType === "mouse" && rcPhase === "end" && rcHover !== key){ rcHover = key; rangeCalPaint(); } });
         grid.appendChild(btn);
     }
 
+}
+
+function rangeCalPaint(){
+    let a = rcStart, b = rcHover || rcStart;
+    if(a && b && parseDateKey(a).getTime() > parseDateKey(b).getTime()){ const x = a; a = b; b = x; }
+    document.querySelectorAll("#rangeCalGrid .rc-day[data-key]").forEach(btn => {
+        const key = btn.dataset.key;
+        btn.classList.toggle("in", !!(a && key >= a && key <= b));
+        btn.classList.toggle("edge", key === a || key === b);
+        btn.classList.toggle("s", key === a);
+        btn.classList.toggle("e", key === b);
+    });
 }
 
 function rangeCalPick(key){
