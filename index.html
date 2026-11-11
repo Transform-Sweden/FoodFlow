@@ -2232,11 +2232,11 @@ Automatically built from every recipe in your meal planner, scaled to the number
 
 <div class="shopping-range-row meal-only">
 
-<input type="date" id="shoppingRangeStartInput" data-i18n-aria-label="aria_range_start" aria-label="Shopping list from date" readonly onclick="openRangeCalendar('start')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openRangeCalendar('start');}" onchange="onShoppingRangeChange()">
+<input type="text" inputmode="none" autocomplete="off" id="shoppingRangeStartInput" data-i18n-aria-label="aria_range_start" aria-label="Shopping list from date" readonly onclick="openRangeCalendar('start')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openRangeCalendar('start');}" onchange="onShoppingRangeChange()">
 
 <span class="small" data-i18n="range_to">to</span>
 
-<input type="date" id="shoppingRangeEndInput" data-i18n-aria-label="aria_range_end" aria-label="Shopping list to date" readonly onclick="openRangeCalendar('end')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openRangeCalendar('end');}" onchange="onShoppingRangeChange()">
+<input type="text" inputmode="none" autocomplete="off" id="shoppingRangeEndInput" data-i18n-aria-label="aria_range_end" aria-label="Shopping list to date" readonly onclick="openRangeCalendar('end')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openRangeCalendar('end');}" onchange="onShoppingRangeChange()">
 
 </div>
 
@@ -13223,12 +13223,17 @@ function updateShoppingRangeInputs(){
     let startInput = document.getElementById("shoppingRangeStartInput");
     let endInput = document.getElementById("shoppingRangeEndInput");
 
+    // plain read-only text (a real date input would open the phone's own picker instead of our calendar)
+    const shown = k => { const d = parseDateKey(k); return isNaN(d.getTime()) ? k : d.toLocaleDateString(currentLanguage === "sv" ? "sv-SE" : "en-GB", { day:"numeric", month:"short", year:"numeric" }); };
+
     if(startInput){
-        startInput.value = shoppingRangeStart;
+        startInput.value = shown(shoppingRangeStart);
+        startInput.dataset.key = shoppingRangeStart;
     }
 
     if(endInput){
-        endInput.value = shoppingRangeEnd;
+        endInput.value = shown(shoppingRangeEnd);
+        endInput.dataset.key = shoppingRangeEnd;
     }
 
     let summary = document.getElementById("shoppingRangeSummary");
