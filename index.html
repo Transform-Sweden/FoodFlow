@@ -810,7 +810,15 @@ background:var(--brand); color:#fff;
 #dayMenu hr { border:none; border-top:1px solid rgba(120,120,120,.25); margin:6px 4px; }
 
 /* Recipe cards: only as tall as their content */
-#recipeList .meal-name-clamp { min-height:0; margin:0; font-size:1.05em; }
+#recipeList .meal-name-clamp { min-height:2.6em; margin:0; font-size:1.05em; }
+/* one fixed-height row for the allergy warning and the tags together, so every recipe card is the same size */
+.recipe-chips { display:flex; flex-wrap:nowrap; align-items:center; gap:4px; height:28px; margin:6px 0 4px; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; overscroll-behavior-x:contain; }
+.recipe-chips::-webkit-scrollbar { display:none; }
+.recipe-chips > * { flex:0 0 auto; white-space:nowrap; margin:0; }
+.recipe-tag-chip { padding:2px 8px; border-radius:999px; font-size:.75em; background:var(--bg); border:1px solid var(--primary); opacity:.85; }
+.recipe-chips.fade-r { -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent); mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent); }
+.recipe-chips.fade-l { -webkit-mask-image:linear-gradient(to left,#000 calc(100% - 28px),transparent); mask-image:linear-gradient(to left,#000 calc(100% - 28px),transparent); }
+.recipe-chips.fade-l.fade-r { -webkit-mask-image:linear-gradient(to right,transparent,#000 28px,#000 calc(100% - 28px),transparent); mask-image:linear-gradient(to right,transparent,#000 28px,#000 calc(100% - 28px),transparent); }
 #recipeList .meal { padding:var(--card-pad); }
 
 /* small menu behind the ⋯ button */
@@ -7247,9 +7255,10 @@ function allergenBadgesHtml(recipe){
     const hits = recipeAllergenHits(recipe).filter(h => !h.checked);
     if(hits.length === 0) return "";
 
-    return `<div class="allergen-badges">${hits.map(h => `
+    // just the badges (no wrapper) so a card can put them in the same row as its tags
+    return hits.map(h => `
         <span class="allergen-badge ${allergenBadgeStyleClass(h.entry)}"
-              title="${escapeHtml(allergenLevelText(h.entry))}: ${escapeHtml(h.ingredients.join(", "))}">${allergenIcon(h.entry)} ${escapeHtml(allergenLabel(h.entry))}<span class="sr-only"> (${escapeHtml(allergenLevelText(h.entry))})</span></span>`).join("")}</div>`;
+              title="${escapeHtml(allergenLevelText(h.entry))}: ${escapeHtml(h.ingredients.join(", "))}">${allergenIcon(h.entry)} ${escapeHtml(allergenLabel(h.entry))}<span class="sr-only"> (${escapeHtml(allergenLevelText(h.entry))})</span></span>`).join("");
 
 }
 
@@ -11259,28 +11268,16 @@ ${escapeHtml(recipe.name)}
 
 </h3>
 
-${allergenBadgesHtml(recipe)}
-
-${
-    (recipe.tags && recipe.tags.length > 0)
-    ? `<div class="tag-scroll" style="display:flex; flex-wrap:wrap; gap:4px; margin:6px 0 4px;">` + recipe.tags.map(tag => `
-        <span style="
-            padding:2px 8px;
-            border-radius:999px;
-            font-size:0.75em;
-            background:var(--bg);
-            border:1px solid var(--primary);
-            opacity:0.85;
-        ">${escapeHtml(tag)}</span>
-    `).join("") + `</div>`
-    : ""
-    }
+<div class="recipe-chips tag-scroll">${allergenBadgesHtml(recipe)}${(recipe.tags || []).map(tag => `<span class="recipe-tag-chip">${escapeHtml(tag)}</span>`).join("")}</div>
 
 <div class="small" style="margin-top:6px;">
 👥 ${t("servings_count").replace("{n}", recipe.servings)} &nbsp;·&nbsp; 🥕 ${ingredientsCountText(recipe.ingredients.length)}
 </div>
 
 `;
+
+const chipRow = card.querySelector(".recipe-chips");
+if(chipRow) enableDesktopRowScroll(chipRow);
 
 // The whole card opens the recipe (no separate View button)
 card.setAttribute("data-open", "1");
