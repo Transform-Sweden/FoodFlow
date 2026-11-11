@@ -843,6 +843,8 @@ color:var(--text); font-size:14px; font-weight:500; border-radius:8px; transform
 .list-tabs::-webkit-scrollbar { display:none; }
 .list-tabs button { white-space:nowrap; flex:0 0 auto; margin:0; }
 .rc-box { max-width:380px; }
+.rc-presets { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; }
+.rc-presets button { margin:0; width:100%; min-width:0; min-height:46px; padding:7px 6px; font-size:13px; line-height:1.2; text-align:center; white-space:normal; display:flex; align-items:center; justify-content:center; }
 .rc-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
 .rc-head strong { flex:1; text-align:center; text-transform:capitalize; }
 .rc-nav { margin:0; width:44px; min-height:44px; padding:0; font-size:1.4em; line-height:1; border-radius:12px; background:transparent; color:var(--text); border:1px solid var(--primary); box-shadow:none; }
@@ -3124,7 +3126,7 @@ style="width:100%;padding:12px;border-radius:var(--radius-field);border:1px soli
 <div class="rc-grid rc-weekdays" id="rangeCalWeekdays" aria-hidden="true"></div>
 <div class="rc-grid" id="rangeCalGrid"></div>
 <p class="small" style="margin:10px 0 0;"><span class="rc-dot-legend"></span> <span data-i18n="range_cal_legend">has meals planned</span></p>
-<div class="week-nav-secondary" style="margin-top:12px;">
+<div class="rc-presets">
 <button type="button" class="wrap-label btn-soft" onclick="rangeCalPreset('thisWeek')" data-i18n="preset_this_week">This Week</button>
 <button type="button" class="wrap-label btn-soft" onclick="rangeCalPreset('restOfWeek')" data-i18n="preset_rest_of_week">📍 Rest of Week</button>
 <button type="button" class="wrap-label btn-soft" onclick="rangeCalPreset('next7')" data-i18n="preset_next_7">Next 7 Days</button>
