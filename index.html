@@ -846,8 +846,9 @@ color:var(--text); font-size:14px; font-weight:500; border-radius:8px; transform
 .rc-presets { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; }
 .rc-presets button { margin:0; width:100%; min-width:0; min-height:46px; padding:7px 6px; font-size:13px; line-height:1.2; text-align:center; white-space:normal; display:flex; align-items:center; justify-content:center; }
 .rc-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
+.rc-nav svg { display:block; width:22px; height:22px; flex:none; }
 .rc-head strong { flex:1; text-align:center; text-transform:capitalize; }
-.rc-nav { margin:0; width:44px; min-height:44px; padding:0; font-size:1.4em; line-height:1; border-radius:12px; background:transparent; color:var(--text); border:1px solid var(--primary); box-shadow:none; }
+.rc-nav { margin:0; width:44px; height:44px; min-height:44px; padding:0; display:flex; align-items:center; justify-content:center; line-height:0; border-radius:12px; background:transparent; color:var(--text); border:1px solid var(--primary); box-shadow:none; }
 .rc-grid { display:grid; grid-template-columns:repeat(7,1fr); row-gap:2px; }
 .rc-weekdays span { text-align:center; font-size:.75em; opacity:.65; padding:4px 0; }
 .rc-day { position:relative; margin:0; width:100%; min-width:0; min-height:44px; padding:0; font-size:.95em; font-weight:500; border-radius:0; background:transparent; color:var(--text); border:none; box-shadow:none; filter:none; }
@@ -3119,9 +3120,9 @@ style="width:100%;padding:12px;border-radius:var(--radius-field);border:1px soli
 <h2 id="rangeCalTitle" data-i18n="range_cal_title">📅 Choose dates</h2>
 <p class="small" id="rangeCalHint" role="status" aria-live="polite" style="margin:0 0 10px;"></p>
 <div class="rc-head">
-<button type="button" class="rc-nav" onclick="rangeCalMove(-1)" data-i18n-aria-label="range_cal_prev" aria-label="Previous month">‹</button>
+<button type="button" class="rc-nav" onclick="rangeCalMove(-1)" data-i18n-aria-label="range_cal_prev" aria-label="Previous month"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15.5 5l-7 7 7 7"/></svg></button>
 <strong id="rangeCalMonth"></strong>
-<button type="button" class="rc-nav" onclick="rangeCalMove(1)" data-i18n-aria-label="range_cal_next" aria-label="Next month">›</button>
+<button type="button" class="rc-nav" onclick="rangeCalMove(1)" data-i18n-aria-label="range_cal_next" aria-label="Next month"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8.5 5l7 7-7 7"/></svg></button>
 </div>
 <div class="rc-grid rc-weekdays" id="rangeCalWeekdays" aria-hidden="true"></div>
 <div class="rc-grid" id="rangeCalGrid"></div>
