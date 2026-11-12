@@ -2055,6 +2055,15 @@ input[type="checkbox"], input[type="radio"] { accent-color:var(--brand); }
 input[type="checkbox"] { width:18px; height:18px; }
 input[type="radio"] { width:18px; height:18px; }
 
+
+/* PHONES: the page scrolls inside its own box instead of the browser window. Safari then never
+   collapses/expands its toolbars while you scroll, so the floating nav bar (and the + button) stay
+   exactly where they are, and there is no rubber-band "shake" at the top or bottom. */
+@media(max-width:600px){
+    html, body { height:100%; overflow:hidden; overscroll-behavior:none; }
+    body { padding-bottom:0 !important; }
+    #appScroll { position:fixed; top:0; left:0; right:0; bottom:0; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; overscroll-behavior:none; padding-bottom:calc(180px + env(safe-area-inset-bottom)); }
+}
 </style>
 
 
@@ -2064,6 +2073,7 @@ input[type="radio"] { width:18px; height:18px; }
 
 <body>
 
+<div id="appScroll">
 
 <header>
 
@@ -2291,7 +2301,7 @@ oninput="renderShoppingList()"
 
 </div>    
 
-
+</div><!-- /appScroll -->
 
 <!-- SETTINGS WINDOW -->
 
@@ -5674,6 +5684,14 @@ document.querySelectorAll(".modal").forEach(modal=>{
 // A short, subtle vibration for touch interactions that just
 // completed (swipe-delete, drag-drop) — silently does nothing on
 // devices/browsers without vibration support.
+// On phones the page scrolls inside #appScroll (see the CSS), on bigger screens it is the window
+function appScroller(){
+    const el = document.getElementById("appScroll");
+    return el && getComputedStyle(el).position === "fixed" ? el : null;
+}
+function getAppScrollY(){ const el = appScroller(); return el ? el.scrollTop : window.scrollY; }
+function setAppScrollY(y){ const el = appScroller(); if(el) el.scrollTop = y; else window.scrollTo(0, y); }
+
 function hapticFeedback(){
 
     if(navigator.vibrate){
@@ -12077,7 +12095,7 @@ const ingredientStopwords = [
 // Every canonical value used above, so we know when to show a
 // translated display name vs. keep the ingredient's original spelling.
 const canonicalIngredientNames =
-    new Set(Object.values(ingredientTranslations));
+    new Set(Object.values(ingredientTranslations).concat(["gluten free bread","sourdough bread","wholegrain bread","rye bread","dark bread","white bread","red lentils","green lentils","brown lentils","black lentils","yellow lentils","turkish yogurt","greek yogurt"]));
 
 
 // Which store-aisle-style section each canonical ingredient belongs
@@ -12121,11 +12139,12 @@ const ingredientCategories = {
     "broth":"Pantry", "chicken broth":"Pantry", "beef broth":"Pantry", "vegetable broth":"Pantry",
     "oil":"Pantry", "olive oil":"Pantry", "vinegar":"Pantry", "soy sauce":"Pantry", "water":"Pantry",
     "mustard":"Pantry", "ketchup":"Pantry", "mayonnaise":"Pantry",
-    "breadcrumbs":"Pantry", "bread":"Pantry", "white wine":"Pantry",
+    "breadcrumbs":"Pantry", "bread":"Pantry", "gluten free bread":"Pantry", "sourdough bread":"Pantry", "wholegrain bread":"Pantry", "rye bread":"Pantry", "dark bread":"Pantry", "white bread":"Pantry", "white wine":"Pantry",
     "egg noodles":"Pantry", "couscous":"Pantry", "fish broth":"Pantry",
     "corn starch":"Pantry", "sambal oelek":"Pantry", "macaroni":"Pantry",
     "sriracha":"Pantry", "sweet chili sauce":"Pantry", "tomato puree":"Pantry",
-    "lasagna sheets":"Pantry", "lentils":"Pantry",
+    "lasagna sheets":"Pantry", "lentils":"Pantry", "red lentils":"Pantry", "green lentils":"Pantry", "brown lentils":"Pantry", "black lentils":"Pantry", "yellow lentils":"Pantry",
+    "turkish yogurt":"Dairy & Eggs", "greek yogurt":"Dairy & Eggs",
     "chili sauce":"Pantry", "taco sauce":"Pantry", "kebab sauce":"Pantry",
     "white beans in tomato sauce":"Pantry", "lime juice":"Pantry",
     "pesto":"Pantry", "pita bread":"Pantry", "tortilla":"Pantry", "tortilla chips":"Pantry",
@@ -12636,6 +12655,36 @@ function renderCustomIngredientTranslations(){
 }
 
 
+const lentilColours = { red:"red", "röd":"red", "röda":"red", green:"green", "grön":"green", "gröna":"green", brown:"brown", brun:"brown", bruna:"brown", black:"black", svart:"black", svarta:"black", yellow:"yellow", gul:"yellow", gula:"yellow" };
+
+// Bread: the kind matters when you shop (gluten free, dark, white ... are different loaves)
+function breadVariantName(base){
+    const words = base.split(" ");
+    if(!/(bread|bröd)$/.test(words[words.length - 1])) return null;
+    if(/gluten[\s-]?(free|fri|fritt)/.test(base)) return "gluten free bread";
+    if(/sour\s?dough|surdeg/.test(base)) return "sourdough bread";
+    if(/whole\s?(grain|meal|wheat)|fullkorn/.test(base)) return "wholegrain bread";
+    if(/(^|[^a-zåäö])(rye|råg)/.test(base)) return "rye bread";
+    if(/(^|[^a-zåäö])(dark|mörk)/.test(base)) return "dark bread";
+    if(/(^|[^a-zåäö])(white|vit)(t|a)?(\s|$)/.test(base)) return "white bread";
+    return null;
+}
+
+function ingredientVariantName(base){
+    const bread = breadVariantName(base);
+    if(bread) return bread;
+    const words = base.split(" ");
+    if(words.some(w => /^(lentils?|lins|linser|linsen)$/.test(w))){
+        const colour = words.map(w => lentilColours[w]).find(Boolean);
+        if(colour) return colour + " lentils";
+    }
+    if(words.some(w => /^(yogurt|yoghurt|jogurt)$/.test(w))){
+        if(words.some(w => /^(turkish|turkisk|turkiskt|turkiska)$/.test(w))) return "turkish yogurt";
+        if(words.some(w => /^(greek|grekisk|grekiskt|grekiska)$/.test(w))) return "greek yogurt";
+    }
+    return null;
+}
+
 function normalizeIngredientName(name){
 
     let base = name
@@ -12663,6 +12712,11 @@ function normalizeIngredientName(name){
     if(ingredientTranslations[base]){
         return ingredientTranslations[base];
     }
+
+    // Some qualifiers are part of the product: red lentils are not green lentils,
+    // and Turkish / Greek yoghurt is not plain yoghurt. Keep those words.
+    const variant = ingredientVariantName(base);
+    if(variant) return variant;
 
     let cleaned = base
         .split(" ")
@@ -14355,7 +14409,7 @@ function buildCombinedEntries(){
         const key = norm + "|" + u;
         let e = byKey[key];
         if(!e){
-            e = byKey[key] = { name: name, unit: unit || "", amount: 0, category: getIngredientCategory(norm), sources: [], tags: [], allChecked: true };
+            e = byKey[key] = { name: canonicalIngredientNames.has(norm) ? norm.charAt(0).toUpperCase() + norm.slice(1) : name, unit: unit || "", amount: 0, category: getIngredientCategory(norm), sources: [], tags: [], allChecked: true };
             order.push(e);
         }
         e.amount += Number(amount) || 0;
@@ -16576,7 +16630,7 @@ function scheduleReload(){
                 return;
             }catch(err){ console.warn("FoodFlow soft refresh failed, reloading instead", err); }
         }
-        try { sessionStorage.setItem("ff_scroll", String(window.scrollY)); sessionStorage.setItem("ff_synced", "1"); if(typeof currentWeekKey === "string") sessionStorage.setItem("ff_week", currentWeekKey); } catch(e){}
+        try { sessionStorage.setItem("ff_scroll", String(getAppScrollY())); sessionStorage.setItem("ff_synced", "1"); if(typeof currentWeekKey === "string") sessionStorage.setItem("ff_week", currentWeekKey); } catch(e){}
         location.reload();
     };
     reloadTimer = setTimeout(tick, 600);
@@ -16754,7 +16808,7 @@ async function switchTo(id){
             switching = false;
             renderSyncSettings();
             if(code) start();
-            window.scrollTo(0, 0);
+            setAppScrollY(0);
             if(typeof closeSettings === "function") closeSettings();
             toast(tr("ws_switched").replace("{name}", wsName(target)));
             return;
@@ -17088,7 +17142,7 @@ try{
     const y = sessionStorage.getItem("ff_scroll");
     if(y !== null){
         sessionStorage.removeItem("ff_scroll");
-        requestAnimationFrame(() => window.scrollTo(0, Number(y)));
+        requestAnimationFrame(() => setAppScrollY(Number(y)));
     }
     if(sessionStorage.getItem("ff_synced")){
         sessionStorage.removeItem("ff_synced");
