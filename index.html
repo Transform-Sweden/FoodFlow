@@ -2505,6 +2505,14 @@ Reorder the categories to match how your store is laid out.
 </label>
 
 <label style="display:flex;align-items:flex-start;gap:10px;margin-top:18px;cursor:pointer;">
+<input type="checkbox" id="roundMealsToggle" style="width:auto;margin:3px 0 0;" onchange="toggleMealRounding(this.checked)">
+<span>
+<strong data-i18n="round_meals_label">Round up amounts per meal</strong><br>
+<span class="small" data-i18n="round_meals_description">When a meal is scaled for a different number of people, weights and volumes are rounded up (1.62 kg becomes 1.65 kg) in recipes, the planner and print. The shopping list adds up these rounded meals, so you don't run short at the end of the week. Seasonings and recipes at their original size stay exact.</span>
+</span>
+</label>
+
+<label style="display:flex;align-items:flex-start;gap:10px;margin-top:18px;cursor:pointer;">
 <input type="checkbox" id="gentleSpicesToggle" style="width:auto;margin:3px 0 0;" onchange="toggleGentleSpices(this.checked)">
 <span>
 <strong data-i18n="gentle_spices_label">Scale seasonings gently for big batches</strong><br>
@@ -4126,7 +4134,9 @@ const translations = {
         planner_no_meals: "No meals planned yet",
         need_exact: "need",
         round_shopping_label: "Round up shopping amounts",
-        round_shopping_description: "80 g becomes 100 g, 1.2 kg becomes 1.5 kg. The exact amount stays visible in gray. Recipes and the planner are not changed.",
+        round_shopping_description: "80 g becomes 100 g, 1.2 kg becomes 1.5 kg. The exact amount stays visible in gray.",
+        round_meals_label: "Round up amounts per meal",
+        round_meals_description: "When a meal is scaled for a different number of people, weights and volumes are rounded up (1.62 kg becomes 1.65 kg) in recipes, the planner and print. The shopping list adds up these rounded meals, so you don't run short at the end of the week. Seasonings and recipes at their original size stay exact.",
         day_menu_note_add: "Add note",
         day_menu_note_edit: "Edit note",
         day_menu_eating_out: "🍽️ Eating out",
@@ -4700,7 +4710,9 @@ const translations = {
         planner_no_meals: "Inga måltider planerade än",
         need_exact: "behöver",
         round_shopping_label: "Avrunda inköpsmängder uppåt",
-        round_shopping_description: "80 g blir 100 g, 1,2 kg blir 1,5 kg. Den exakta mängden visas i grått. Recept och planeraren ändras inte.",
+        round_shopping_description: "80 g blir 100 g, 1,2 kg blir 1,5 kg. Den exakta mängden visas i grått.",
+        round_meals_label: "Avrunda mängder uppåt per måltid",
+        round_meals_description: "När en måltid skalas för ett annat antal personer avrundas vikt och volym uppåt (1,62 kg blir 1,65 kg) i recept, planeraren och utskrift. Inköpslistan summerar de avrundade måltiderna, så att maten räcker hela veckan. Kryddor och recept i sin ursprungliga storlek förblir exakta.",
         day_menu_note_add: "Lägg till anteckning",
         day_menu_note_edit: "Redigera anteckning",
         day_menu_eating_out: "🍽️ Äter ute",
@@ -10221,6 +10233,8 @@ if(atToggle) atToggle.checked = askTypeOn();
 
 let roundToggle = document.getElementById("roundShoppingToggle");
 if(roundToggle) roundToggle.checked = shoppingRoundingOn();
+let roundMealsToggle = document.getElementById("roundMealsToggle");
+if(roundMealsToggle) roundMealsToggle.checked = mealRoundingOn();
 
 let printIngToggle = document.getElementById("printIngredientsToggle");
 if(printIngToggle) printIngToggle.checked = printIngredientsOn();
@@ -11031,10 +11045,9 @@ recipe.ingredients.map(item=>`
 <li>
 ${
 item.amount
-? formatAmount(Number(item.amount) * ingredientFactor(item, factor))
-: ""
+? escapeHtml((q => qtyText(q.amount, q.unit))(scaledIngredient(item, factor)))
+: escapeHtml(item.unit || "")
 }
-${escapeHtml(item.unit || "")}
 ${escapeHtml(item.name)}
 </li>
 
@@ -11375,7 +11388,7 @@ ${recipe.ingredients.map(item=>`
 <li>${
     typeof item === "string"
     ? escapeHtml(item)
-    : `${item.amount || ""} ${escapeHtml(item.unit || "")} ${escapeHtml(item.name)}`.trim()
+    : `${Number(item.amount) > 0 ? escapeHtml(qtyText(Number(item.amount), item.unit)) : escapeHtml(((item.amount || "") + " " + (item.unit || "")).trim())} ${escapeHtml(item.name)}`.trim()
 }</li>
 
 `).join("")}
@@ -12458,6 +12471,39 @@ function toggleShoppingRounding(on){
     renderShoppingList();
 }
 
+// Cooks round up while cooking too, so meals scaled for other numbers of people get
+// rounded up per meal (weight and volume only). The shopping list adds up these rounded
+// meal amounts, so the last meal of the week doesn't come up short.
+function mealRoundingOn(){
+    try{ return localStorage.getItem("foodflowRoundMeals") !== "0"; }
+    catch(e){ return true; }
+}
+
+function toggleMealRounding(on){
+    try{ localStorage.setItem("foodflowRoundMeals", on ? "1" : "0"); }catch(e){}
+    renderShoppingList();
+    if(typeof render === "function") render();
+}
+
+function roundUpMealBase(base){
+    let step = base < 100 ? 10 : base < 1000 ? 50 : 100;
+    return Math.ceil(base / step - 1e-9) * step;
+}
+
+// Scaled amount of one ingredient for a meal: { amount, unit } in the recipe's own unit.
+function scaledIngredient(ing, factor){
+    let amount = (Number(ing.amount) || 0) * ingredientFactor(ing, factor);
+    let unit = (ing.unit || "").trim();
+    let info = unitFamilies[unit.toLowerCase()];
+    if(mealRoundingOn() && info && Math.abs(factor - 1) > 1e-9 && amount > 0 && !isSeasoningName(ing.name)){
+        let base = amount * info.toBase;
+        if(base >= 20){
+            amount = roundUpMealBase(base) / info.toBase;
+        }
+    }
+    return { amount, unit };
+}
+
 const roundableCountUnits = new Set([
     "", "st", "piece", "clove", "klyfta", "slice", "skiva", "can",
     "package", "bag", "bottle", "jar", "box", "bunch", "head", "stick", "portion"
@@ -12839,7 +12885,7 @@ function generateShoppingList(){
 
                     let unit = normalizeUnit(ingredient.unit || "");
                     let amount = Number(ingredient.amount) || 0;
-                    let scaled = amount * ingredientFactor(ingredient, factor);
+                    let scaled = scaledIngredient(ingredient, factor).amount;
 
                     let normalizedName = normalizeIngredientName(rawName);
 
@@ -13002,6 +13048,22 @@ function generateShoppingList(){
 }
 
 
+// Display helper: 1600 g -> "1.6 kg", 1500 ml -> "1.5 l". Only touches g and ml;
+// everything else is shown exactly as written.
+function niceQty(amount, unit){
+    let u = (unit || "").trim();
+    let a = Number(amount);
+    let low = u.toLowerCase();
+    if(a >= 1000 && (low === "g" || low === "gram")) return { amount: a / 1000, unit: "kg" };
+    if(a >= 1000 && low === "ml") return { amount: a / 1000, unit: "l" };
+    return { amount: a, unit: u };
+}
+
+function qtyText(amount, unit){
+    let q = niceQty(amount, unit);
+    return formatAmount(q.amount) + (q.unit ? " " + q.unit : "");
+}
+
 function formatAmount(num){
 
     let rounded = Math.round(num * 100) / 100;
@@ -13024,7 +13086,7 @@ function renderShoppingItemRow(item){
     let accent = categoryAccents[item.category] || categoryAccents["Other"];
 
     let amountText = item.amount > 0
-        ? `${formatAmount(item.amount)}${item.unit ? " " + item.unit : ""} `
+        ? `${qtyText(item.amount, item.unit)} `
         : "";
 
     if(shoppingSelectionMode){
@@ -13110,7 +13172,7 @@ function renderAtHomeRow(item){
     let safeKey = String(item.key).replace(/\\/g,"\\\\").replace(/'/g,"\\x27").replace(/"/g,"\\x22").replace(/</g,"\\x3c").replace(/>/g,"\\x3e").replace(/&/g,"\\x26").replace(/\n/g,"\\n");
     let accent = categoryAccents[item.category] || categoryAccents["Other"];
     let amountText = item.amount > 0
-        ? `${formatAmount(item.amount)}${item.unit ? " " + item.unit : ""} `
+        ? `${qtyText(item.amount, item.unit)} `
         : "";
     let inPantry = pantry.includes(pantryNameOf(item));
 
@@ -14294,7 +14356,7 @@ function clearCheckedCustomItems(){
 }
 
 function customItemText(i){
-    let amount = Number(i.amount) > 0 ? formatAmount(Number(i.amount)) + (i.unit ? " " + i.unit : "") + " " : "";
+    let amount = Number(i.amount) > 0 ? qtyText(Number(i.amount), i.unit) + " " : "";
     return amount + i.name;
 }
 
@@ -14479,7 +14541,7 @@ function buildCombinedEntries(){
 }
 
 function combinedEntryText(e){
-    return (e.amount > 0 ? formatAmount(e.amount) + (e.unit ? " " + e.unit : "") + " " : "") + e.name;
+    return (e.amount > 0 ? qtyText(e.amount, e.unit) + " " : "") + e.name;
 }
 
 function renderCombinedList(){
@@ -14807,7 +14869,7 @@ function buildShoppingListText(){
             groups[cat].forEach(item=>{
 
                 let amountText = item.amount > 0
-                    ? `${formatAmount(item.amount)}${item.unit ? " " + item.unit : ""} `
+                    ? `${qtyText(item.amount, item.unit)} `
                     : "";
 
                 let box = shoppingChecked[item.key] ? "[x]" : "[ ]";
@@ -15314,7 +15376,7 @@ function printShoppingList(){
                 let rows = groups[cat].map(item=>{
 
                     let amountText = item.amount > 0
-                        ? `${formatAmount(item.amount)}${item.unit ? " " + item.unit : ""} — `
+                        ? `${qtyText(item.amount, item.unit)} — `
                         : "";
 
                     let checked = shoppingChecked[item.key] ? "print-checked" : "";
@@ -15349,7 +15411,7 @@ function printShoppingList(){
         .map(cat => ({
             label: categoryLabel(cat),
             items: g[cat].map(item => ({
-                text: (item.amount > 0 ? formatAmount(item.amount) + (item.unit ? " " + item.unit : "") + " - " : "") + item.name,
+                text: (item.amount > 0 ? qtyText(item.amount, item.unit) + " - " : "") + item.name,
                 checked: !!shoppingChecked[item.key]
             }))
         })))(groupItemsByCategory(list));
@@ -15375,9 +15437,10 @@ function plannerMealIngredientLines(meal){
     return (recipe.ingredients || [])
         .filter(ing => (ing.name || "").trim() !== "")
         .map(ing => {
-            let amount = (Number(ing.amount) || 0) * ingredientFactor(ing, factor);
-            let unit = (ing.unit || "").trim();
-            return (amount > 0 ? formatAmount(amount) + (unit ? " " + unit : "") + " " : "") + ing.name.trim();
+            let sq = scaledIngredient(ing, factor);
+            let amount = sq.amount;
+            let unit = sq.unit;
+            return (amount > 0 ? qtyText(amount, unit) + " " : "") + ing.name.trim();
         });
 
 }
