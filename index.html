@@ -2200,7 +2200,7 @@ input[type="radio"] { width:18px; height:18px; }
 
 <input
     id="recipeSearchPage"
-    placeholder="🔍 Search recipes..."
+    placeholder="🔍 Search recipes or ingredients..."
     data-i18n-placeholder="recipe_search_placeholder"
     oninput="renderRecipes()"
 >
@@ -2508,7 +2508,7 @@ Reorder the categories to match how your store is laid out.
 <input type="checkbox" id="roundMealsToggle" style="width:auto;margin:3px 0 0;" onchange="toggleMealRounding(this.checked)">
 <span>
 <strong data-i18n="round_meals_label">Round up amounts per meal</strong><br>
-<span class="small" data-i18n="round_meals_description">When a meal is scaled for a different number of people, weights and volumes are rounded up (1.62 kg becomes 1.65 kg) in recipes, the planner and print. The shopping list adds up these rounded meals, so you don't run short at the end of the week. Seasonings and recipes at their original size stay exact.</span>
+<span class="small" data-i18n="round_meals_description">When a meal is scaled for a different number of people, weights and volumes are rounded up (1.62 kg becomes 1.65 kg) in recipes, the planner and print. The shopping list adds up these rounded meals, so you don't run short at the end of the week. Whole items go up to the next whole one (19.2 carrots become 20). Seasonings measured by weight and recipes at their original size stay exact.</span>
 </span>
 </label>
 
@@ -2984,7 +2984,7 @@ Add Meal
 
 <input
 id="recipeSearch"
-placeholder="🔍 Search recipes..."
+placeholder="🔍 Search recipes or ingredients..."
 data-i18n-placeholder="meal_search_placeholder"
 oninput="searchRecipesForMeal()"
 >
@@ -4122,7 +4122,7 @@ const translations = {
         recipes_heading: "📖 Recipes",
         add_recipe: "➕ Add Recipe",
         paste_from_web: "📋 Paste from Web",
-        recipe_search_placeholder: "🔍 Search recipes...",
+        recipe_search_placeholder: "🔍 Search recipes or ingredients...",
         recipe_sort_label: "Sort / group by",
         recipe_sort_recent: "Recently Added",
         recipe_sort_alpha: "A–Z",
@@ -4136,7 +4136,7 @@ const translations = {
         round_shopping_label: "Round up shopping amounts",
         round_shopping_description: "80 g becomes 100 g, 1.2 kg becomes 1.5 kg. The exact amount stays visible in gray.",
         round_meals_label: "Round up amounts per meal",
-        round_meals_description: "When a meal is scaled for a different number of people, weights and volumes are rounded up (1.62 kg becomes 1.65 kg) in recipes, the planner and print. The shopping list adds up these rounded meals, so you don't run short at the end of the week. Seasonings and recipes at their original size stay exact.",
+        round_meals_description: "When a meal is scaled for a different number of people, weights and volumes are rounded up (1.62 kg becomes 1.65 kg) in recipes, the planner and print. The shopping list adds up these rounded meals, so you don't run short at the end of the week. Whole items go up to the next whole one (19.2 carrots become 20). Seasonings measured by weight and recipes at their original size stay exact.",
         day_menu_note_add: "Add note",
         day_menu_note_edit: "Edit note",
         day_menu_eating_out: "🍽️ Eating out",
@@ -4315,7 +4315,7 @@ const translations = {
 
         meal_type_label: "Meal Type",
         choose_recipe_label: "📖 Choose Recipe",
-        meal_search_placeholder: "🔍 Search recipes...",
+        meal_search_placeholder: "🔍 Search recipes or ingredients...",
         or_enter_manually: "or enter manually:",
         meal_label: "Meal",
         people_label: "People",
@@ -4698,7 +4698,7 @@ const translations = {
         recipes_heading: "📖 Recept",
         add_recipe: "➕ Lägg till recept",
         paste_from_web: "📋 Klistra in från webben",
-        recipe_search_placeholder: "🔍 Sök recept...",
+        recipe_search_placeholder: "🔍 Sök recept eller ingredienser...",
         recipe_sort_label: "Sortera / gruppera efter",
         recipe_sort_recent: "Senast tillagda",
         recipe_sort_alpha: "A–Ö",
@@ -4712,7 +4712,7 @@ const translations = {
         round_shopping_label: "Avrunda inköpsmängder uppåt",
         round_shopping_description: "80 g blir 100 g, 1,2 kg blir 1,5 kg. Den exakta mängden visas i grått.",
         round_meals_label: "Avrunda mängder uppåt per måltid",
-        round_meals_description: "När en måltid skalas för ett annat antal personer avrundas vikt och volym uppåt (1,62 kg blir 1,65 kg) i recept, planeraren och utskrift. Inköpslistan summerar de avrundade måltiderna, så att maten räcker hela veckan. Kryddor och recept i sin ursprungliga storlek förblir exakta.",
+        round_meals_description: "När en måltid skalas för ett annat antal personer avrundas vikt och volym uppåt (1,62 kg blir 1,65 kg) i recept, planeraren och utskrift. Inköpslistan summerar de avrundade måltiderna, så att maten räcker hela veckan. Hela varor går upp till nästa hela (19,2 morötter blir 20). Kryddor i gram och recept i sin ursprungliga storlek förblir exakta.",
         day_menu_note_add: "Lägg till anteckning",
         day_menu_note_edit: "Redigera anteckning",
         day_menu_eating_out: "🍽️ Äter ute",
@@ -4891,7 +4891,7 @@ const translations = {
 
         meal_type_label: "Måltidstyp",
         choose_recipe_label: "📖 Välj recept",
-        meal_search_placeholder: "🔍 Sök recept...",
+        meal_search_placeholder: "🔍 Sök recept eller ingredienser...",
         or_enter_manually: "eller skriv in manuellt:",
         meal_label: "Måltid",
         people_label: "Personer",
@@ -10879,8 +10879,7 @@ recipes.forEach((recipe,index)=>{
 
 
 if(
-recipe.name.toLowerCase()
-.includes(search)
+recipeMatchesSearch(recipe, search)
 ){
 
 
@@ -11110,6 +11109,36 @@ function ingredientsCountText(n){
     return n === 1 ? t("ingredient_one") : t("ingredients_count").replace("{n}", n);
 }
 
+// Search by recipe name, tag or ingredient, in Swedish or English.
+// Several words all have to match: "chicken rice" finds recipes with both.
+function recipeMatchesSearch(recipe, search){
+
+    let terms = String(search || "").toLowerCase().split(/[\s,]+/).filter(Boolean);
+    if(terms.length === 0) return true;
+
+    let name = String(recipe.name || "").toLowerCase();
+    let tags = (recipe.tags || []).map(x => String(x).toLowerCase());
+
+    let ingRaw = [];
+    let ingNorm = [];
+    (recipe.ingredients || []).forEach(i => {
+        let n = typeof i === "string" ? i : (i.name || "");
+        n = String(n).toLowerCase();
+        if(!n) return;
+        ingRaw.push(n);
+        ingNorm.push(normalizeIngredientName(n).toLowerCase());
+    });
+
+    return terms.every(term => {
+        if(name.includes(term)) return true;
+        if(tags.some(x => x.includes(term))) return true;
+        if(ingRaw.some(x => x.includes(term))) return true;
+        let nt = normalizeIngredientName(term).toLowerCase();
+        return ingNorm.some(x => x.includes(nt));
+    });
+
+}
+
 function renderRecipes(){
 
 const list =
@@ -11165,7 +11194,7 @@ if(sortSelect) sortSelect.value = recipeSortMode;
 
 let filteredRecipes = recipes
     .map((recipe, index) => ({ recipe, index }))
-    .filter(({recipe}) => recipe.name.toLowerCase().includes(search))
+    .filter(({recipe}) => recipeMatchesSearch(recipe, search))
     .filter(({recipe}) => !activeRecipeTagFilter || (recipe.tags || []).includes(activeRecipeTagFilter))
     .sort((a, b) => {
 
@@ -12095,6 +12124,9 @@ const ingredientTranslations = {
     "spring onion":"spring onion", "spring onions":"spring onion", "green onion":"spring onion", "green onions":"spring onion", "scallion":"spring onion", "scallions":"spring onion", "vårlök":"spring onion",
     "florsocker":"icing sugar", "puderssocker":"icing sugar", "icing sugar":"icing sugar", "powdered sugar":"icing sugar",
     "ground black pepper":"pepper", "ground pepper":"pepper", "malen peppar":"pepper", "mald peppar":"pepper", "mald svartpeppar":"pepper", "malen svartpeppar":"pepper",
+    // words found missing when checking real recipes
+    "körsbärstomater":"cherry tomato", "körsbärstomat":"cherry tomato", "cherry tomatoes":"cherry tomato", "cherry tomato":"cherry tomato", "plommontomater":"plum tomato",
+    "torkade aprikoser":"dried apricot", "torkad aprikos":"dried apricot", "dried apricots":"dried apricot", "dried apricot":"dried apricot", "aprikoser":"dried apricot", "matlagningsgrädde":"cooking cream", "cooking cream":"cooking cream", "hönsbuljongtärning":"chicken stock", "hönsbuljong":"chicken stock", "chicken stock cube":"chicken stock", "chicken bouillon cube":"chicken stock", "chicken stock":"chicken stock", "chicken broth":"chicken stock", "grönsaksbuljongtärning":"vegetable stock", "grönsaks-buljongtärning":"vegetable stock", "grönsaksbuljong":"vegetable stock", "vegetable stock cube":"vegetable stock", "vegetable stock":"vegetable stock", "vegetable broth":"vegetable stock", "vegetable bouillon":"vegetable stock", "maizena":"cornstarch", "maizenaredning":"cornstarch", "maizenamjöl":"cornstarch", "majsstärkelse":"cornstarch", "cornstarch":"cornstarch", "corn starch":"cornstarch", "cornflour":"cornstarch", "kycklingbröstfilé":"chicken breast", "kycklingbröstfiléer":"chicken breast", "kycklingbröst":"chicken breast", "kycklingfiléer":"chicken breast", "grön currypasta":"green curry paste", "green curry paste":"green curry paste", "röd currypasta":"red curry paste", "red curry paste":"red curry paste", "röd curry pasta":"red curry paste", "jordnötssmör":"peanut butter", "osötat jordnötssmör":"peanut butter", "peanut butter":"peanut butter", "jordnötter":"peanuts", "saltade jordnötter":"peanuts", "peanuts":"peanuts", "salted peanuts":"peanuts", "palttunnbröd":"flatbread", "tunnbröd":"flatbread", "flatbread":"flatbread", "havremjöl":"oat flour", "oat flour":"oat flour", "pumpakärnor":"pumpkin seeds", "pumpkin seeds":"pumpkin seeds", "tangzhong":"tangzhong", "färskost":"cream cheese", "cream cheese":"cream cheese", "philadelphia":"cream cheese", "gräddfil":"sour cream", "sour cream":"sour cream", "lingon":"lingonberries", "lingonberries":"lingonberries", "lingonberry":"lingonberries", "lingonsylt":"lingonberries", "lingonberry jam":"lingonberries", "muskotnöt":"nutmeg", "riven muskotnöt":"nutmeg", "muskot":"nutmeg", "nutmeg":"nutmeg", "risoni":"orzo", "orzo":"orzo", "bikarbonat":"baking soda", "bicarbonate of soda":"baking soda", "bicarbonate":"baking soda", "baking soda":"baking soda", "mörk choklad":"dark chocolate", "dark chocolate":"dark chocolate", "mjölkchoklad":"milk chocolate", "milk chocolate":"milk chocolate", "vit choklad":"white chocolate", "white chocolate":"white chocolate", "choklad":"chocolate", "chocolate":"chocolate", "rimmat sidfläsk":"pancetta", "sidfläsk":"pancetta", "pancetta":"pancetta", "guanciale":"pancetta", "äggula":"egg yolk", "äggulor":"egg yolk", "egg yolk":"egg yolk", "egg yolks":"egg yolk", "äggvita":"egg white", "äggvitor":"egg white", "egg white":"egg white", "egg whites":"egg white", "kålrot":"swede", "swede":"swede", "rutabaga":"swede", "palsternacka":"parsnip", "palsternackor":"parsnip", "parsnip":"parsnip", "parsnips":"parsnip", "rotselleri":"celeriac", "celeriac":"celeriac", "celery root":"celeriac", "ghee":"ghee", "havremjölk":"oat milk", "havredryck":"oat milk", "oat milk":"oat milk", "oat drink":"oat milk", "sojamjölk":"soy milk", "sojadryck":"soy milk", "soy milk":"soy milk", "mandelmjölk":"almond milk", "mandeldryck":"almond milk", "almond milk":"almond milk", "chiafrön":"chia seeds", "chia seeds":"chia seeds", "chia seed":"chia seeds", "chiafrö":"chia seeds", "chilipulver":"chili powder", "chili powder":"chili powder", "chilli powder":"chili powder", "mild chilli powder":"chili powder", "tortillabröd":"tortilla wraps", "seeded wraps":"tortilla wraps", "wholemeal wrap":"tortilla wraps", "sill":"herring", "herring":"herring", "filmjölk":"filmjölk", "keso":"cottage cheese", "cottage cheese":"cottage cheese", "flingor":"cereal", "cereal":"cereal", "cornflakes":"cereal", "corn flakes":"cereal", "knäckebröd":"crispbread", "crispbread":"crispbread", "pannkaksmix":"pancake mix", "pancake mix":"pancake mix", "marmelad":"marmalade", "marmalade":"marmalade", "lönnsirap":"maple syrup", "maple syrup":"maple syrup", "nutella":"hazelnut spread", "hazelnut spread":"hazelnut spread", "chokladnötkräm":"hazelnut spread", "hasselnötter":"hazelnuts", "hazelnuts":"hazelnuts", "mandlar":"almonds", "mandel":"almonds", "almonds":"almonds", "almond":"almonds", "mandelmassa":"marzipan", "marzipan":"marzipan", "kokosflingor":"shredded coconut", "shredded coconut":"shredded coconut", "desiccated coconut":"shredded coconut", "coconut flakes":"shredded coconut", "russin":"raisins", "raisins":"raisins", "kanelstång":"cinnamon stick", "cinnamon stick":"cinnamon stick", "kardemummakärnor":"cardamom", "kardemumma":"cardamom", "cardamom pods":"cardamom", "cardamom":"cardamom", "pärlsocker":"pearl sugar", "pearl sugar":"pearl sugar", "gelatin":"gelatine", "gelatinblad":"gelatine", "gelatine":"gelatine", "gelatine leaves":"gelatine", "potatismjöl":"potato starch", "potato starch":"potato starch", "dinkelmjöl":"spelt flour", "spelt flour":"spelt flour", "rågmjöl":"rye flour", "rye flour":"rye flour", "grahamsmjöl":"graham flour", "graham flour":"graham flour", "vörtbröd":"malt bread", "malt bread":"malt bread", "surdeg":"sourdough starter", "sourdough starter":"sourdough starter", "torrjäst":"dry yeast", "dry yeast":"dry yeast", "active dry yeast":"dry yeast", "färsk jäst":"fresh yeast", "fresh yeast":"fresh yeast", "jäst":"yeast", "yeast":"yeast", "kronjäst":"yeast", "tomatsås":"tomato sauce", "tomato sauce":"tomato sauce", "kapris":"capers", "capers":"capers", "sojasås":"soy sauce", "soja":"soy sauce", "soy sauce":"soy sauce", "glutenfri soja":"gluten free soy sauce", "gluten free soy sauce":"gluten free soy sauce", "ostronsås":"oyster sauce", "oyster sauce":"oyster sauce", "fisksås":"fish sauce", "fish sauce":"fish sauce", "worcestershiresås":"worcestershire sauce", "worcestershire sauce":"worcestershire sauce", "worcestershire":"worcestershire sauce", "tabasco":"tabasco", "remoulad":"remoulade", "remoulade":"remoulade", "sweet chili":"sweet chili sauce", "sweet chili sauce":"sweet chili sauce", "sweet chilli sauce":"sweet chili sauce", "hoisinsås":"hoisin sauce", "hoisin sauce":"hoisin sauce", "teriyakisås":"teriyaki sauce", "teriyaki sauce":"teriyaki sauce", "tahini":"tahini", "quinoa":"quinoa", "tortellini":"tortellini", "gnocchi":"gnocchi", "jasminris":"jasmine rice", "jasmine rice":"jasmine rice", "arborioris":"arborio rice", "risottoris":"arborio rice", "risotto rice":"arborio rice", "arborio rice":"arborio rice", "fänkål":"fennel", "fennel":"fennel", "salladslök":"spring onion", "vårlök":"spring onion", "spring onion":"spring onion", "green onion":"spring onion", "scallion":"spring onion", "purjo":"leek", "purjolök":"leek", "leek":"leek", "leeks":"leek", "stjälkselleri":"celery", "selleri":"celery", "celery":"celery", "sockerärtor":"sugar snap peas", "sugar snap peas":"sugar snap peas", "snow peas":"sugar snap peas", "sockerärt":"sugar snap peas", "sparris":"asparagus", "asparagus":"asparagus", "aubergine":"aubergine", "eggplant":"aubergine", "rädisor":"radish", "rädisa":"radish", "radish":"radish", "radishes":"radish", "päron":"pear", "pear":"pear", "pears":"pear", "apelsin":"orange", "apelsiner":"orange", "orange":"orange", "oranges":"orange", "jordgubbar":"strawberries", "strawberries":"strawberries", "strawberry":"strawberries", "blåbär":"blueberries", "blueberries":"blueberries", "blueberry":"blueberries", "hallon":"raspberries", "raspberries":"raspberries", "raspberry":"raspberries", "avokado":"avocado", "avocado":"avocado", "avocados":"avocado", "kokosgrädde":"coconut cream", "coconut cream":"coconut cream", "havregrädde":"oat cream", "oat cream":"oat cream", "mellanmjölk":"milk", "lättmjölk":"milk", "standardmjölk":"milk", "semi-skimmed milk":"milk", "skimmed milk":"milk", "smördeg":"puff pastry", "puff pastry":"puff pastry", "pizzadeg":"pizza dough", "pizza dough":"pizza dough", "pajdeg":"shortcrust pastry", "mördeg":"shortcrust pastry", "shortcrust pastry":"shortcrust pastry", "tacoskal":"taco shells", "taco shells":"taco shells", "hamburgare":"burger patties", "hamburger patties":"burger patties", "burger patties":"burger patties", "hamburgerbröd":"burger buns", "hamburger buns":"burger buns", "burger buns":"burger buns", "korvbröd":"hot dog buns", "hot dog buns":"hot dog buns", "skinkstrimlor":"ham strips", "ham strips":"ham strips", "kassler":"kassler", "smoked pork loin":"kassler", "revbensspjäll":"spare ribs", "spare ribs":"spare ribs", "ribs":"spare ribs", "entrecôte":"ribeye steak", "entrecote":"ribeye steak", "ribeye":"ribeye steak", "ribeye steak":"ribeye steak", "högrev":"beef chuck", "chuck roast":"beef chuck", "beef chuck":"beef chuck", "fläskkarré":"pork neck", "pork neck":"pork neck", "pork shoulder":"pork neck", "lammkött":"lamb", "krabba":"crab", "crab":"crab", "musslor":"mussels", "mussels":"mussels", "makrill":"mackerel", "mackerel":"mackerel", "pangasius":"pangasius", "rödspätta":"plaice", "plaice":"plaice", "kokosolja":"coconut oil", "coconut oil":"coconut oil", "mald kryddpeppar":"allspice", "kryddpeppar":"allspice", "allspice":"allspice", "ceylonkanel":"cinnamon", "vitlökspulver":"garlic powder", "garlic powder":"garlic powder", "vaniljsocker":"vanilla sugar", "vanilla sugar":"vanilla sugar", "vaniljpulver":"vanilla powder", "vanilla powder":"vanilla powder", "butternutsquash":"pumpkin", "butternut squash":"pumpkin", "pumpa":"pumpkin", "majonnäs":"mayonnaise", "mayonnaise":"mayonnaise", "mayo":"mayonnaise", "kvisttomater":"vine tomatoes", "vine tomatoes":"vine tomatoes", "broccoliblommor":"broccoli", "broccoli florets":"broccoli", "mango chutney":"mango chutney", "chutney":"mango chutney", "risnudlar":"rice noodles", "rice noodles":"rice noodles", "äggnudlar":"egg noodles", "egg noodles":"egg noodles", "havreris":"oat rice", "curry powder":"curry powder", "currypulver":"curry powder", "greek yoghurt":"greek yogurt", "grekisk yoghurt":"greek yogurt", "low-fat greek style yoghurt":"greek yogurt",
     "kycklingvingar":"chicken wings", "kycklingvinge":"chicken wings", "kycklinglårfilé":"chicken thighs", "kycklinglår":"chicken thighs", "kycklingklubba":"chicken drumsticks", "kycklingklubbor":"chicken drumsticks", "kycklingben":"chicken drumsticks",
     "fläskfilé":"pork tenderloin", "pork tenderloin":"pork tenderloin", "laxfilé":"salmon", "sötpotatis":"sweet potato", "basmatiris":"basmati rice", "penne":"penne", "halloumi":"halloumi", "tofu":"tofu",
     "red wine":"red wine", "rött vin":"red wine", "rödvin":"red wine", "rött matlagningsvin":"red wine"
@@ -12187,7 +12219,7 @@ const ingredientCategories = {
     "egg noodles":"Pantry", "couscous":"Pantry", "fish broth":"Pantry",
     "corn starch":"Pantry", "sambal oelek":"Pantry", "macaroni":"Pantry",
     "sriracha":"Pantry", "sweet chili sauce":"Pantry", "tomato puree":"Pantry",
-    "lasagna sheets":"Pantry", "red wine":"Pantry", "icing sugar":"Pantry", "penne":"Pantry", "basmati rice":"Pantry", "halloumi":"Dairy & Eggs", "tofu":"Produce", "pork tenderloin":"Meat & Fish", "spring onion":"Produce", "lentils":"Pantry", "red lentils":"Pantry", "green lentils":"Pantry", "brown lentils":"Pantry", "black lentils":"Pantry", "yellow lentils":"Pantry",
+    "lasagna sheets":"Pantry", "red wine":"Pantry", "icing sugar":"Pantry", "allspice":"Herbs & Spices", "almond milk":"Dairy & Eggs", "almonds":"Pantry", "arborio rice":"Pantry", "asparagus":"Produce", "aubergine":"Produce", "avocado":"Produce", "baking soda":"Pantry", "beef chuck":"Meat & Fish", "blueberries":"Produce", "broccoli":"Produce", "burger buns":"Pantry", "burger patties":"Meat & Fish", "capers":"Pantry", "cardamom":"Herbs & Spices", "celeriac":"Produce", "celery":"Produce", "cereal":"Pantry", "cheese":"Dairy & Eggs", "chia seeds":"Pantry", "chicken breast":"Meat & Fish", "chicken stock":"Pantry", "chili powder":"Herbs & Spices", "chocolate":"Pantry", "cinnamon stick":"Herbs & Spices", "cinnamon":"Herbs & Spices", "coconut cream":"Pantry", "coconut oil":"Pantry", "cooking cream":"Dairy & Eggs", "cornstarch":"Pantry", "cottage cheese":"Dairy & Eggs", "crab":"Meat & Fish", "cream cheese":"Dairy & Eggs", "crispbread":"Pantry", "curry powder":"Herbs & Spices", "dark chocolate":"Pantry", "dried apricot":"Pantry", "dry yeast":"Pantry", "egg noodles":"Pantry", "egg white":"Dairy & Eggs", "egg yolk":"Dairy & Eggs", "fennel":"Produce", "filmjölk":"Dairy & Eggs", "fish sauce":"Pantry", "flatbread":"Pantry", "fresh yeast":"Dairy & Eggs", "garlic powder":"Herbs & Spices", "gelatine":"Pantry", "ghee":"Dairy & Eggs", "gluten free soy sauce":"Pantry", "gnocchi":"Pantry", "graham flour":"Pantry", "greek yogurt":"Dairy & Eggs", "green curry paste":"Pantry", "ham strips":"Meat & Fish", "hazelnut spread":"Pantry", "hazelnuts":"Pantry", "herring":"Meat & Fish", "hoisin sauce":"Pantry", "hot dog buns":"Pantry", "jasmine rice":"Pantry", "kassler":"Meat & Fish", "lamb":"Meat & Fish", "leek":"Produce", "lingonberries":"Pantry", "mackerel":"Meat & Fish", "malt bread":"Pantry", "mango chutney":"Pantry", "maple syrup":"Pantry", "marmalade":"Pantry", "marzipan":"Pantry", "mayonnaise":"Pantry", "milk chocolate":"Pantry", "milk":"Dairy & Eggs", "mussels":"Meat & Fish", "nutmeg":"Herbs & Spices", "oat cream":"Pantry", "oat flour":"Pantry", "oat milk":"Dairy & Eggs", "oat rice":"Pantry", "orange":"Produce", "orzo":"Pantry", "oyster sauce":"Pantry", "pancake mix":"Pantry", "pancetta":"Meat & Fish", "pangasius":"Meat & Fish", "parsnip":"Produce", "peanut butter":"Pantry", "peanuts":"Pantry", "pear":"Produce", "pearl sugar":"Pantry", "pizza dough":"Pantry", "plaice":"Meat & Fish", "pork neck":"Meat & Fish", "potato starch":"Pantry", "puff pastry":"Pantry", "pumpkin seeds":"Pantry", "pumpkin":"Produce", "quinoa":"Pantry", "radish":"Produce", "raisins":"Pantry", "raspberries":"Produce", "red curry paste":"Pantry", "remoulade":"Pantry", "ribeye steak":"Meat & Fish", "rice noodles":"Pantry", "rye flour":"Pantry", "shortcrust pastry":"Pantry", "shredded coconut":"Pantry", "sour cream":"Dairy & Eggs", "sourdough starter":"Pantry", "soy milk":"Dairy & Eggs", "soy sauce":"Pantry", "spare ribs":"Meat & Fish", "spelt flour":"Pantry", "spring onion":"Produce", "strawberries":"Produce", "sugar snap peas":"Produce", "swede":"Produce", "sweet chili sauce":"Pantry", "tabasco":"Pantry", "taco shells":"Pantry", "tahini":"Pantry", "tangzhong":"Pantry", "teriyaki sauce":"Pantry", "tomato sauce":"Pantry", "tortellini":"Pantry", "tortilla wraps":"Pantry", "vanilla powder":"Herbs & Spices", "vanilla sugar":"Pantry", "vegetable stock":"Pantry", "vine tomatoes":"Produce", "white chocolate":"Pantry", "worcestershire sauce":"Pantry", "yeast":"Pantry", "penne":"Pantry", "basmati rice":"Pantry", "halloumi":"Dairy & Eggs", "tofu":"Produce", "pork tenderloin":"Meat & Fish", "spring onion":"Produce", "lentils":"Pantry", "red lentils":"Pantry", "green lentils":"Pantry", "brown lentils":"Pantry", "black lentils":"Pantry", "yellow lentils":"Pantry",
     "turkish yogurt":"Dairy & Eggs", "greek yogurt":"Dairy & Eggs",
     "chili sauce":"Pantry", "taco sauce":"Pantry", "kebab sauce":"Pantry",
     "white beans in tomato sauce":"Pantry", "lime juice":"Pantry",
@@ -12495,10 +12527,25 @@ function scaledIngredient(ing, factor){
     let amount = (Number(ing.amount) || 0) * ingredientFactor(ing, factor);
     let unit = (ing.unit || "").trim();
     let info = unitFamilies[unit.toLowerCase()];
-    if(mealRoundingOn() && info && Math.abs(factor - 1) > 1e-9 && amount > 0 && !isSeasoningName(ing.name)){
-        let base = amount * info.toBase;
-        if(base >= 20){
-            amount = roundUpMealBase(base) / info.toBase;
+    let seasoning = isSeasoningName(ing.name);
+    if(mealRoundingOn() && Math.abs(factor - 1) > 1e-9 && amount > 0 && seasoning && !info && amount >= 1 && !roundableCountUnits.has(unit.toLowerCase())){
+        // spoon measures of seasoning: up to the next half (4.8 tsk -> 5 tsk)
+        amount = Math.ceil(amount * 2 - 1e-9) / 2;
+    }else if(mealRoundingOn() && Math.abs(factor - 1) > 1e-9 && amount > 0 && !seasoning){
+        if(info){
+            // weight and volume
+            let base = amount * info.toBase;
+            if(base >= 20){
+                amount = roundUpMealBase(base) / info.toBase;
+            }
+        }else if(amount >= 1){
+            if(roundableCountUnits.has(unit.toLowerCase())){
+                // whole items: 19.2 carrots -> 20
+                amount = Math.ceil(amount - 1e-9);
+            }else{
+                // spoons, cups and other measures: up to the next half
+                amount = Math.ceil(amount * 2 - 1e-9) / 2;
+            }
         }
     }
     return { amount, unit };
