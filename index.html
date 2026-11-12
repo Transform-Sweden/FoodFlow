@@ -10321,7 +10321,14 @@ const foodflowStorageKeys = [
     "foodflowDayNotes",
     "foodflowWeekTemplates",
     "foodflowWeekNames",
-    "foodflowCustomLists"
+    "foodflowCustomLists",
+    "foodflowCombinedExcluded",
+    "foodflowRoundShopping",
+    "foodflowRoundMeals",
+    "foodflowPrintIngredients",
+    "foodflowAskMealType",
+    "foodflowWeekLayout",
+    "foodflowRecipeSortMode"
 ];
 
 
@@ -10473,7 +10480,7 @@ async function importData(event){
             }
 
             // Only accept known keys holding valid JSON text (theme/language/page are plain words)
-            let plain = ["foodflowTheme","foodflowLanguage","foodflowPage"];
+            let plain = ["foodflowTheme","foodflowLanguage","foodflowPage","foodflowWeekLayout","foodflowRecipeSortMode"];
             let accepted = {};
 
             foodflowStorageKeys.forEach(key=>{
