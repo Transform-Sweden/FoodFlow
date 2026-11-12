@@ -12076,21 +12076,50 @@ const ingredientTranslations = {
     "cabbage":"cabbage", "kål":"cabbage",
     "ham package":"ham", "salami package":"salami",
     "mos pulver":"instant mashed potato", "pulvermos":"instant mashed potato",
-    "potatismos":"instant mashed potato"
+    "potatismos":"instant mashed potato",
+
+    // spring onion has several names; icing sugar and ground pepper are their own things / the plain thing
+    "spring onion":"spring onion", "spring onions":"spring onion", "green onion":"spring onion", "green onions":"spring onion", "scallion":"spring onion", "scallions":"spring onion", "vårlök":"spring onion",
+    "florsocker":"icing sugar", "puderssocker":"icing sugar", "icing sugar":"icing sugar", "powdered sugar":"icing sugar",
+    "ground black pepper":"pepper", "ground pepper":"pepper", "malen peppar":"pepper", "mald peppar":"pepper", "mald svartpeppar":"pepper", "malen svartpeppar":"pepper",
+    "red wine":"red wine", "rött vin":"red wine", "rödvin":"red wine", "rött matlagningsvin":"red wine"
 
 };
 
 // Descriptive words stripped only for matching purposes (so "gul lök"
 // and "yellow onion" both reduce down to "lök" / "onion" before lookup).
+// Words that do NOT change what you buy (size, how it is cut, "organic" ...): dropped before matching,
+// so "gul lök" and "yellow onion" are the same thing.
 const ingredientStopwords = [
-    "gul","gult","gula","röd","rött","röda","vit","vitt","vita",
-    "grön","grönt","gröna","färsk","färskt","färska","torkad","torkat","torkade",
+    "gul","gult","gula","yellow",
     "stor","stort","stora","liten","litet","små","hel","helt","hela",
-    "riven","rivet","rivna","hackad","hackat","hackade",
-    "frysta","fryst","fruset","frusna",
-    "fresh","dried","yellow","red","white","green","large","small","whole","big","little",
-    "grated","shredded","chopped","diced","minced","frozen"
+    "large","small","whole","big","little","extra","virgin",
+    "färsk","färskt","färska","fresh",
+    "riven","rivet","rivna","grated","shredded","finriven","grovriven",
+    "hackad","hackat","hackade","chopped","finhackad","diced","minced","skivad","skivat","skivade","sliced","tärnad","tärnade",
+    "ekologisk","ekologiskt","ekologiska","eko","organic",
+    "naturell","natural","plain"
 ];
+
+// Words that DO change the product (red is not green, frozen is not fresh ...). They stay part of the
+// name, written in English so Swedish and English spellings still end up as the same item.
+const ingredientQualifiers = {
+    "röd":"red","rött":"red","röda":"red","red":"red",
+    "vit":"white","vitt":"white","vita":"white","white":"white",
+    "grön":"green","grönt":"green","gröna":"green","green":"green",
+    "svart":"black","svarta":"black","black":"black",
+    "brun":"brown","bruna":"brown","brown":"brown",
+    "frysta":"frozen","fryst":"frozen","fruset":"frozen","frusna":"frozen","frozen":"frozen",
+    "torkad":"dried","torkat":"dried","torkade":"dried","dried":"dried",
+    "rökt":"smoked","rökta":"smoked","smoked":"smoked",
+    "söt":"sweet","söta":"sweet","sweet":"sweet",
+    "sur":"sour","sura":"sour","sour":"sour",
+    "mörk":"dark","mörkt":"dark","mörka":"dark","dark":"dark",
+    "ljus":"light","ljust":"light","ljusa":"light","light":"light",
+    "kokos":"coconut","laktosfri":"lactose free","laktosfritt":"lactose free","lactosefree":"lactose free",
+    "krossade":"crushed","krossad":"crushed","krossat":"crushed","crushed":"crushed",
+    "glutenfree":"gluten free","wholegrain":"wholegrain"
+};
 
 // Every canonical value used above, so we know when to show a
 // translated display name vs. keep the ingredient's original spelling.
@@ -12143,7 +12172,7 @@ const ingredientCategories = {
     "egg noodles":"Pantry", "couscous":"Pantry", "fish broth":"Pantry",
     "corn starch":"Pantry", "sambal oelek":"Pantry", "macaroni":"Pantry",
     "sriracha":"Pantry", "sweet chili sauce":"Pantry", "tomato puree":"Pantry",
-    "lasagna sheets":"Pantry", "lentils":"Pantry", "red lentils":"Pantry", "green lentils":"Pantry", "brown lentils":"Pantry", "black lentils":"Pantry", "yellow lentils":"Pantry",
+    "lasagna sheets":"Pantry", "red wine":"Pantry", "icing sugar":"Pantry", "spring onion":"Produce", "lentils":"Pantry", "red lentils":"Pantry", "green lentils":"Pantry", "brown lentils":"Pantry", "black lentils":"Pantry", "yellow lentils":"Pantry",
     "turkish yogurt":"Dairy & Eggs", "greek yogurt":"Dairy & Eggs",
     "chili sauce":"Pantry", "taco sauce":"Pantry", "kebab sauce":"Pantry",
     "white beans in tomato sauce":"Pantry", "lime juice":"Pantry",
@@ -12314,6 +12343,14 @@ function getIngredientCategory(normalizedName){
     let name = String(normalizedName || "").toLowerCase();
     for(const [cat, re] of categoryKeywordRules){
         if(re.test(name)) return cat;
+    }
+
+    // "red bell pepper", "frozen peas": file it where its head noun goes
+    const w = name.split(" ");
+    for(let i = 1; i < w.length; i++){
+        const head = w.slice(i).join(" ");
+        const c = customIngredientCategories[head] || ingredientCategories[head];
+        if(c) return c;
     }
     return "Other";
 }
@@ -12661,7 +12698,7 @@ const lentilColours = { red:"red", "röd":"red", "röda":"red", green:"green", "
 function breadVariantName(base){
     const words = base.split(" ");
     if(!/(bread|bröd)$/.test(words[words.length - 1])) return null;
-    if(/gluten[\s-]?(free|fri|fritt)/.test(base)) return "gluten free bread";
+    if(/gluten[\s-]?(free|fritt|fri)/.test(base)) return "gluten free bread";
     if(/sour\s?dough|surdeg/.test(base)) return "sourdough bread";
     if(/whole\s?(grain|meal|wheat)|fullkorn/.test(base)) return "wholegrain bread";
     if(/(^|[^a-zåäö])(rye|råg)/.test(base)) return "rye bread";
@@ -12718,10 +12755,14 @@ function normalizeIngredientName(name){
     const variant = ingredientVariantName(base);
     if(variant) return variant;
 
-    let cleaned = base
-        .split(" ")
-        .filter(word => !ingredientStopwords.includes(word))
-        .join(" ");
+    // a few multi-word qualifiers, folded into one token first
+    base = base
+        .replace(/gluten[\s-]?(free|fritt|fri)/g, "glutenfree")
+        .replace(/whole\s?(grain|meal|wheat)|fullkorn(s)?(?=[a-zåäö])|fullkorn(s)?(?=\s|$)/g, "wholegrain ")
+        .replace(/\s+/g, " ").trim();
+
+    const words = base.split(" ").filter(word => !ingredientStopwords.includes(word));
+    let cleaned = words.join(" ");
 
     if(customIngredientTranslations[cleaned]){
         return customIngredientTranslations[cleaned];
@@ -12731,17 +12772,15 @@ function normalizeIngredientName(name){
         return ingredientTranslations[cleaned];
     }
 
-    // Try just the last word — catches things like "diced onion"
-    // or "gul lök" -> "lök" after "gul" was already stripped above.
-    let words = cleaned.split(" ");
-    let lastWord = words[words.length - 1];
-
-    if(customIngredientTranslations[lastWord]){
-        return customIngredientTranslations[lastWord];
-    }
-
-    if(ingredientTranslations[lastWord]){
-        return ingredientTranslations[lastWord];
+    // The head noun is the longest ending the dictionary knows ("bell pepper" in "red bell pepper").
+    // Whatever stands in front of it is a qualifier that is kept, so red/yellow peppers, frozen/fresh peas,
+    // smoked/plain salmon, sweet/plain potatoes ... stay separate lines instead of all becoming one.
+    for(let i = 1; i < words.length; i++){
+        const head = words.slice(i).join(" ");
+        const canon = customIngredientTranslations[head] || ingredientTranslations[head];
+        if(canon){
+            return words.slice(0, i).map(w => ingredientQualifiers[w] || w).join(" ") + " " + canon;
+        }
     }
 
     // Not in the dictionary — fall back to the cleaned name itself,
