@@ -15790,6 +15790,38 @@ function trimIngredientNotes(name){
     return n.trim() || String(name || "").trim();
 }
 
+const gluedUnitsAlways = ["förp","klyfta","paket","påse","nypa","msk","tsk","krm","pkt","kg","dl","cl","ml"];
+const gluedUnitsIfKnown = ["st","g","l","port","burk","skiva","kruka"];
+
+function isKnownFoodWord(w){
+    w = String(w || "").toLowerCase();
+    if(!w) return false;
+    try{
+        return !!(
+            (typeof customIngredientTranslations !== "undefined" && customIngredientTranslations[w]) ||
+            ingredientTranslations[w] ||
+            canonicalIngredientNames.has(w) ||
+            ingredientCategories[w]
+        );
+    }catch(e){ return false; }
+}
+
+// "mskolja" -> { unit: "msk", rest: "olja" }; null when it doesn't look like a glued unit
+function splitGluedUnit(token){
+    let low = String(token || "").toLowerCase();
+    if(!/^\p{L}+$/u.test(low) || isKnownFoodWord(low)) return null;
+    let cands = gluedUnitsAlways.concat(gluedUnitsIfKnown).sort((x, y) => y.length - x.length);
+    for(const u of cands){
+        if(!low.startsWith(u)) continue;
+        let r = low.slice(u.length);
+        if(r.length < 3) continue;
+        if(gluedUnitsAlways.includes(u) || isKnownFoodWord(r)){
+            return { unit: u, rest: token.slice(u.length) };
+        }
+    }
+    return null;
+}
+
 function parseIngredientLine(line){
 
     line = stripListMarker(normalizeFractionText(line).trim());
@@ -15925,6 +15957,18 @@ function parseIngredientLine(line){
     let rest = (match[3] || "").trim();
     let restTokens = rest.split(/\s+/);
     let unit = "";
+
+    // Copied recipes sometimes lose the space after the unit: "1 mskolja", "550 gfalukorv",
+    // "2 dlmjölk". Split it again. Units that can't start a normal word (msk, tsk, dl ...) are
+    // always split; short ones (g, l, st ...) only when what is left is a food word we know,
+    // so "gurka", "grönsaksbuljong" or "stjälkselleri" stay as they are.
+    if(restTokens.length && !knownUnits.includes(restTokens[0].toLowerCase())){
+        let glued = splitGluedUnit(restTokens[0]);
+        if(glued){
+            restTokens[0] = glued.rest;
+            restTokens.unshift(glued.unit);
+        }
+    }
 
     // "1 small bottle of oil": skip a size word in front of the unit
     if(
