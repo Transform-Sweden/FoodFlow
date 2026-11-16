@@ -1833,6 +1833,13 @@ font-size:12.5px; line-height:1.5; color:var(--text-soft); border-radius:var(--r
 .hint-card { display:flex; align-items:center; gap:10px; padding:10px 12px; margin:8px 0 12px; border-radius:var(--radius-sm); background:color-mix(in srgb, var(--primary) 10%, var(--card)); font-size:14px; }
 .hint-card > span { flex:1; }
 .hint-card button { flex:none; }
+/* several weeks stacked in the planner */
+.week-stack{ display:block; }
+.week-block{ margin:0 0 20px; }
+.week-block-head{ display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; margin:6px 2px 8px; font-size:15px; font-weight:700; color:var(--text-soft); }
+.week-block-head .wbh-badge{ font-size:12px; font-weight:600; padding:1px 8px; border-radius:999px; background:color-mix(in srgb, var(--primary) 14%, var(--card)); color:var(--primary); }
+.week-block.active .week-block-head{ color:var(--primary); }
+.week-block.active .week-block-head::before{ content:""; width:4px; align-self:stretch; border-radius:2px; background:var(--primary); margin-right:2px; }
 /* day titles shrink to fit their card (long names like "Wednesday" in the 7-column week) */
 .week .day { container-type:inline-size; }
 /* Wide week: one block per meal type in every day (empty ones are spacers), heights equalised in JS, so a type sits on the same line in every column */
@@ -2661,6 +2668,19 @@ Add your own word so it always combines on the shopping list, no matter which la
 </details>
 
 <details class="settings-section">
+<summary><h3 data-i18n="settings_planner_view">
+🗓 Planner view
+</h3></summary>
+<div class="section-body">
+<p class="small" data-i18n="planner_weeks_description">Show more than one week in the planner.</p>
+<label for="weeksBeforeSelect" data-i18n="planner_weeks_before_label">Earlier weeks shown above</label>
+<select id="weeksBeforeSelect" onchange="setWeeksShown('before', this.value)"></select>
+<label for="weeksAfterSelect" style="margin-top:12px;display:block;" data-i18n="planner_weeks_after_label">Later weeks shown below</label>
+<select id="weeksAfterSelect" onchange="setWeeksShown('after', this.value)"></select>
+</div>
+</details>
+
+<details class="settings-section">
 <summary><h3 data-i18n="settings_printing">
 🖨️ Printing
 </h3></summary>
@@ -2845,7 +2865,10 @@ data-i18n-placeholder="category_emoji_placeholder"
 </p>
 
 
-<div id="copyDayTargets"></div>
+<label for="copyDayWeek" data-i18n="copy_week_pick">Week</label>
+<select id="copyDayWeek" onchange="renderCopyDayTargets()"></select>
+
+<div id="copyDayTargets" style="margin-top:10px;"></div>
 
 
 <p class="small" data-i18n="copy_day_note">
@@ -2890,6 +2913,8 @@ Meal
 <button id="mealDetailOpenRecipeBtn" onclick="openRecipeFromMealDetail()" data-i18n="btn_open_recipe">📖 Open Recipe</button>
 
 <button id="mealDetailMoveBtn" onclick="openMoveMealPicker()" data-i18n="move_meal_btn">↔️ Move to another day</button>
+
+<button id="mealDetailCopyBtn" onclick="openCopyMealPicker()" data-i18n="copy_meal_btn">📋 Copy to another day or week</button>
 
 <button id="mealDetailShopBtn" onclick="shopForMealFromDetail()" data-i18n="shop_meal_btn">🛒 Shopping list for this meal</button>
 
@@ -3652,6 +3677,7 @@ Close
 
 <button onclick="closeWeekActionsMenu(); openAutoPlan();"><span data-i18n="autoplan_button">✨ Fill empty days</span></button>
 <button onclick="closeWeekActionsMenu(); openHeadcountModal();"><span data-i18n="headcount_button">👥 Set headcount…</span></button>
+<button onclick="closeWeekActionsMenu(); openWeeksShownModal();"><span data-i18n="weeks_shown_button">🗓 Weeks shown…</span></button>
 <button onclick="closeWeekActionsMenu(); openRenameWeekModal();"><span data-i18n="nav_full_name_week">🏷️ Name This Week</span></button>
 <button onclick="closeWeekActionsMenu(); openCopyWeekModal();"><span data-i18n="nav_full_copy_forward">📆 Copy Week To...</span></button>
 <button onclick="closeWeekActionsMenu(); openSaveTemplateModal();"><span data-i18n="nav_full_save_template">💾 Save as Template</span></button>
@@ -3663,6 +3689,30 @@ Close
 <br>
 
 <button data-i18n="close" onclick="closeWeekActionsMenu()">Close</button>
+
+</div>
+
+</div>
+
+<!-- HOW MANY WEEKS THE PLANNER SHOWS -->
+
+<div class="modal" role="dialog" aria-modal="true" id="weeksShownModal" aria-labelledby="weeksShownTitle">
+
+<div class="modal-box">
+
+<h2 id="weeksShownTitle" data-i18n="weeks_shown_title">🗓 Weeks shown</h2>
+
+<p class="small" data-i18n="planner_weeks_description">Show more than one week in the planner.</p>
+
+<label for="weeksBeforeQuick" data-i18n="planner_weeks_before_label">Earlier weeks shown above</label>
+<select id="weeksBeforeQuick" onchange="setWeeksShown('before', this.value)"></select>
+
+<label for="weeksAfterQuick" style="margin-top:12px;display:block;" data-i18n="planner_weeks_after_label">Later weeks shown below</label>
+<select id="weeksAfterQuick" onchange="setWeeksShown('after', this.value)"></select>
+
+<br>
+
+<button data-primary onclick="closeWeeksShownModal()" data-i18n="close">Close</button>
 
 </div>
 
@@ -3811,13 +3861,43 @@ Save this week's meals as a reusable template you can apply to any week later.
 
 <!-- LOAD WEEK TEMPLATE -->
 
+<div class="modal" role="dialog" aria-modal="true" id="copyMealModal">
+
+<div class="modal-box">
+
+<h2 data-i18n="copy_meal_title">📋 Copy meal</h2>
+
+<p class="small"><strong id="copyMealName"></strong></p>
+
+<p class="small" data-i18n="copy_meal_intro">Copy this meal into:</p>
+
+<label for="copyMealWeek" data-i18n="copy_week_pick">Week</label>
+<select id="copyMealWeek" onchange="renderCopyMealDays()"></select>
+
+<div id="copyMealTargets" style="margin-top:10px;"></div>
+
+<p class="small" data-i18n="copy_meal_note">The meal stays where it is; a copy is added to each chosen day.</p>
+
+<br>
+
+<button data-primary onclick="confirmCopyMeal()" data-i18n="copy">Copy</button>
+
+<button class="modal-close" onclick="closeCopyMealPicker()" data-i18n="cancel">Cancel</button>
+
+</div>
+
+</div>
+
 <div class="modal" role="dialog" aria-modal="true" id="moveMealModal">
 
 <div class="modal-box">
 
 <h2 data-i18n="move_meal_title">Move to which day?</h2>
 
-<div id="moveMealList" class="day-pick-list"></div>
+<label for="moveMealWeek" data-i18n="move_week_pick">Week</label>
+<select id="moveMealWeek" onchange="renderMoveMealDays()"></select>
+
+<div id="moveMealList" class="day-pick-list" style="margin-top:10px;"></div>
 
 <button class="modal-close" onclick="closeMoveMealPicker()" data-i18n="cancel">Cancel</button>
 
@@ -4022,6 +4102,22 @@ const translations = {
         settings_group_look: "🎨 Appearance & printing",
         settings_amounts: "⚖️ Amounts",
         settings_printing: "🖨️ Printing",
+        settings_planner_view: "🗓 Planner view",
+        planner_weeks_before_label: "Earlier weeks shown above",
+        planner_weeks_after_label: "Later weeks shown below",
+        planner_weeks_description: "Show more than one week in the planner, stacked under each other, and drag meals between them. 0 and 0 looks like before. Only the card layout shows several weeks.",
+        planner_weeks_none: "None",
+        planner_weeks_one: "1 week",
+        planner_weeks_many: "{n} weeks",
+        weeks_shown_button: "🗓 Weeks shown…",
+        weeks_shown_title: "🗓 Weeks shown",
+        copy_meal_btn: "📋 Copy to another day or week",
+        copy_meal_title: "Copy meal",
+        copy_meal_intro: "Copy this meal into:",
+        copy_week_pick: "Week",
+        copy_meal_note: "The meal stays where it is; a copy is added to each chosen day.",
+        copied_meal_toast: "Copied",
+        move_week_pick: "Week",
         shopping_category_order_description: "Reorder the categories to match how your store is laid out.",
         sync_restore: "♻️ Restore data from before sync",
         sync_restore_title: "Restore backup?",
@@ -4598,6 +4694,22 @@ const translations = {
         settings_group_look: "🎨 Utseende & utskrift",
         settings_amounts: "⚖️ Mängder",
         settings_printing: "🖨️ Utskrift",
+        settings_planner_view: "🗓 Planeringsvy",
+        planner_weeks_before_label: "Tidigare veckor ovanför",
+        planner_weeks_after_label: "Senare veckor nedanför",
+        planner_weeks_description: "Visa fler än en vecka i planeraren, under varandra, och dra måltider mellan dem. 0 och 0 ser ut som förut. Bara kortvyn visar flera veckor.",
+        planner_weeks_none: "Inga",
+        planner_weeks_one: "1 vecka",
+        planner_weeks_many: "{n} veckor",
+        weeks_shown_button: "🗓 Visade veckor…",
+        weeks_shown_title: "🗓 Visade veckor",
+        copy_meal_btn: "📋 Kopiera till annan dag eller vecka",
+        copy_meal_title: "Kopiera måltid",
+        copy_meal_intro: "Kopiera måltiden till:",
+        copy_week_pick: "Vecka",
+        copy_meal_note: "Måltiden ligger kvar; en kopia läggs till på varje vald dag.",
+        copied_meal_toast: "Kopierat",
+        move_week_pick: "Vecka",
         shopping_category_order_description: "Ändra ordningen på kategorierna så att den matchar din butik.",
         sync_restore: "♻️ Återställ data från före synk",
         sync_restore_title: "Återställa säkerhetskopia?",
@@ -5252,13 +5364,13 @@ document.addEventListener("click", function(e){
 let draggedMealInfo = null;
 
 
-function setupMealDragSource(box, day, index){
+function setupMealDragSource(box, wk, day, index){
 
     box.draggable = true;
 
     box.addEventListener("dragstart", (e)=>{
 
-        draggedMealInfo = { day, index };
+        draggedMealInfo = { wk, day, index };
         box.style.opacity = "0.5";
 
         if(e.dataTransfer){
@@ -5274,7 +5386,29 @@ function setupMealDragSource(box, day, index){
 }
 
 
-function setupDayDropZone(card, targetDay){
+// Moves one meal to a day in any week. Returns the moved meal (or null).
+function moveMealBetween(srcWk, srcDay, srcIndex, dstWk, dstDay){
+
+    const srcMeals = srcWk === currentWeekKey ? meals : ensureWeek(srcWk);
+    const dstMeals = dstWk === currentWeekKey ? meals : ensureWeek(dstWk);
+
+    if(!srcMeals[srcDay] || !srcMeals[srcDay][srcIndex]) return null;
+
+    const moved = srcMeals[srcDay].splice(srcIndex, 1)[0];
+    if(!dstMeals[dstDay]) dstMeals[dstDay] = [];
+    dstMeals[dstDay].push(moved);
+
+    return moved;
+
+}
+
+function movedToastText(meal, dstWk, dstDay, srcWk){
+    let where = translateDayName(dstDay);
+    if(dstWk !== srcWk) where += " (" + weekRangeText(dstWk, false) + ")";
+    return `${t("moved_meal_prefix")}"${meal.name}"${t("moved_meal_suffix")}${where}`;
+}
+
+function setupDayDropZone(card, targetWk, targetDay){
 
     card.addEventListener("dragover", (e)=>{
         e.preventDefault();
@@ -5294,30 +5428,23 @@ function setupDayDropZone(card, targetDay){
             return;
         }
 
-        let { day: sourceDay, index: sourceIndex } = draggedMealInfo;
+        let { wk: sourceWk, day: sourceDay, index: sourceIndex } = draggedMealInfo;
         draggedMealInfo = null;
+        sourceWk = sourceWk || currentWeekKey;
 
-        if(!meals[sourceDay] || !meals[sourceDay][sourceIndex]){
+        let movedMeal = moveMealBetween(sourceWk, sourceDay, sourceIndex, targetWk, targetDay);
+
+        if(!movedMeal){
             return;
         }
-
-        let movedMeal = meals[sourceDay][sourceIndex];
-
-        meals[sourceDay].splice(sourceIndex, 1);
-
-        if(!meals[targetDay]){
-            meals[targetDay] = [];
-        }
-
-        meals[targetDay].push(movedMeal);
 
         saveData();
         render();
 
-        if(sourceDay !== targetDay){
-            flashMovedMeal(targetDay);
+        if(sourceDay !== targetDay || sourceWk !== targetWk){
+            flashMovedMeal(targetDay, targetWk);
             hapticFeedback();
-            showToast(`${t("moved_meal_prefix")}"${movedMeal.name}"${t("moved_meal_suffix")}${translateDayName(targetDay)}`);
+            showToast(movedToastText(movedMeal, targetWk, targetDay, sourceWk));
         }
 
     });
@@ -5334,7 +5461,7 @@ let pickedUpElement = null;
 let pickupCancelTimer = null;
 
 
-function attachLongPressToMove(element, day, index){
+function attachLongPressToMove(element, wk, day, index){
 
     let pressTimer = null;
     let moved = false;
@@ -5356,8 +5483,8 @@ function attachLongPressToMove(element, day, index){
 
         pressTimer = setTimeout(()=>{
 
-            if(!moved && meals[day] && meals[day][index]){
-                pickUpMeal(day, index, element);
+            if(!moved && ((wk === currentWeekKey ? meals : (weeks[wk] || {}))[day] || [])[index]){
+                pickUpMeal(wk, day, index, element);
             }
 
         }, 450);
@@ -5397,9 +5524,9 @@ function attachLongPressToMove(element, day, index){
 }
 
 
-function pickUpMeal(day, index, element){
+function pickUpMeal(wk, day, index, element){
 
-    let meal = meals[day] && meals[day][index];
+    let meal = ((wk === currentWeekKey ? meals : (weeks[wk] || {}))[day] || [])[index];
 
     if(!meal){
         return;
@@ -5412,7 +5539,7 @@ function pickUpMeal(day, index, element){
 
     hapticFeedback();
 
-    pickedUpMeal = { day, index };
+    pickedUpMeal = { wk, day, index };
     pickedUpElement = element;
 
     element.classList.add("meal-picked-up");
@@ -5455,7 +5582,7 @@ function cancelMealPickup(){
 }
 
 
-function setupDayTapDropZone(card, targetDay){
+function setupDayTapDropZone(card, targetWk, targetDay){
 
     // Capture phase so this runs before any inner button's own
     // onclick (Add, Copy Day, Edit, Delete, etc.) while a meal is
@@ -5470,41 +5597,35 @@ function setupDayTapDropZone(card, targetDay){
         e.preventDefault();
         e.stopPropagation();
 
-        tryDropMealOnDay(targetDay);
+        tryDropMealOnDay(targetWk, targetDay);
 
     }, true);
 
 }
 
 
-function tryDropMealOnDay(targetDay){
+function tryDropMealOnDay(targetWk, targetDay){
 
     if(!pickedUpMeal){
         return;
     }
 
-    let { day: sourceDay, index: sourceIndex } = pickedUpMeal;
+    let { wk: sourceWk, day: sourceDay, index: sourceIndex } = pickedUpMeal;
+    sourceWk = sourceWk || currentWeekKey;
+    targetWk = targetWk || currentWeekKey;
 
-    if(sourceDay === targetDay){
+    if(sourceDay === targetDay && sourceWk === targetWk){
         // Tapping the same day it's already on just cancels
         cancelMealPickup();
         return;
     }
 
-    if(!meals[sourceDay] || !meals[sourceDay][sourceIndex]){
+    let movedMeal = moveMealBetween(sourceWk, sourceDay, sourceIndex, targetWk, targetDay);
+
+    if(!movedMeal){
         cancelMealPickup();
         return;
     }
-
-    let movedMeal = meals[sourceDay][sourceIndex];
-
-    meals[sourceDay].splice(sourceIndex, 1);
-
-    if(!meals[targetDay]){
-        meals[targetDay] = [];
-    }
-
-    meals[targetDay].push(movedMeal);
 
     saveData();
 
@@ -5514,9 +5635,9 @@ function tryDropMealOnDay(targetDay){
 
     render();
 
-    flashMovedMeal(targetDay);
+    flashMovedMeal(targetDay, targetWk);
 
-    showToast(`${t("moved_meal_prefix")}"${movedMeal.name}"${t("moved_meal_suffix")}${translateDayName(targetDay)}`);
+    showToast(movedToastText(movedMeal, targetWk, targetDay, sourceWk));
 
 }
 
@@ -6257,6 +6378,36 @@ if(weeks === null){
 // week under a date one day off from the actual Monday for timezones
 // ahead of UTC. Realign any such keys so that data isn't stranded
 // under a key the app will never navigate to again.
+// One-time catch-up: planner meals linked to a recipe that was renamed earlier get the
+// recipe's current name (before this version a rename never reached the planner).
+(function syncMealNamesOnce(){
+
+    try{
+        if(localStorage.getItem("foodflowMealNameSync1")) return;
+
+        let byId = {};
+        (recipes || []).forEach(r => { if(r && r.id) byId[r.id] = r.name; });
+
+        let changed = false;
+
+        Object.keys(weeks).forEach(wk => {
+            const w = weeks[wk] || {};
+            Object.keys(w).forEach(d => {
+                (w[d] || []).forEach(m => {
+                    if(m && m.recipe && byId[m.recipe] && m.name !== byId[m.recipe]){
+                        m.name = byId[m.recipe];
+                        changed = true;
+                    }
+                });
+            });
+        });
+
+        if(changed) localStorage.setItem("foodflowWeeks", JSON.stringify(weeks));
+        localStorage.setItem("foodflowMealNameSync1", "1");
+    }catch(e){}
+
+})();
+
 (function repairMisalignedWeekKeys(){
 
     let changed = false;
@@ -6846,6 +6997,7 @@ function renderMonth(){
 function switchToWeek(weekKey){
 
     currentWeekKey = weekKey;
+    plannerAnchorWeek = weekKey;
     meals = ensureWeek(weekKey);
 
     syncShoppingStateToRange();
@@ -6861,7 +7013,7 @@ function goToPreviousWeek(){
 
     if(plannerView === "month"){ shiftMonth(-1); return; }
 
-    let d = parseDateKey(currentWeekKey);
+    let d = parseDateKey(plannerAnchorWeek || currentWeekKey);
     d.setDate(d.getDate() - 7);
 
     switchToWeek(getMondayKey(d));
@@ -6873,7 +7025,7 @@ function goToNextWeek(){
 
     if(plannerView === "month"){ shiftMonth(1); return; }
 
-    let d = parseDateKey(currentWeekKey);
+    let d = parseDateKey(plannerAnchorWeek || currentWeekKey);
     d.setDate(d.getDate() + 7);
 
     switchToWeek(getMondayKey(d));
@@ -6908,8 +7060,9 @@ function updateWeekLabel(){
 
     }
 
-    let start = parseDateKey(currentWeekKey);
-    let end = parseDateKey(currentWeekKey);
+    let keysShown = weekKeysForView();
+    let start = parseDateKey(keysShown[0]);
+    let end = parseDateKey(keysShown[keysShown.length - 1]);
     end.setDate(end.getDate() + 6);
 
     let locale = currentLanguage === "sv" ? "sv-SE" : "en-US";
@@ -6918,13 +7071,13 @@ function updateWeekLabel(){
     let startStr = start.toLocaleDateString(locale, options);
     let endStr = end.toLocaleDateString(locale, { ...options, year:"numeric" });
 
-    let isThisWeek = currentWeekKey === getMondayKey(new Date());
+    let isThisWeek = keysShown.includes(getMondayKey(new Date()));
     let thisWeekBtn = document.getElementById("thisWeekBtn");
     if(thisWeekBtn){ thisWeekBtn.classList.toggle("active", isThisWeek); }
 
     let label = document.getElementById("weekLabel");
 
-    let customName = weekNames[currentWeekKey];
+    let customName = keysShown.length === 1 ? weekNames[currentWeekKey] : "";
 
     if(label){
         label.innerText =
@@ -8361,9 +8514,105 @@ function emptyHeroHtml(icon, titleKey, textKey, actions){
 }
 
 // ---- highlight a meal that was just moved ----
-function flashMovedMeal(day){
+// ---- several weeks in the planner ----
+let plannerAnchorWeek = null;
+
+function weeksCountPref(which){
     try{
-        const card = document.querySelector('#week .day[data-day="' + day + '"]');
+        const max = which === "before" ? 2 : 3;
+        const v = parseInt(localStorage.getItem(which === "before" ? "foodflowWeeksBefore" : "foodflowWeeksAfter"), 10);
+        return (v >= 0 && v <= max) ? v : 0;
+    }catch(e){ return 0; }
+}
+
+function setWeeksShown(which, value){
+    try{ localStorage.setItem(which === "before" ? "foodflowWeeksBefore" : "foodflowWeeksAfter", String(parseInt(value, 10) || 0)); }catch(e){}
+    plannerAnchorWeek = currentWeekKey;
+    renderWeeksShownSettings();
+    updateWeekLabel();
+    render();
+}
+
+function renderWeeksShownSettings(){
+    const fill = (id, which, max) => {
+        const el = document.getElementById(id);
+        if(!el) return;
+        let html = "";
+        for(let i = 0; i <= max; i++){
+            const label = i === 0 ? t("planner_weeks_none") : (i === 1 ? t("planner_weeks_one") : t("planner_weeks_many").replace("{n}", i));
+            html += `<option value="${i}">${label}</option>`;
+        }
+        el.innerHTML = html;
+        el.value = String(weeksCountPref(which));
+    };
+    fill("weeksBeforeSelect", "before", 2);
+    fill("weeksAfterSelect", "after", 3);
+    fill("weeksBeforeQuick", "before", 2);
+    fill("weeksAfterQuick", "after", 3);
+}
+
+function openWeeksShownModal(){
+    renderWeeksShownSettings();
+    document.getElementById("weeksShownModal").style.display = "flex";
+}
+
+function closeWeeksShownModal(){
+    document.getElementById("weeksShownModal").style.display = "none";
+}
+
+// The weeks the planner shows, top to bottom. One week (the default) behaves exactly as before.
+function weekKeysForView(){
+    const b = weeksCountPref("before"), a = weeksCountPref("after");
+    if(plannerView !== "week" || (b === 0 && a === 0)){
+        plannerAnchorWeek = currentWeekKey;
+        return [currentWeekKey];
+    }
+    const keysFor = an => { const out = []; for(let i = -b; i <= a; i++) out.push(addDaysToKey(an, 7 * i)); return out; };
+    let anchor = plannerAnchorWeek;
+    if(!anchor || !keysFor(anchor).includes(currentWeekKey)) anchor = currentWeekKey;
+    plannerAnchorWeek = anchor;
+    return keysFor(anchor);
+}
+
+function weekRangeText(weekKey, withYear){
+    const start = parseDateKey(weekKey), end = parseDateKey(weekKey);
+    end.setDate(end.getDate() + 6);
+    const locale = currentLanguage === "sv" ? "sv-SE" : "en-US";
+    const o = { month:"short", day:"numeric" };
+    return start.toLocaleDateString(locale, o) + " – " + end.toLocaleDateString(locale, withYear ? { ...o, year:"numeric" } : o);
+}
+
+// Weeks to choose from in the copy / move windows
+function weekOptionsHtml(selectedKey){
+    const base = getMondayKey(new Date());
+    const keys = [];
+    for(let i = -4; i <= 16; i++) keys.push(addDaysToKey(base, 7 * i));
+    if(selectedKey && !keys.includes(selectedKey)) keys.push(selectedKey);
+    keys.sort();
+    return keys.map(k => {
+        const nm = weekNames[k] ? weekNames[k] + " · " : "";
+        const tw = k === base ? " " + t("this_week_suffix") : "";
+        return `<option value="${k}"${k === selectedKey ? " selected" : ""}>${escapeHtml(nm + weekRangeText(k) + tw)}</option>`;
+    }).join("");
+}
+
+// Clicking or tapping inside a week makes it the one that actions apply to
+function activateWeek(wk){
+    if(!wk || wk === currentWeekKey) return;
+    currentWeekKey = wk;
+    meals = ensureWeek(wk);
+    try{ syncShoppingStateToRange(); }catch(e){}
+    document.querySelectorAll("#week .week-block").forEach(b => b.classList.toggle("active", b.dataset.week === wk));
+    updateWeekLabel();
+}
+
+function freshMealId(){
+    return "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function flashMovedMeal(day, wk){
+    try{
+        const card = document.querySelector('#week .day[data-day="' + day + '"]' + (wk ? '[data-week="' + wk + '"]' : ''));
         if(!card) return;
         const boxes = card.querySelectorAll(".meal");
         const box = boxes[boxes.length - 1];
@@ -8545,13 +8794,59 @@ if(plannerView === "grid"){ renderGrid(); return; }
 const week =
 document.getElementById("week");
 
-
 week.innerHTML="";
+
+const keys = weekKeysForView();
+
+if(keys.length === 1){
+
+    week.className = "week";
+    buildWeekCards(week, keys[0]);
+
+}else{
+
+    // several weeks stacked: a heading and a normal 7-day week for each
+    week.className = "week-stack";
+
+    keys.forEach(wk => {
+
+        const block = document.createElement("section");
+        block.className = "week-block" + (wk === currentWeekKey ? " active" : "");
+        block.dataset.week = wk;
+
+        const customName = weekNames[wk];
+        const isThis = wk === getMondayKey(new Date());
+        block.innerHTML = `<h3 class="week-block-head"><span>${customName ? escapeHtml(customName) + " · " : ""}${escapeHtml(weekRangeText(wk, false))}</span>${isThis ? `<span class="wbh-badge">${escapeHtml(t("this_week_suffix").replace(/[()]/g, ""))}</span>` : ""}</h3>`;
+
+        const grid = document.createElement("div");
+        grid.className = "week";
+        block.appendChild(grid);
+        week.appendChild(block);
+
+        buildWeekCards(grid, wk);
+
+        // anything done inside this week (tap, focus, drag) makes it the week the actions apply to
+        ["pointerdown", "focusin", "click"].forEach(ev => block.addEventListener(ev, () => activateWeek(wk), true));
+
+    });
+
+}
+
+alignWeekRows();
+requestAnimationFrame(alignWeekRows);
+
+}
+
+
+// Draws one week's seven day cards into `week`. `wk` is that week's Monday key.
+function buildWeekCards(week, wk){
+
+const wm = (wk === currentWeekKey) ? meals : (weeks[wk] || {});
 let mealOrder = getMealOrder();
 
 // Meal types used anywhere this week, in order: each gets its own row so e.g. Dinner lines up across days
 let weekTypes = [];
-days.forEach(d => (meals[d] || []).forEach(m => { if(!weekTypes.includes(m.type)) weekTypes.push(m.type); }));
+days.forEach(d => (wm[d] || []).forEach(m => { if(!weekTypes.includes(m.type)) weekTypes.push(m.type); }));
 weekTypes.sort((a, b) => (mealOrder[a] ?? 99) - (mealOrder[b] ?? 99));
 let typeGroups = {};
 
@@ -8566,6 +8861,7 @@ typeGroups = {};
 
 card.className="day";
 card.dataset.day = day;
+card.dataset.week = wk;
 
 
 
@@ -8574,12 +8870,12 @@ card.innerHTML = `
 <h2>${translateDayName(day)}</h2>
 
 <input
-    class="day-note-input${(dayNotes[dayNoteKey(day)] || "") ? "" : " is-hidden"}"
+    class="day-note-input${(dayNotes[wk + "_" + day] || "") ? "" : " is-hidden"}"
     type="text"
     placeholder="${t("day_note_placeholder")}"
     aria-label="${t("lbl_day_note")} ${translateDayName(day)}"
-    value="${(dayNotes[dayNoteKey(day)] || "").replace(/"/g, "&quot;")}"
-    onchange="updateDayNote('${day}', this.value)"
+    value="${(dayNotes[wk + "_" + day] || "").replace(/"/g, "&quot;")}"
+    onchange="activateWeek('${wk}');updateDayNote('${day}', this.value)"
     onblur="if(!this.value.trim()) this.classList.add('is-hidden')"
     style="
         width:100%;
@@ -8596,22 +8892,22 @@ card.innerHTML = `
 >
 
 <div class="day-actions">
-<button class="add-btn" onclick="askMealType('${day}')">
+<button class="add-btn" onclick="activateWeek('${wk}');askMealType('${day}')">
 ${t("planner_add")}
 </button>
 
-<button class="more-btn" aria-haspopup="menu" aria-label="${t("day_menu_label")}" title="${t("day_menu_label")}" onclick="openDayMenu(this,'${day}')"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="3" cy="8" r="1.5" fill="currentColor"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/><circle cx="13" cy="8" r="1.5" fill="currentColor"/></svg></button>
+<button class="more-btn" aria-haspopup="menu" aria-label="${t("day_menu_label")}" title="${t("day_menu_label")}" onclick="activateWeek('${wk}');openDayMenu(this,'${day}')"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="3" cy="8" r="1.5" fill="currentColor"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/><circle cx="13" cy="8" r="1.5" fill="currentColor"/></svg></button>
 </div>
 
 `;
 
 
 
-if(meals[day] && meals[day].length > 0){
+if(wm[day] && wm[day].length > 0){
 
     // Keep each meal's original index (needed for edit/delete)
     // while sorting the displayed order by meal type.
-    let sortedMeals = meals[day]
+    let sortedMeals = wm[day]
         .map((meal, originalIndex) => ({ meal, originalIndex }))
         .sort((a, b) =>
             (mealOrder[a.meal.type] ?? 99) - (mealOrder[b.meal.type] ?? 99)
@@ -8653,19 +8949,23 @@ if(meals[day] && meals[day].length > 0){
         box.setAttribute("tabindex", "0");
         box.addEventListener("click", (e)=>{
             if(pickedUpMeal || e.target.closest("button")) return;
+            activateWeek(wk);
             openMealDetail(day, originalIndex);
         });
         box.addEventListener("keydown", (e)=>{
             if((e.key === "Enter" || e.key === " ") && !pickedUpMeal){
                 e.preventDefault();
-                openMealDetail(day, originalIndex);
+                activateWeek(wk);
+            openMealDetail(day, originalIndex);
             }
             // keyboard alternative to swipe-to-delete (the Delete button inside the meal view works too)
             if((e.key === "Delete" || e.key === "Backspace") && e.target === box && !pickedUpMeal){
                 e.preventDefault();
+                activateWeek(wk);
                 deleteMeal(day, originalIndex);
                 setTimeout(() => {
-                    let next = document.querySelector('[data-day="' + day + '"] .meal[tabindex="0"]') || document.querySelector('[data-day="' + day + '"] .add-btn');
+                    let sel = '[data-day="' + day + '"][data-week="' + wk + '"]';
+                    let next = document.querySelector(sel + ' .meal[tabindex="0"]') || document.querySelector(sel + ' .add-btn');
                     if(next) try{ next.focus(); }catch(err){}
                 }, 60);
             }
@@ -8685,13 +8985,13 @@ if(meals[day] && meals[day].length > 0){
         grp.appendChild(box);
 
         // Desktop: drag this meal onto another day to move it there
-        setupMealDragSource(box, day, originalIndex);
+        setupMealDragSource(box, wk, day, originalIndex);
 
         // Mobile: swipe left to delete
-        attachSwipeToDelete(box, () => deleteMeal(day, originalIndex));
+        attachSwipeToDelete(box, () => { activateWeek(wk); deleteMeal(day, originalIndex); });
 
         // Mobile: long-press to pick up, then tap another day to move it there
-        attachLongPressToMove(box, day, originalIndex);
+        attachLongPressToMove(box, wk, day, originalIndex);
 
 
     });
@@ -8713,7 +9013,7 @@ if(meals[day] && meals[day].length > 0){
 week.appendChild(card);
 
 // Spacers for the meal types this day doesn't have, so the rest line up; kept in type order
-if(weekTypes.length > 1 && meals[day] && meals[day].length > 0){
+if(weekTypes.length > 1 && wm[day] && wm[day].length > 0){
     weekTypes.forEach(ty => {
         if(typeGroups[ty]) return;
         let sp = document.createElement("div");
@@ -8728,16 +9028,12 @@ if(weekTypes.length > 1 && meals[day] && meals[day].length > 0){
 }
 
 // Desktop: let this day accept a dragged meal from another day
-setupDayDropZone(card, day);
+setupDayDropZone(card, wk, day);
 
 // Mobile: tapping a day while a meal is picked up drops it there
-setupDayTapDropZone(card, day);
+setupDayTapDropZone(card, wk, day);
 
 });
-
-alignWeekRows();
-requestAnimationFrame(alignWeekRows);
-
 
 }
 
@@ -8746,12 +9042,17 @@ requestAnimationFrame(alignWeekRows);
 function alignWeekRows(){
     const week = document.getElementById("week");
     if(!week) return;
-    const groups = [...week.querySelectorAll(".meal-group")];
-    groups.forEach(g => g.style.minHeight = "");
+    const allGroups = [...week.querySelectorAll(".meal-group")];
+    allGroups.forEach(g => g.style.minHeight = "");
     if(!window.matchMedia("(min-width: 901px)").matches || plannerView !== "week") return;
-    const tallest = {};
-    groups.forEach(g => { tallest[g.dataset.type] = Math.max(tallest[g.dataset.type] || 0, g.offsetHeight); });
-    groups.forEach(g => { g.style.minHeight = tallest[g.dataset.type] + "px"; });
+    // each week lines its own meal types up
+    const grids = week.classList.contains("week-stack") ? [...week.querySelectorAll(".week")] : [week];
+    grids.forEach(grid => {
+        const groups = [...grid.querySelectorAll(".meal-group")];
+        const tallest = {};
+        groups.forEach(g => { tallest[g.dataset.type] = Math.max(tallest[g.dataset.type] || 0, g.offsetHeight); });
+        groups.forEach(g => { g.style.minHeight = tallest[g.dataset.type] + "px"; });
+    });
 }
 window.addEventListener("resize", () => { clearTimeout(alignWeekRows._t); alignWeekRows._t = setTimeout(alignWeekRows, 120); });
 
@@ -8765,6 +9066,7 @@ function toggleMeal(day,index){
 }
 
 
+let mealDetailWeek = null;
 let mealDetailDay = null;
 let mealDetailIndex = null;
 
@@ -8776,6 +9078,7 @@ if(!meal) return;
 
 mealDetailDay = day;
 mealDetailIndex = index;
+mealDetailWeek = currentWeekKey;
 
 document.getElementById("mealDetailTitle").innerText = meal.type + " — " + meal.name;
 
@@ -9480,26 +9783,39 @@ function openMoveMealPicker(){
 
     if(mealDetailIndex === null) return;
 
+    let wk = mealDetailWeek || currentWeekKey;
     let day = mealDetailDay;
     let index = mealDetailIndex;
-    if(!meals[day] || !meals[day][index]) return;
+    let src = (wk === currentWeekKey ? meals : ensureWeek(wk));
+    if(!src[day] || !src[day][index]) return;
 
-    moveMealSource = { day, index };
+    moveMealSource = { wk, day, index };
 
+    document.getElementById("moveMealWeek").innerHTML = weekOptionsHtml(wk);
+    renderMoveMealDays();
+
+    closeMealDetail();
+    document.getElementById("moveMealModal").style.display = "flex";
+
+}
+
+function renderMoveMealDays(){
+
+    let src = moveMealSource;
+    if(!src) return;
+
+    let dstWk = document.getElementById("moveMealWeek").value;
     let list = document.getElementById("moveMealList");
     list.innerHTML = "";
 
     days.forEach(d => {
-        if(d === day) return;
+        if(d === src.day && dstWk === src.wk) return;
         let b = document.createElement("button");
         b.type = "button";
         b.textContent = translateDayName(d);
-        b.onclick = () => chooseMoveMealDay(d);
+        b.onclick = () => chooseMoveMealDay(dstWk, d);
         list.appendChild(b);
     });
-
-    closeMealDetail();
-    document.getElementById("moveMealModal").style.display = "flex";
 
 }
 
@@ -9507,14 +9823,88 @@ function closeMoveMealPicker(){
     document.getElementById("moveMealModal").style.display = "none";
 }
 
-function chooseMoveMealDay(targetDay){
+function chooseMoveMealDay(dstWk, targetDay){
 
     let src = moveMealSource;
     closeMoveMealPicker();
     if(!src) return;
 
-    pickedUpMeal = { day: src.day, index: src.index };
-    tryDropMealOnDay(targetDay);
+    pickedUpMeal = { wk: src.wk, day: src.day, index: src.index };
+    tryDropMealOnDay(dstWk, targetDay);
+
+}
+
+// ---- Copy one meal to other days / weeks ----
+let copyMealSource = null;
+
+function openCopyMealPicker(){
+
+    if(mealDetailIndex === null) return;
+
+    let wk = mealDetailWeek || currentWeekKey;
+    let src = (wk === currentWeekKey ? meals : ensureWeek(wk));
+    let meal = src[mealDetailDay] && src[mealDetailDay][mealDetailIndex];
+    if(!meal) return;
+
+    copyMealSource = { wk, day: mealDetailDay, index: mealDetailIndex };
+
+    document.getElementById("copyMealName").textContent = meal.type + " — " + meal.name;
+    document.getElementById("copyMealWeek").innerHTML = weekOptionsHtml(wk);
+    renderCopyMealDays();
+
+    closeMealDetail();
+    document.getElementById("copyMealModal").style.display = "flex";
+
+}
+
+function renderCopyMealDays(){
+
+    let src = copyMealSource;
+    if(!src) return;
+
+    let dstWk = document.getElementById("copyMealWeek").value;
+
+    document.getElementById("copyMealTargets").innerHTML = days
+        .filter(d => !(d === src.day && dstWk === src.wk))
+        .map(d => `
+            <label style="display:flex;align-items:center;gap:8px;font-weight:normal;">
+                <input type="checkbox" class="copyMealTarget" value="${d}" style="width:auto;margin:0;">
+                ${translateDayName(d)}
+            </label>`).join("");
+
+}
+
+function closeCopyMealPicker(){
+    document.getElementById("copyMealModal").style.display = "none";
+}
+
+function confirmCopyMeal(){
+
+    let src = copyMealSource;
+    if(!src) return;
+
+    let boxes = document.querySelectorAll(".copyMealTarget:checked");
+    if(boxes.length === 0){
+        showToast(t("pick_day_to_copy"), { type:"error" });
+        return;
+    }
+
+    let dstWk = document.getElementById("copyMealWeek").value;
+    let srcMeals = (src.wk === currentWeekKey ? meals : ensureWeek(src.wk));
+    let dstMeals = (dstWk === currentWeekKey ? meals : ensureWeek(dstWk));
+    let meal = srcMeals[src.day] && srcMeals[src.day][src.index];
+    if(!meal) return;
+
+    boxes.forEach(box => {
+        let d = box.value;
+        if(!dstMeals[d]) dstMeals[d] = [];
+        dstMeals[d].push({ ...meal, id: freshMealId(), expanded: false });
+    });
+
+    saveData();
+    closeCopyMealPicker();
+    render();
+    showToast(t("copied_meal_toast") + " ✓");
 
 }
 
@@ -10033,6 +10423,7 @@ function applyHeadcount(){
 // =======================
 
 let copyDaySource = null;
+let copyDaySourceWeek = null;
 
 
 function openCopyDayModal(day){
@@ -10048,11 +10439,25 @@ function openCopyDayModal(day){
     }
 
     copyDaySource = day;
+    copyDaySourceWeek = currentWeekKey;
 
     document.getElementById("copyDaySourceLabel")
     .innerText = translateDayName(day);
 
-    let targets = days.filter(d => d !== day);
+    document.getElementById("copyDayWeek").innerHTML = weekOptionsHtml(currentWeekKey);
+    renderCopyDayTargets();
+
+    document.getElementById("copyDayModal")
+    .style.display = "flex";
+
+}
+
+function renderCopyDayTargets(){
+
+    let dstWk = document.getElementById("copyDayWeek").value;
+
+    // in the same week the source day itself is left out; another week offers all seven days
+    let targets = days.filter(d => !(d === copyDaySource && dstWk === copyDaySourceWeek));
 
     document.getElementById("copyDayTargets").innerHTML =
         targets.map(d => `
@@ -10066,9 +10471,6 @@ function openCopyDayModal(day){
                 ${translateDayName(d)}
             </label>
         `).join("");
-
-    document.getElementById("copyDayModal")
-    .style.display = "flex";
 
 }
 
@@ -10093,16 +10495,23 @@ function copyDayToTargets(){
 
     }
 
+    let dstWk = document.getElementById("copyDayWeek").value;
+    let srcMeals = (copyDaySourceWeek === currentWeekKey ? meals : ensureWeek(copyDaySourceWeek));
+    let dstMeals = (dstWk === currentWeekKey ? meals : ensureWeek(dstWk));
+
+    // copy the list first, so copying onto itself can't loop
+    let toCopy = (srcMeals[copyDaySource] || []).map(m => ({ ...m }));
+
     checkboxes.forEach(checkbox=>{
 
         let targetDay = checkbox.value;
 
-        if(!meals[targetDay]){
-            meals[targetDay] = [];
+        if(!dstMeals[targetDay]){
+            dstMeals[targetDay] = [];
         }
 
-        meals[copyDaySource].forEach(meal=>{
-            meals[targetDay].push({ ...meal, expanded:false });
+        toCopy.forEach(meal=>{
+            dstMeals[targetDay].push({ ...meal, id: freshMealId(), expanded:false });
         });
 
     });
@@ -10232,6 +10641,7 @@ if(atToggle) atToggle.checked = askTypeOn();
 
 let roundToggle = document.getElementById("roundShoppingToggle");
 if(roundToggle) roundToggle.checked = shoppingRoundingOn();
+renderWeeksShownSettings();
 let roundMealsToggle = document.getElementById("roundMealsToggle");
 if(roundMealsToggle) roundMealsToggle.checked = mealRoundingOn();
 
@@ -10327,7 +10737,9 @@ const foodflowStorageKeys = [
     "foodflowPrintIngredients",
     "foodflowAskMealType",
     "foodflowWeekLayout",
-    "foodflowRecipeSortMode"
+    "foodflowRecipeSortMode",
+    "foodflowWeeksBefore",
+    "foodflowWeeksAfter"
 ];
 
 
@@ -10753,7 +11165,33 @@ document.getElementById("recipeModal")
 
 
 
+// A meal keeps its own copy of the recipe's name, so a rename has to be passed on.
+// Only meals still carrying the old name are changed, so a name you typed yourself stays.
+function renameLinkedMeals(recipeId, oldName, newName){
+
+    if(!recipeId || !newName || oldName === newName) return 0;
+
+    let changed = 0;
+
+    Object.keys(weeks).forEach(wk => {
+        const w = weeks[wk] || {};
+        Object.keys(w).forEach(d => {
+            (w[d] || []).forEach(m => {
+                if(m && m.recipe === recipeId && m.name === oldName){
+                    m.name = newName;
+                    changed++;
+                }
+            });
+        });
+    });
+
+    return changed;
+
+}
+
 function saveRecipe(){
+
+let oldRecipeName = (selectedRecipe !== null && recipes[selectedRecipe]) ? recipes[selectedRecipe].name : null;
 
 let recipe = {
 
@@ -10816,6 +11254,11 @@ localStorage.setItem(
 "foodflowRecipes",
 JSON.stringify(recipes)
 );
+
+if(oldRecipeName !== null && renameLinkedMeals(recipe.id, oldRecipeName, recipe.name) > 0){
+    saveData();
+    render();
+}
 
 
 selectedRecipe = null;
