@@ -2515,13 +2515,15 @@ Reorder the categories to match how your store is laid out.
 </span>
 </label>
 
-<label style="display:flex;align-items:flex-start;gap:10px;margin-top:18px;cursor:pointer;">
-<input type="checkbox" id="roundMealsToggle" style="width:auto;margin:3px 0 0;" onchange="toggleMealRounding(this.checked)">
-<span>
-<strong data-i18n="round_meals_label">Round up amounts per meal</strong><br>
+<div style="margin-top:18px;">
+<label for="roundMealsSelect"><strong data-i18n="round_meals_label">Round up amounts per meal</strong></label>
+<select id="roundMealsSelect" onchange="setMealRoundingMode(this.value)" style="margin:6px 0;">
+<option value="0" data-i18n="round_mode_off">Exact (no rounding)</option>
+<option value="n" data-i18n="round_mode_normal">Normal</option>
+<option value="g" data-i18n="round_mode_generous">Generous (bigger steps for big amounts)</option>
+</select><br>
 <span class="small" data-i18n="round_meals_description">When a meal is scaled for a different number of people, weights and volumes are rounded up (1.62 kg becomes 1.65 kg) in recipes, the planner and print. The shopping list adds up these rounded meals, so you don't run short at the end of the week. Whole items go up to the next whole one (19.2 carrots become 20). Seasonings measured by weight and recipes at their original size stay exact.</span>
-</span>
-</label>
+</div>
 
 <label style="display:flex;align-items:flex-start;gap:10px;margin-top:18px;cursor:pointer;">
 <input type="checkbox" id="gentleSpicesToggle" style="width:auto;margin:3px 0 0;" onchange="toggleGentleSpices(this.checked)">
@@ -4236,7 +4238,10 @@ const translations = {
         round_shopping_label: "Round up shopping amounts",
         round_shopping_description: "80 g becomes 100 g, 1.2 kg becomes 1.5 kg. The exact amount stays visible in gray.",
         round_meals_label: "Round up amounts per meal",
-        round_meals_description: "When a meal is scaled for a different number of people, weights and volumes are rounded up (1.62 kg becomes 1.65 kg) in recipes, the planner and print. The shopping list adds up these rounded meals, so you don't run short at the end of the week. Whole items go up to the next whole one (19.2 carrots become 20). Seasonings measured by weight and recipes at their original size stay exact.",
+        round_mode_off: "Exact (no rounding)",
+        round_mode_normal: "Normal",
+        round_mode_generous: "Generous (bigger steps for big amounts)",
+        round_meals_description: "When a meal is scaled for a different number of people, weights and volumes are rounded up (Normal: 1.62 kg becomes 1.7 kg; Generous: 1.75 kg, and 4.65 kg becomes 5 kg) in recipes, the planner and print. The shopping list adds up these rounded meals, so you don't run short at the end of the week. Whole items go up to the next whole one (19.2 carrots become 20). Seasonings measured by weight and recipes at their original size stay exact.",
         day_menu_note_add: "Add note",
         day_menu_note_edit: "Edit note",
         day_menu_eating_out: "🍽️ Eating out",
@@ -4828,7 +4833,10 @@ const translations = {
         round_shopping_label: "Avrunda inköpsmängder uppåt",
         round_shopping_description: "80 g blir 100 g, 1,2 kg blir 1,5 kg. Den exakta mängden visas i grått.",
         round_meals_label: "Avrunda mängder uppåt per måltid",
-        round_meals_description: "När en måltid skalas för ett annat antal personer avrundas vikt och volym uppåt (1,62 kg blir 1,65 kg) i recept, planeraren och utskrift. Inköpslistan summerar de avrundade måltiderna, så att maten räcker hela veckan. Hela varor går upp till nästa hela (19,2 morötter blir 20). Kryddor i gram och recept i sin ursprungliga storlek förblir exakta.",
+        round_mode_off: "Exakt (ingen avrundning)",
+        round_mode_normal: "Normal",
+        round_mode_generous: "Generös (större steg för stora mängder)",
+        round_meals_description: "När en måltid skalas för ett annat antal personer avrundas vikt och volym uppåt (Normal: 1,62 kg blir 1,7 kg; Generös: 1,75 kg, och 4,65 kg blir 5 kg) i recept, planeraren och utskrift. Inköpslistan summerar de avrundade måltiderna, så att maten räcker hela veckan. Hela varor går upp till nästa hela (19,2 morötter blir 20). Kryddor i gram och recept i sin ursprungliga storlek förblir exakta.",
         day_menu_note_add: "Lägg till anteckning",
         day_menu_note_edit: "Redigera anteckning",
         day_menu_eating_out: "🍽️ Äter ute",
@@ -10714,8 +10722,8 @@ if(atToggle) atToggle.checked = askTypeOn();
 let roundToggle = document.getElementById("roundShoppingToggle");
 if(roundToggle) roundToggle.checked = shoppingRoundingOn();
 renderWeeksShownSettings();
-let roundMealsToggle = document.getElementById("roundMealsToggle");
-if(roundMealsToggle) roundMealsToggle.checked = mealRoundingOn();
+let roundMealsSelect = document.getElementById("roundMealsSelect");
+if(roundMealsSelect) roundMealsSelect.value = mealRoundingMode();
 
 let printIngToggle = document.getElementById("printIngredientsToggle");
 if(printIngToggle) printIngToggle.checked = printIngredientsOn();
@@ -13034,19 +13042,27 @@ function toggleShoppingRounding(on){
 // Cooks round up while cooking too, so meals scaled for other numbers of people get
 // rounded up per meal (weight and volume only). The shopping list adds up these rounded
 // meal amounts, so the last meal of the week doesn't come up short.
-function mealRoundingOn(){
-    try{ return localStorage.getItem("foodflowRoundMeals") !== "0"; }
-    catch(e){ return true; }
+// "0" = exact, "n" = normal, anything else (unset / old "1") = generous
+function mealRoundingMode(){
+    try{
+        const v = localStorage.getItem("foodflowRoundMeals");
+        return v === "0" ? "0" : v === "n" ? "n" : "g";
+    }catch(e){ return "g"; }
 }
 
-function toggleMealRounding(on){
-    try{ localStorage.setItem("foodflowRoundMeals", on ? "1" : "0"); }catch(e){}
+function mealRoundingOn(){ return mealRoundingMode() !== "0"; }
+
+function setMealRoundingMode(mode){
+    try{ localStorage.setItem("foodflowRoundMeals", mode); }catch(e){}
     renderShoppingList();
     if(typeof render === "function") render();
 }
 
 function roundUpMealBase(base){
-    let step = base < 100 ? 10 : base < 1000 ? 50 : 100;
+    // bigger amounts get bigger steps (bags/packs come in 500 g - 1 kg): 1.62 kg -> 1.75 kg, 4.65 kg -> 5 kg
+    let step;
+    if(mealRoundingMode() === "n") step = base < 100 ? 10 : base < 1000 ? 50 : 100;
+    else step = base < 100 ? 10 : base < 500 ? 50 : base < 1000 ? 100 : base < 3000 ? 250 : 500;
     return Math.ceil(base / step - 1e-9) * step;
 }
 
@@ -13087,7 +13103,7 @@ const roundableCountUnits = new Set([
 // Rounds a combined base amount (g or ml) UP to a buyable step.
 function roundUpBase(amount){
     let step;
-    if(amount < 50)        step = 10;
+    if(amount < 50)       step = 10;
     else if(amount < 500)  step = 50;
     else if(amount < 1000) step = 100;
     else                   step = 500;
