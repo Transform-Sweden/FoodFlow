@@ -840,9 +840,10 @@ color:var(--text); font-size:14px; font-weight:500; border-radius:8px; transform
 #plannerPage .meal { padding:var(--card-pad); }
 #plannerPage .meal .meal-title { font-size:.8em; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:color-mix(in srgb, var(--accent, var(--text-soft)) 45%, var(--text)); margin-bottom:3px; }
 #plannerPage .meal .meal-name-clamp { min-height:2.6em; font-size:1.05em; font-weight:700; line-height:1.3em; }
-#plannerPage .meal .meal-foot { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:8px; }
+#plannerPage .meal .meal-foot { display:flex; flex-wrap:nowrap; align-items:center; gap:6px; margin-top:8px; }
 #plannerPage .meal .meal-chip.chip-hidden { display:none; }
 #plannerPage .meal .meal-chip-more { cursor:help; font-weight:700; }
+#plannerPage .meal .meal-foot.nolbl .meal-chip-lbl { display:none; }
 #plannerPage .meal .meal-foot.tight { gap:3px; }
 #plannerPage .meal .meal-foot.tight .meal-chip { padding:3px 4px; font-size:11px; }
 #plannerPage .meal .meal-chip { font-size:12.5px; line-height:1; padding:4px 9px; border-radius:999px; background:var(--card); border:1px solid rgba(120,120,120,.22); color:var(--text); white-space:nowrap; }
@@ -9064,13 +9065,15 @@ function fitMealChips(){
     document.querySelectorAll("#plannerPage .meal .meal-foot").forEach(foot => {
         foot.querySelectorAll(".meal-chip-more").forEach(x => x.remove());
         foot.querySelectorAll(".meal-chip.chip-hidden").forEach(c => c.classList.remove("chip-hidden"));
-        foot.classList.remove("tight");
+        foot.classList.remove("tight", "nolbl");
     });
-
-    if(!window.matchMedia("(min-width: 700px)").matches) return;
 
     document.querySelectorAll("#plannerPage .meal .meal-foot").forEach(foot => {
 
+        if(foot.scrollWidth <= foot.clientWidth + 1) return;
+
+        // phone: try icon-only badges first
+        foot.classList.add("nolbl");
         if(foot.scrollWidth <= foot.clientWidth + 1) return;
 
         const hideOrder = ["noshop", "leftover", "allergen"];
