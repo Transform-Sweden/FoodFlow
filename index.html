@@ -9134,6 +9134,22 @@ function alignWeekRows(){
         groups.forEach(g => { g.style.minHeight = tallest[g.dataset.type] + "px"; });
     });
 }
+// the planner can be laid out late (page hidden at first, fonts/emoji loading, sidebars opening),
+// so re-fit the badges whenever the planner's width actually changes or it becomes visible
+(function(){
+    let lastW = -1;
+    function refit(){ clearTimeout(refit._t); refit._t = setTimeout(() => { fitMealChips(); alignWeekRows(); }, 60); }
+    const pg = document.getElementById("plannerPage");
+    if(pg && window.ResizeObserver){
+        new ResizeObserver(() => {
+            const w = Math.round(pg.getBoundingClientRect().width);
+            if(w !== lastW){ lastW = w; refit(); }
+        }).observe(pg);
+    }
+    if(document.fonts && document.fonts.ready) document.fonts.ready.then(refit);
+    window.addEventListener("load", refit);
+    window.__refitMealChips = refit;
+})();
 window.addEventListener("resize", () => { clearTimeout(alignWeekRows._t); alignWeekRows._t = setTimeout(() => { fitMealChips(); alignWeekRows(); }, 120); });
 
 function toggleMeal(day,index){
