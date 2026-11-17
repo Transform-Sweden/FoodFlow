@@ -841,9 +841,13 @@ color:var(--text); font-size:14px; font-weight:500; border-radius:8px; transform
 #plannerPage .meal .meal-title { font-size:.8em; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:color-mix(in srgb, var(--accent, var(--text-soft)) 45%, var(--text)); margin-bottom:3px; }
 #plannerPage .meal .meal-name-clamp { min-height:2.6em; font-size:1.05em; font-weight:700; line-height:1.3em; }
 #plannerPage .meal .meal-foot { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:8px; }
+#plannerPage .meal .meal-chip.chip-hidden { display:none; }
+#plannerPage .meal .meal-chip-more { cursor:help; font-weight:700; }
+#plannerPage .meal .meal-foot.tight { gap:3px; }
+#plannerPage .meal .meal-foot.tight .meal-chip { padding:3px 4px; font-size:11px; }
 #plannerPage .meal .meal-chip { font-size:12.5px; line-height:1; padding:4px 9px; border-radius:999px; background:var(--card); border:1px solid rgba(120,120,120,.22); color:var(--text); white-space:nowrap; }
 #plannerPage .meal .meal-chevron { margin-left:auto; font-size:22px; line-height:1; color:var(--text-soft); opacity:.55; padding-left:6px; }
-@media(min-width:700px){ #plannerPage .meal { padding:10px 9px 10px 10px; } #plannerPage .meal .meal-chevron { display:none; } #plannerPage .meal .meal-chip-lbl { display:none; } #plannerPage .meal .meal-foot { gap:4px; flex-wrap:wrap; } #plannerPage .meal .meal-chip { padding:4px 7px; font-size:12px; } #plannerPage .meal .meal-name-clamp { font-size:1em; overflow-wrap:anywhere; word-break:normal; } }
+@media(min-width:700px){ #plannerPage .meal { padding:10px 9px 10px 10px; } #plannerPage .meal .meal-chevron { display:none; } #plannerPage .meal .meal-chip-lbl { display:none; } #plannerPage .meal .meal-foot { gap:4px; flex-wrap:nowrap; } #plannerPage .meal .meal-chip { padding:4px 7px; font-size:12px; } #plannerPage .meal .meal-name-clamp { font-size:1em; overflow-wrap:anywhere; word-break:normal; } }
 @media(hover:hover){ #plannerPage .meal:hover .meal-chevron { color:var(--brand); opacity:1; } }
 
 /* Shopping page: tabs for the meal-plan list and your own lists */
@@ -8832,8 +8836,9 @@ if(keys.length === 1){
 
 }
 
+fitMealChips();
 alignWeekRows();
-requestAnimationFrame(alignWeekRows);
+requestAnimationFrame(() => { fitMealChips(); alignWeekRows(); });
 
 }
 
@@ -8943,6 +8948,18 @@ if(wm[day] && wm[day].length > 0){
         </div>
         `;
 
+        // Tell the chips apart so a narrow card can hide the least important ones
+        {
+            const chips = [...box.querySelectorAll(".meal-foot .meal-chip")];
+            chips.forEach((c, i) => {
+                let kind = "allergen";
+                if(i === 0) kind = "people";
+                else if(leftoverChip && i === 1) kind = "leftover";
+                else if(meal.noShop && i === chips.length - 1) kind = "noshop";
+                c.dataset.kind = kind;
+            });
+        }
+
         // The whole card opens the meal (no separate View button)
         box.setAttribute("data-open", "1");
         box.setAttribute("role", "button");
@@ -9039,6 +9056,58 @@ setupDayTapDropZone(card, wk, day);
 
 
 // Make every meal-type block the same height across the week's day columns (wide screens only)
+// On wide screens each meal card keeps its badges on ONE row. If they don't fit, the least
+// important are hidden and a small "+N" badge says so (hover or tap it to see what is hidden).
+// Order of hiding: not-on-list, leftovers, allergy warnings. The people count always stays.
+function fitMealChips(){
+
+    document.querySelectorAll("#plannerPage .meal .meal-foot").forEach(foot => {
+        foot.querySelectorAll(".meal-chip-more").forEach(x => x.remove());
+        foot.querySelectorAll(".meal-chip.chip-hidden").forEach(c => c.classList.remove("chip-hidden"));
+        foot.classList.remove("tight");
+    });
+
+    if(!window.matchMedia("(min-width: 700px)").matches) return;
+
+    document.querySelectorAll("#plannerPage .meal .meal-foot").forEach(foot => {
+
+        if(foot.scrollWidth <= foot.clientWidth + 1) return;
+
+        const hideOrder = ["noshop", "leftover", "allergen"];
+        const more = document.createElement("span");
+        more.className = "meal-chip meal-chip-more";
+        more.setAttribute("role", "note");
+        foot.insertBefore(more, foot.querySelector(".meal-chevron"));
+
+        const hidden = [];
+
+        for(const kind of hideOrder){
+            const list = [...foot.querySelectorAll('.meal-chip[data-kind="' + kind + '"]:not(.chip-hidden)')].reverse();
+            for(const chip of list){
+                chip.classList.add("chip-hidden");
+                hidden.push((chip.getAttribute("title") || chip.textContent).replace(/\s+/g, " ").trim());
+                more.textContent = "+" + hidden.length;
+                const text = hidden.slice().reverse().join(" · ");
+                more.title = text;
+                more.setAttribute("aria-label", text);
+                if(foot.scrollWidth <= foot.clientWidth + 1) break;
+            }
+            if(foot.scrollWidth <= foot.clientWidth + 1) break;
+        }
+
+        // very narrow cards: make the badges a little smaller so people + "+N" still fit
+        if(foot.scrollWidth > foot.clientWidth + 1) foot.classList.add("tight");
+
+        // tapping the badge shows what is hidden (without opening the meal)
+        more.addEventListener("click", e => {
+            e.stopPropagation();
+            showToast(more.title);
+        });
+
+    });
+
+}
+
 function alignWeekRows(){
     const week = document.getElementById("week");
     if(!week) return;
@@ -9054,7 +9123,7 @@ function alignWeekRows(){
         groups.forEach(g => { g.style.minHeight = tallest[g.dataset.type] + "px"; });
     });
 }
-window.addEventListener("resize", () => { clearTimeout(alignWeekRows._t); alignWeekRows._t = setTimeout(alignWeekRows, 120); });
+window.addEventListener("resize", () => { clearTimeout(alignWeekRows._t); alignWeekRows._t = setTimeout(() => { fitMealChips(); alignWeekRows(); }, 120); });
 
 function toggleMeal(day,index){
 
