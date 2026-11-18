@@ -15380,6 +15380,31 @@ function addPastedShoppingItems(){
         });
     });
 
+    // "Syltsocker, 1 paket" / "Vispgrädde, 5,5 liter (real cream!)": a piece that is only an amount
+    // belongs to the item before it
+    for(let i = pieces.length - 1; i > 0; i--){
+        const pa = parseIngredientLine(pieces[i]);
+        const pb = parseIngredientLine(pieces[i - 1]);
+        if(pa && !pa.name && Number(pa.amount) > 0 && pb && pb.name && !(Number(pb.amount) > 0)){
+            const note = (pieces[i].match(/\([^()]*\)\s*$/) || [""])[0];
+            const amt = pieces[i].replace(/\([^()]*\)\s*$/, "").trim();
+            pieces.splice(i - 1, 2, amt + " " + pieces[i - 1] + (note ? " " + note : ""));
+        }
+    }
+
+    // "Vispgrädde 1 liter laktosfri": amount in the middle of the name -> "1 liter laktosfri vispgrädde"
+    pieces = pieces.map(piece => {
+        const pc = parseIngredientLine(piece);
+        if(pc && !(Number(pc.amount) > 0)){
+            const m = piece.match(/^(.*?\p{L})\s+(\d[\d.,\/]*\s*\p{L}+)\s+(\p{L}.*)$/u);
+            if(m){
+                const mid = parseIngredientLine(m[2]);
+                if(mid && !mid.name && Number(mid.amount) > 0) return m[2] + " " + m[3] + " " + m[1];
+            }
+        }
+        return piece;
+    });
+
     let added = [];
 
     pieces.forEach(piece => {
@@ -16157,7 +16182,7 @@ function printMealPlanner(){
 const knownUnits = [
     "g","kg","dl","msk","tsk","st","ml","l","cl","liter",
     "förp","förpackning","burk","burkar","klyfta","klyftor",
-    "kruka","skiva","skivor","bunt","nypa","kryddmått","krm","paket","påse",
+    "kruka","krukor","skiva","skivor","bunt","nypa","kryddmått","krm","paket","påse",
     "port","portion","portioner","potions","personer",
 
     // English units — metric/weight/volume
@@ -16357,7 +16382,9 @@ function parseQuantityToken(token){
 
 // Removes list markers pasted from notes apps / chats: "* ", "- ", "• ", "☐ ", "[ ] " …
 function stripListMarker(line){
-    return line.replace(/^\s*(?:[*•·▪◦‣⁃☐☑✓✔□■▢-]+|\[[ xX]?\]|[–—])\s+/, "").trim();
+    // pasted text often carries invisible characters (word joiners, zero-width spaces) and odd spaces
+    line = String(line).replace(/[\u2060\u200B-\u200D\uFEFF\u00AD]/g, "").replace(/[\u00A0\u2007\u202F\u2009\u2002\u2003]/g, " ");
+    return line.replace(/^\s*(?:(?:[*•·▪◦‣⁃☐☑✓✔□■▢-]+|\[[ xX]?\]|[–—])\s+)+/, "").trim();
 }
 
 // "chicken breasts, cut into strips" -> "chicken breasts"; "pepper to taste" -> "pepper".
