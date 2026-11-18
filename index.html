@@ -15342,6 +15342,30 @@ function closePasteShoppingModal(){
     document.getElementById("pasteShoppingModal").style.display = "none";
 }
 
+// Splits one pasted line into items. Commas/semicolons split, except inside brackets;
+// "salad (lettuce x3, tomatoes x9)" becomes the items inside the brackets (the label is dropped).
+function splitShoppingLine(line){
+    const top = [];
+    let depth = 0, cur = "";
+    for(let i = 0; i < line.length; i++){
+        const ch = line[i];
+        if(ch === "(" || ch === "[") depth++;
+        if((ch === ")" || ch === "]") && depth > 0) depth--;
+        const atSplit = depth === 0 && (ch === ";" || (ch === "," && /\s/.test(line[i + 1] || "") && /\S/.test(line.slice(i + 1))));
+        if(atSplit){ top.push(cur); cur = ""; }
+        else cur += ch;
+    }
+    top.push(cur);
+    const out = [];
+    top.forEach(piece => {
+        const m = piece.match(/^([^()\[\]]*)[(\[]([^()\[\]]*)[)\]]\s*$/);
+        if(m && /,|;/.test(m[2])){
+            m[2].split(/[;,]\s*/).forEach(x => { if(x.trim()) out.push(x.trim()); });
+        }else out.push(piece);
+    });
+    return out;
+}
+
 function addPastedShoppingItems(){
 
     let raw = document.getElementById("pasteShoppingText").value;
@@ -15350,7 +15374,7 @@ function addPastedShoppingItems(){
     // (a decimal comma like "1,5 l" has no space after it, so it stays in one piece)
     let pieces = [];
     raw.split(/\r?\n/).forEach(line => {
-        stripListMarker(line).split(/[;]|,\s+(?=\S)/).forEach(piece => {
+        splitShoppingLine(stripListMarker(line)).forEach(piece => {
             piece = piece.trim();
             if(piece && !/:$/.test(piece)) pieces.push(piece);   // skip headings like "Groceries:"
         });
