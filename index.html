@@ -844,6 +844,8 @@ color:var(--text); font-size:14px; font-weight:500; border-radius:8px; transform
 #plannerPage .meal .meal-chip.chip-hidden { display:none; }
 #plannerPage .meal .meal-chip-more { cursor:help; font-weight:700; }
 #plannerPage .meal .meal-foot.nolbl .meal-chip-lbl { display:none; }
+.combined-more { display:none; }
+@media(max-width:699px){ .combined-actions { display:none !important; } .combined-more { display:inline-block; } }
 #plannerPage .meal .meal-foot.tight { gap:3px; }
 #plannerPage .meal .meal-foot.tight .meal-chip { padding:3px 4px; font-size:11px; }
 #plannerPage .meal .meal-chip { font-size:12.5px; line-height:1; padding:4px 9px; border-radius:999px; background:var(--card); border:1px solid rgba(120,120,120,.22); color:var(--text); white-space:nowrap; }
@@ -3218,6 +3220,15 @@ style="width:100%;padding:12px;border-radius:var(--radius-field);border:1px soli
 </div>
 </div>
 
+<div class="modal" role="dialog" aria-modal="true" id="combinedActionsModal" aria-labelledby="combinedActionsTitle">
+<div class="modal-box">
+<h2 id="combinedActionsTitle">Item</h2>
+<div class="action-list" id="combinedActionsList"></div>
+<br>
+<button data-primary data-i18n="close" onclick="closeCombinedActions()">Close</button>
+</div>
+</div>
+
 <div class="modal" role="dialog" aria-modal="true" id="combinedSourcesModal" aria-labelledby="combinedSourcesTitle">
 <div class="modal-box">
 <h2 id="combinedSourcesTitle" data-i18n="combined_pick_title">Which one?</h2>
@@ -4295,6 +4306,7 @@ const translations = {
         all_lists_choose: "📑 Choose lists…",
         all_lists_choose_title: "Lists in the combined list",
         all_lists_choose_hint: "Untick a list to leave it out for now. Nothing is deleted.",
+        combined_more: "More actions",
         combined_pick_title: "Which one?",
         combined_pick_hint: "This line adds up items from several lists. Pick the one to change.",
         all_lists_summary: "Combined from {n} of {total} lists. Tick items here and they are ticked in their own list too. Add and edit items in the individual lists.",
@@ -4892,6 +4904,7 @@ const translations = {
         all_lists_choose: "📑 Välj listor…",
         all_lists_choose_title: "Listor i den samlade listan",
         all_lists_choose_hint: "Avmarkera en lista för att lämna den utanför just nu. Inget tas bort.",
+        combined_more: "Fler åtgärder",
         combined_pick_title: "Vilken av dem?",
         combined_pick_hint: "Den här raden summerar varor från flera listor. Välj den du vill ändra.",
         all_lists_summary: "Samlad från {n} av {total} listor. Bocka av varor här så bockas de av i sin egen lista också. Lägg till och ändra varor i de enskilda listorna.",
@@ -15241,10 +15254,13 @@ function renderCombinedList(){
                 <span class="small" style="opacity:.6;"> · ${e.tags.map(escapeHtml).join(", ")}</span>
                 ${allergenInlineHtml(e.name)}
             </span>
+            <span class="combined-actions" style="display:inline-flex;gap:8px;flex-wrap:wrap;">
             ${hasMeal ? `<button class="edit" style="margin:0;padding:6px 10px;font-size:13px;" aria-label="${t("aria_at_home")}: ${escapeHtml(e.name)}" title="${t("aria_at_home")}" onclick="combinedItemHome(${e.idx})">🏠</button>` : ""}
             <button class="edit" style="margin:0;padding:6px 10px;font-size:13px;" aria-pressed="${inPantry}" aria-label="${inPantry ? t("aria_pantry_remove") : t("aria_pantry_add")}: ${escapeHtml(e.name)}" title="${inPantry ? t("aria_pantry_remove") : t("aria_pantry_add")}" onclick="combinedPantry(${e.idx})">${inPantry ? "📌" : "📍"}</button>
             <button class="edit" style="margin:0;padding:6px 10px;font-size:13px;" aria-label="${t("aria_edit")}: ${escapeHtml(e.name)}" onclick="combinedEdit(${e.idx})">✏️</button>
             <button class="delete" style="margin:0;padding:6px 10px;font-size:13px;" aria-label="${t("aria_delete")}: ${escapeHtml(e.name)}" onclick="combinedDelete(${e.idx})">🗑</button>
+            </span>
+            <button class="edit combined-more" style="margin:0;padding:6px 12px;font-size:15px;line-height:1;" aria-haspopup="dialog" aria-label="${t("combined_more")}: ${escapeHtml(e.name)}" title="${t("combined_more")}" onclick="openCombinedActions(${e.idx})">⋯</button>
         </div>`;
     };
 
@@ -15356,6 +15372,27 @@ function combinedEditSource(src){
     editingShoppingKey = "custom:" + src.itemId;
     editingShoppingIsExtra = false;
     openShoppingItemModal(t("edit_item_title"), info.item.name, Number(info.item.amount) > 0 ? info.item.amount : "", info.item.unit || "");
+}
+
+function openCombinedActions(idx){
+    const e = combinedEntryByIdx(idx);
+    const box = document.getElementById("combinedActionsList");
+    if(!e || !box) return;
+    const inPantry = pantry.includes(combinedPantryName(e));
+    const hasMeal = e.sources.some(sr => sr.type === "meal");
+    document.getElementById("combinedActionsTitle").textContent = combinedEntryText(e);
+    const btn = (icon, label, fn) => `<button onclick="closeCombinedActions(); ${fn}(${idx});">${icon} ${escapeHtml(label)}</button>`;
+    box.innerHTML =
+        (hasMeal ? btn("🏠", t("aria_at_home"), "combinedItemHome") : "") +
+        btn(inPantry ? "📌" : "📍", inPantry ? t("aria_pantry_remove") : t("aria_pantry_add"), "combinedPantry") +
+        btn("✏️", t("aria_edit"), "combinedEdit") +
+        btn("🗑", t("aria_delete"), "combinedDelete");
+    document.getElementById("combinedActionsModal").style.display = "flex";
+}
+
+function closeCombinedActions(){
+    const m = document.getElementById("combinedActionsModal");
+    if(m) m.style.display = "none";
 }
 
 function combinedEdit(idx){
