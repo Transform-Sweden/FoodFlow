@@ -3218,6 +3218,16 @@ style="width:100%;padding:12px;border-radius:var(--radius-field);border:1px soli
 </div>
 </div>
 
+<div class="modal" role="dialog" aria-modal="true" id="combinedSourcesModal" aria-labelledby="combinedSourcesTitle">
+<div class="modal-box">
+<h2 id="combinedSourcesTitle" data-i18n="combined_pick_title">Which one?</h2>
+<p class="small" data-i18n="combined_pick_hint">This line adds up items from several lists. Pick the one to change.</p>
+<div id="combinedSourcesList"></div>
+<br>
+<button data-primary data-i18n="close" onclick="closeCombinedSources()">Close</button>
+</div>
+</div>
+
 <div class="modal" role="dialog" aria-modal="true" id="customListMenu">
 <div class="modal-box">
 <h2 id="customListMenuTitle">List</h2>
@@ -4285,6 +4295,8 @@ const translations = {
         all_lists_choose: "📑 Choose lists…",
         all_lists_choose_title: "Lists in the combined list",
         all_lists_choose_hint: "Untick a list to leave it out for now. Nothing is deleted.",
+        combined_pick_title: "Which one?",
+        combined_pick_hint: "This line adds up items from several lists. Pick the one to change.",
         all_lists_summary: "Combined from {n} of {total} lists. Tick items here and they are ticked in their own list too. Add and edit items in the individual lists.",
         list_new: "➕ New list",
         new_list_title: "➕ New list",
@@ -4880,6 +4892,8 @@ const translations = {
         all_lists_choose: "📑 Välj listor…",
         all_lists_choose_title: "Listor i den samlade listan",
         all_lists_choose_hint: "Avmarkera en lista för att lämna den utanför just nu. Inget tas bort.",
+        combined_pick_title: "Vilken av dem?",
+        combined_pick_hint: "Den här raden summerar varor från flera listor. Välj den du vill ändra.",
         all_lists_summary: "Samlad från {n} av {total} listor. Bocka av varor här så bockas de av i sin egen lista också. Lägg till och ändra varor i de enskilda listorna.",
         list_new: "➕ Ny lista",
         new_list_title: "➕ Ny lista",
@@ -13393,6 +13407,12 @@ function normalizeIngredientName(name){
         // plain "water".
         .replace(/\s+(i|in)\s+(vatten|olja|tomatsås|saltlake|spad|lag|water|oil|tomato sauce|brine)$/, "");
 
+    // "shallots frozen" / "skinka rökt": a trailing qualifier is read as if it came first
+    base = base.replace(/^(.+?)[, ]+(frozen|fryst|frysta|djupfryst|djupfrysta)$/, "$2 $1")
+               .replace(/^(.+?) (frysta)$/, "fryst $1");
+    if(base.startsWith("frysta ") || base.startsWith("djupfrysta ")) base = "fryst " + base.replace(/^\S+ /, "");
+    if(base.startsWith("djupfryst ")) base = "fryst " + base.slice(10);
+
     // Custom user translations take priority over the built-in dictionary.
     if(customIngredientTranslations[base]){
         return customIngredientTranslations[base];
@@ -14587,6 +14607,8 @@ function openShoppingItemModal(title, name, amount, unit){
 
 function closeShoppingItemModal(){
 
+    editingCustomSource = null;
+
     document.getElementById("shoppingItemModal")
     .style.display = "none";
 
@@ -14633,6 +14655,19 @@ function saveShoppingItem(){
 
     let amount =
         Number(String(amountRaw).replace(",",".")) || 0;
+
+    // an item of another list, edited from the combined "All lists" view
+    if(editingCustomSource){
+        const cl = customLists[editingCustomSource.listId];
+        const ci = cl && (cl.items || []).find(i => i.id === editingCustomSource.itemId);
+        if(ci){ ci.name = name; ci.amount = amount; ci.unit = unit; }
+        saveCustomLists();
+        editingCustomSource = null;
+        editingShoppingKey = null;
+        closeShoppingItemModal();
+        renderShoppingList();
+        return;
+    }
 
     // an item of one of your own lists
     if(activeCustomList()){
@@ -15196,7 +15231,8 @@ function renderCombinedList(){
 
     const row = e => {
         const accent = categoryAccents[e.category] || categoryAccents["Other"];
-        const mealOnly = e.sources.length === 1 && e.sources[0].type === "meal";
+        const hasMeal = e.sources.some(sr => sr.type === "meal");
+        const inPantry = pantry.includes(combinedPantryName(e));
         const txt = escapeHtml(combinedEntryText(e));
         return `
         <div class="meal" style="--accent:${accent};display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -15205,7 +15241,10 @@ function renderCombinedList(){
                 <span class="small" style="opacity:.6;"> · ${e.tags.map(escapeHtml).join(", ")}</span>
                 ${allergenInlineHtml(e.name)}
             </span>
-            ${mealOnly ? `<button class="edit" style="margin:0;padding:6px 10px;font-size:13px;" aria-label="${t("aria_at_home")}: ${escapeHtml(e.name)}" title="${t("aria_at_home")}" onclick="combinedItemHome(${e.idx})">🏠</button>` : ""}
+            ${hasMeal ? `<button class="edit" style="margin:0;padding:6px 10px;font-size:13px;" aria-label="${t("aria_at_home")}: ${escapeHtml(e.name)}" title="${t("aria_at_home")}" onclick="combinedItemHome(${e.idx})">🏠</button>` : ""}
+            <button class="edit" style="margin:0;padding:6px 10px;font-size:13px;" aria-pressed="${inPantry}" aria-label="${inPantry ? t("aria_pantry_remove") : t("aria_pantry_add")}: ${escapeHtml(e.name)}" title="${inPantry ? t("aria_pantry_remove") : t("aria_pantry_add")}" onclick="combinedPantry(${e.idx})">${inPantry ? "📌" : "📍"}</button>
+            <button class="edit" style="margin:0;padding:6px 10px;font-size:13px;" aria-label="${t("aria_edit")}: ${escapeHtml(e.name)}" onclick="combinedEdit(${e.idx})">✏️</button>
+            <button class="delete" style="margin:0;padding:6px 10px;font-size:13px;" aria-label="${t("aria_delete")}: ${escapeHtml(e.name)}" onclick="combinedDelete(${e.idx})">🗑</button>
         </div>`;
     };
 
@@ -15238,9 +15277,169 @@ function toggleCombinedEntry(idx){
 
 }
 
+function combinedEntryByIdx(idx){ return combinedEntries.find(x => x.idx === idx); }
+
+function combinedSourceItem(src){
+    if(src.type === "meal"){
+        const it = generateShoppingList().list.find(i => i.key === src.key);
+        return it ? { label: t("list_tab_meal"), item: it } : null;
+    }
+    const l = customLists[src.listId];
+    const it = l && (l.items || []).find(i => i.id === src.itemId);
+    return it ? { label: (l.icon || "🛒") + " " + (l.name || "?"), item: it } : null;
+}
+
+// the name used for "always at home" for this line
+function combinedPantryName(e){
+    const m = e.sources.find(sr => sr.type === "meal");
+    if(m) return String(m.key).startsWith("extra:") ? normalizeIngredientName(e.name) : String(m.key).split("|")[0];
+    return normalizeIngredientName(e.name);
+}
+
+// every change made here is made in the list the item belongs to
 function combinedItemHome(idx){
-    const e = combinedEntries.find(x => x.idx === idx);
-    if(e && e.sources[0] && e.sources[0].type === "meal") setItemHome(e.sources[0].key, true);
+    const e = combinedEntryByIdx(idx);
+    if(!e) return;
+    const meal = e.sources.filter(sr => sr.type === "meal");
+    if(meal.length === 0) return;
+    const keys = [];
+    meal.forEach(sr => keys.push("home:" + sr.key, "need:" + sr.key, sr.key));
+    const before = keys.map(k => shoppingChecked[k]);
+    meal.forEach(sr => {
+        delete shoppingChecked["need:" + sr.key];
+        shoppingChecked["home:" + sr.key] = true;
+        delete shoppingChecked[sr.key];
+    });
+    saveShoppingState();
+    renderShoppingList();
+    showToast(`${t("toast_marked_home")}: "${e.name}"`, {
+        actionLabel: t("undo"),
+        onAction: () => {
+            keys.forEach((k, i) => { if(before[i] === undefined) delete shoppingChecked[k]; else shoppingChecked[k] = before[i]; });
+            saveShoppingState();
+            renderShoppingList();
+        }
+    });
+}
+
+function combinedPantry(idx){
+    const e = combinedEntryByIdx(idx);
+    if(!e) return;
+    const name = combinedPantryName(e);
+    if(pantry.includes(name)){
+        pantry = pantry.filter(n => n !== name);
+        e.sources.forEach(sr => { if(sr.type === "meal"){ delete shoppingChecked["home:" + sr.key]; delete shoppingChecked["need:" + sr.key]; } });
+        showToast(`${t("toast_pantry_removed")}: "${e.name}"`);
+    }else{
+        pantry.push(name);
+        e.sources.forEach(sr => { if(sr.type === "meal"){ delete shoppingChecked["need:" + sr.key]; } });
+        showToast(`${t("toast_pantry_added")}: "${e.name}"`);
+    }
+    savePantry();
+    saveShoppingState();
+    renderShoppingList();
+    renderPantrySettings();
+}
+
+let editingCustomSource = null;
+
+function combinedEditSource(src){
+    closeCombinedSources();
+    if(src.type === "meal"){
+        editingCustomSource = null;
+        editShoppingItem(src.key);
+        return;
+    }
+    const info = combinedSourceItem(src);
+    if(!info) return;
+    editingCustomSource = { listId: src.listId, itemId: src.itemId };
+    editingShoppingKey = "custom:" + src.itemId;
+    editingShoppingIsExtra = false;
+    openShoppingItemModal(t("edit_item_title"), info.item.name, Number(info.item.amount) > 0 ? info.item.amount : "", info.item.unit || "");
+}
+
+function combinedEdit(idx){
+    const e = combinedEntryByIdx(idx);
+    if(!e) return;
+    if(e.sources.length === 1) combinedEditSource(e.sources[0]);
+    else openCombinedSources(idx);
+}
+
+function combinedDeleteSources(srcs, name){
+    const snap = { extras: JSON.stringify(shoppingExtras), removed: JSON.stringify(shoppingRemoved), over: JSON.stringify(shoppingOverrides), custom: {} };
+    srcs.forEach(src => {
+        if(src.type === "meal"){
+            if(String(src.key).startsWith("extra:")){
+                const id = src.key.replace("extra:", "");
+                shoppingExtras = shoppingExtras.filter(x => x.id !== id);
+            }else{
+                shoppingRemoved[src.key] = true;
+                delete shoppingOverrides[src.key];
+            }
+        }else{
+            const l = customLists[src.listId];
+            if(!l) return;
+            if(!(src.listId in snap.custom)) snap.custom[src.listId] = JSON.stringify(l.items || []);
+            l.items = (l.items || []).filter(i => i.id !== src.itemId);
+        }
+    });
+    saveShoppingState();
+    saveCustomLists();
+    renderShoppingList();
+    showToast(`${t("toast_removed")} "${name}"`, {
+        actionLabel: t("undo"),
+        onAction: () => {
+            shoppingExtras = JSON.parse(snap.extras);
+            Object.keys(shoppingRemoved).forEach(k => delete shoppingRemoved[k]);
+            Object.assign(shoppingRemoved, JSON.parse(snap.removed));
+            Object.keys(shoppingOverrides).forEach(k => delete shoppingOverrides[k]);
+            Object.assign(shoppingOverrides, JSON.parse(snap.over));
+            Object.keys(snap.custom).forEach(id => { if(customLists[id]) customLists[id].items = JSON.parse(snap.custom[id]); });
+            saveShoppingState();
+            saveCustomLists();
+            renderShoppingList();
+        }
+    });
+}
+
+function combinedDelete(idx){
+    const e = combinedEntryByIdx(idx);
+    if(!e) return;
+    combinedDeleteSources(e.sources.slice(), e.name);
+}
+
+function openCombinedSources(idx){
+    const e = combinedEntryByIdx(idx);
+    const box = document.getElementById("combinedSourcesList");
+    if(!e || !box) return;
+    box.innerHTML = e.sources.map((src, i) => {
+        const info = combinedSourceItem(src);
+        if(!info) return "";
+        const txt = (Number(info.item.amount) > 0 ? qtyText(info.item.amount, info.item.unit) + " " : "") + info.item.name;
+        return `<div class="meal" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span style="flex:1;">${escapeHtml(txt)}<span class="small" style="opacity:.6;"> · ${escapeHtml(info.label)}</span></span>
+            <button class="edit" style="margin:0;padding:6px 10px;font-size:13px;" aria-label="${t("aria_edit")}: ${escapeHtml(txt)}" onclick="combinedEditSrc(${idx}, ${i})">✏️</button>
+            <button class="delete" style="margin:0;padding:6px 10px;font-size:13px;" aria-label="${t("aria_delete")}: ${escapeHtml(txt)}" onclick="combinedDeleteSrc(${idx}, ${i})">🗑</button>
+        </div>`;
+    }).join("");
+    document.getElementById("combinedSourcesModal").style.display = "flex";
+}
+
+function closeCombinedSources(){
+    const m = document.getElementById("combinedSourcesModal");
+    if(m) m.style.display = "none";
+}
+
+function combinedEditSrc(idx, i){
+    const e = combinedEntryByIdx(idx);
+    if(e && e.sources[i]) combinedEditSource(e.sources[i]);
+}
+
+function combinedDeleteSrc(idx, i){
+    const e = combinedEntryByIdx(idx);
+    if(!e || !e.sources[i]) return;
+    closeCombinedSources();
+    combinedDeleteSources([e.sources[i]], e.name);
 }
 
 function uncheckAllCombined(){
