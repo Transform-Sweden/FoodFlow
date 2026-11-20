@@ -91,6 +91,13 @@ body.dark {
 
 
 
+/* phones: do not auto-enlarge text when the phone is turned sideways (and keep it from staying big when turned back) */
+html {
+-webkit-text-size-adjust:100%;
+-moz-text-size-adjust:100%;
+text-size-adjust:100%;
+}
+
 * {
 
 box-sizing:border-box;
@@ -12459,7 +12466,7 @@ function getIngredientsFromRows(){
 
         const entry = {
             name: name,
-            amount: amounts[index].value,
+            amount: (amounts[index].value || "").replace(/^(\d+),(\d+)$/, "$1.$2"),
             unit: units[index].value
         };
         const rowEl = nameInput.parentElement;
@@ -13121,8 +13128,23 @@ function roundUpMealBase(base){
 }
 
 // Scaled amount of one ingredient for a meal: { amount, unit } in the recipe's own unit.
+// an amount typed or stored as text: "0,5" and "0.5" both mean a half, "1/2" and "½" too
+function amountNumber(v){
+    if(typeof v === "number") return isFinite(v) ? v : 0;
+    let x = String(v == null ? "" : v).trim().replace(/\u00A0/g, " ");
+    if(!x) return 0;
+    const half = { "½": 0.5, "¼": 0.25, "¾": 0.75, "⅓": 1 / 3, "⅔": 2 / 3 };
+    let m = x.match(/^(\d+)?\s*([½¼¾⅓⅔])$/);
+    if(m) return (m[1] ? Number(m[1]) : 0) + half[m[2]];
+    m = x.match(/^(?:(\d+)\s+)?(\d+)\s*\/\s*(\d+)$/);
+    if(m && Number(m[3]) > 0) return (m[1] ? Number(m[1]) : 0) + Number(m[2]) / Number(m[3]);
+    if(/^\d+,\d+$/.test(x)) x = x.replace(",", ".");
+    const n = Number(x);
+    return isFinite(n) ? n : 0;
+}
+
 function scaledIngredient(ing, factor){
-    let amount = (Number(ing.amount) || 0) * ingredientFactor(ing, factor);
+    let amount = amountNumber(ing.amount) * ingredientFactor(ing, factor);
     let unit = (ing.unit || "").trim();
     let info = unitFamilies[unit.toLowerCase()];
     let seasoning = isSeasoningName(ing.name);
@@ -13553,7 +13575,7 @@ function generateShoppingList(){
                     }
 
                     let unit = normalizeUnit(ingredient.unit || "");
-                    let amount = Number(ingredient.amount) || 0;
+                    let amount = amountNumber(ingredient.amount);
                     let scaled = scaledIngredient(ingredient, factor).amount;
 
                     let normalizedName = normalizeIngredientName(rawName);
@@ -16771,6 +16793,9 @@ function parseIngredientLine(line){
 
     // "~2 dl flour" / "≈ 2 dl flour"
     line = line.replace(/^[~≈]\s*/, "");
+
+    // "1.000 g" / "1,000 g" / "1 000 g" (thousands separator, g or ml only): 1000 g, not 1 g
+    line = line.replace(/^([1-9]\d{0,2})(?:[.,]|\u00A0|\u202F)(\d{3})(?=\s*(?:g|gr|gram|grams|ml|milliliter|millilitres?)\b)/i, "$1$2");
 
     // "Milk (2 dl)" / "Flour (1 cup)" / "Eggs (3 st)": the amount sits in brackets after the name
     let bracketAmount = line.match(/^([^\d(][^(]*?)\s*\(\s*((?:ca\.?\s*)?[\d½¼¾⅓⅔][\d.,\/\s½¼¾⅓⅔]*\s*[a-zA-ZåäöÅÄÖ]*\.?)\s*\)\s*$/);
