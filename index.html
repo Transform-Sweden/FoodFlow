@@ -845,6 +845,8 @@ color:var(--text); font-size:14px; font-weight:500; border-radius:8px; transform
 #plannerPage .meal .meal-chip-more { cursor:help; font-weight:700; }
 #plannerPage .meal .meal-foot.nolbl .meal-chip-lbl { display:none; }
 .combined-more { display:none; }
+/* long words (Worcestershire) wrap with a hyphen instead of pushing the buttons onto a new line */
+#shoppingList .meal > span { min-width:0; overflow-wrap:anywhere; }
 @media(max-width:699px){ .combined-actions { display:none !important; } .combined-more { display:inline-block; } }
 #plannerPage .meal .meal-foot.tight { gap:3px; }
 #plannerPage .meal .meal-foot.tight .meal-chip { padding:3px 4px; font-size:11px; }
@@ -11388,6 +11390,7 @@ selectedRecipe = null;
 
 
 renderRecipes();
+refreshShoppingListIfOpen();
 
 closeRecipeModal();
 
@@ -12109,6 +12112,12 @@ showToast(`${t("toast_duplicated_prefix")} "${original.name}"`);
 }
 
 
+// the shopping list is built from the recipes, so redraw it whenever a recipe changes
+// (otherwise it keeps showing the old amounts on this phone until you leave and come back)
+function refreshShoppingListIfOpen(){
+    try{ if(document.getElementById("shoppingList") && typeof renderShoppingList === "function") renderShoppingList(); }catch(e){}
+}
+
 function deleteRecipe(index){
 
 let removedRecipe = recipes[index];
@@ -12121,6 +12130,7 @@ JSON.stringify(recipes)
 );
 
 renderRecipes();
+refreshShoppingListIfOpen();
 
 showToast(`${t("toast_removed")} "${removedRecipe.name}"`, {
     actionLabel: t("undo"),
@@ -12134,6 +12144,7 @@ showToast(`${t("toast_removed")} "${removedRecipe.name}"`, {
         );
 
         renderRecipes();
+        refreshShoppingListIfOpen();
 
     }
 });
@@ -15403,6 +15414,45 @@ function combinedPantry(idx){
     renderShoppingList();
     renderPantrySettings();
 }
+
+// Long words get invisible "soft hyphens": if the word does not fit on the line it is split with a "-"
+// and continues below, instead of forcing the buttons out of place.
+function softHyphenate(text){
+    return text.replace(/[A-Za-zÅÄÖåäöÉéÈèÜü]{8,}/g, w => {
+        if(w.indexOf("\u00AD") >= 0) return w;
+        const V = /[aeiouyåäöéèü]/i;
+        let out = "", last = 0;
+        for(let i = 3; i <= w.length - 3; i++){
+            const natural = i - last >= 3 && V.test(w[i - 1]) && !V.test(w[i]) && !/^(sh|ch|th|ck|ng|sj|sk|tj|kj|ph)/i.test(w.slice(i, i + 2));
+            if(natural || i - last >= 6){
+                out += w.slice(last, i) + "\u00AD";
+                last = i;
+            }
+        }
+        return out + w.slice(last);
+    });
+}
+function softHyphenateList(){
+    const box = document.getElementById("shoppingList");
+    if(!box) return;
+    const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while(walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(n => {
+        if(!n.parentElement || !n.parentElement.closest(".meal")) return;
+        const v = softHyphenate(n.nodeValue);
+        if(v !== n.nodeValue) n.nodeValue = v;
+    });
+}
+(function(){
+    function start(){
+        const box = document.getElementById("shoppingList");
+        if(!box || !window.MutationObserver) return;
+        new MutationObserver(() => softHyphenateList()).observe(box, { childList: true, subtree: true });
+        softHyphenateList();
+    }
+    if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
+})();
 
 let editingCustomSource = null;
 
