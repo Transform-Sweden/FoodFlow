@@ -819,7 +819,9 @@ background:var(--brand); color:#fff;
 /* Recipe cards: only as tall as their content */
 #recipeList .meal-name-clamp { display:block; min-height:1.3em; height:1.3em; margin:0; font-size:1.05em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 /* one fixed-height row for the allergy warning and the tags together, so every recipe card is the same size */
-.recipe-chips { display:flex; flex-wrap:nowrap; align-items:center; gap:4px; height:28px; margin:6px 0 4px; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; overscroll-behavior-x:contain; }
+.recipe-chips { display:flex; flex-wrap:nowrap; align-items:center; gap:4px; height:28px; margin:6px 0 4px; overflow:hidden; }
+.recipe-chips .chip-hidden { display:none; }
+.recipe-chips > .recipe-tag-chip, .recipe-chips > .allergen-badge { max-width:100%; overflow:hidden; text-overflow:ellipsis; }
 .recipe-chips::-webkit-scrollbar { display:none; }
 .recipe-chips > * { flex:0 0 auto; white-space:nowrap; margin:0; }
 .recipe-tag-chip { padding:2px 8px; border-radius:999px; font-size:.75em; background:var(--bg); border:1px solid var(--primary); opacity:.85; }
@@ -1563,11 +1565,15 @@ animation:checkPop .3s ease;
 .allergen-hit.is-checked{ opacity:.65; }
 .allergen-ok{ margin:0; padding:6px 10px; font-size:13px; width:auto; }
 .allergen-chip{ border:1px solid #c0392b; }
+.free-badge{ border-color:#2e7d32; background:rgba(46,125,50,.14); }
+.recipe-chips .recipe-chip-more{ cursor:pointer; font-weight:700; }
 .allergen-inline{ opacity:.9; }
 .sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
 .scale-btn{ width:44px; min-width:44px; padding:0 !important; display:inline-flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--primary); }
 .scale-btn.on{ background:color-mix(in srgb, var(--primary) 22%, transparent); border-width:2px; }
 .scale-btn[hidden]{ display:none; }
+#recipeDraftBanner:not([hidden]){ display:flex; }
+#recipeDraftBanner[hidden]{ display:none; }
 .hc-group{ border:0; padding:0; margin:12px 0 0; min-width:0; }
 .hc-group legend{ font-weight:600; padding:0; margin-bottom:2px; }
 .ap-types{ display:flex; flex-wrap:wrap; gap:6px 14px; margin:8px 0 12px; }
@@ -2439,6 +2445,14 @@ data-i18n-placeholder="sync_code_placeholder" placeholder="XXXX-XXXX-XXXX" data-
 <p class="small"><strong data-i18n="allergy_disclaimer">This is only a reminder. It reads ingredient names, so it can miss hidden ingredients (sauces, stock cubes, "may contain"). Always check labels.</strong></p>
 
 <div id="allergyList"></div>
+
+<label style="display:flex;align-items:flex-start;gap:10px;margin:12px 0;cursor:pointer;">
+<input type="checkbox" id="freeBadgesToggle" style="width:auto;margin:3px 0 0;" onchange="toggleFreeBadges(this.checked)">
+<span>
+<strong data-i18n="free_badges_label">Show "free from" badges on recipes</strong><br>
+<span class="small" data-i18n="free_badges_hint_long">A recipe with nothing matching your list gets a green badge such as "✓ Tomato free", and you can filter recipes by it. Only a reminder: it reads ingredient names.</span>
+</span>
+</label>
 
 <label for="allergyType"><span data-i18n="allergy_type_label">Allergy or intolerance</span></label>
 <select id="allergyType" onchange="onAllergyTypeChange()"></select>
@@ -3388,6 +3402,11 @@ Close
 Add Recipe
 </h2>
 
+<div id="recipeDraftBanner" class="small" hidden style="margin:0 0 10px;padding:8px 10px;border:1px dashed var(--primary);border-radius:10px;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;">
+<span data-i18n="recipe_draft_restored">📝 We kept what you had typed.</span>
+<button type="button" class="btn-sm" style="margin:0;" data-i18n="recipe_draft_discard" onclick="discardRecipeDraft()">Start over</button>
+</div>
+
 
 <label>
 <span data-i18n="recipe_name_label">Recipe Name</span>
@@ -4047,6 +4066,11 @@ const translations = {
         toast_meal_added_back: "Added back to the shopping list",
         settings_allergies: "⚠️ Allergies & intolerances",
         allergy_description: "Add allergies and intolerances in your household. FoodFlow then flags recipes, planned meals and shopping items whose ingredients match.",
+        recipe_draft_restored: "📝 We kept what you had typed.",
+        recipe_draft_discard: "Start over",
+        free_badges_label: "Show \"free from\" badges on recipes",
+        free_badges_hint_long: "A recipe with nothing matching your list gets a green badge such as \"✓ Tomato free\", and you can filter recipes by it. Only a reminder: it reads ingredient names.",
+        free_badge_hint: "Nothing matching found in the ingredient names. Always check labels.",
         allergy_disclaimer: "This is only a reminder. It reads ingredient names, so it can miss hidden ingredients (sauces, stock cubes, \"may contain\"). Always check labels.",
         allergy_type_label: "Allergy or intolerance",
         allergy_custom_option: "Other (type your own)…",
@@ -4064,7 +4088,7 @@ const translations = {
         allergy_checked_done: "✓ Checked, fine (undo)",
         allergy_remove: "Remove allergy",
         allergy_check_label: "Check the label",
-        allergen_gluten: "Gluten", allergen_milk: "Milk", allergen_lactose: "Lactose", allergen_nuts: "Tree nuts", allergen_peanuts: "Peanuts", allergen_egg: "Egg",
+        allergen_tomato: "Tomato", allergen_gluten: "Gluten", allergen_milk: "Milk", allergen_lactose: "Lactose", allergen_nuts: "Tree nuts", allergen_peanuts: "Peanuts", allergen_egg: "Egg",
         allergen_shellfish: "Shellfish", allergen_fish: "Fish", allergen_soy: "Soy", allergen_sesame: "Sesame", allergen_celery: "Celery", allergen_mustard: "Mustard",
         print_people_word: "people",
         nav_tab_planner: "Planner",
@@ -4645,6 +4669,11 @@ const translations = {
         toast_meal_added_back: "Tillbaka på inköpslistan",
         settings_allergies: "⚠️ Allergier & intoleranser",
         allergy_description: "Lägg till allergier och intoleranser i hushållet. FoodFlow markerar sedan recept, planerade måltider och varor på inköpslistan vars ingredienser matchar.",
+        recipe_draft_restored: "📝 Vi sparade det du hade skrivit.",
+        recipe_draft_discard: "Börja om",
+        free_badges_label: "Visa \"fri från\"-märken på recept",
+        free_badges_hint_long: "Ett recept där inget matchar din lista får ett grönt märke som \"✓ Tomatfri\", och du kan filtrera recept på det. Bara en påminnelse: appen läser ingrediensnamn.",
+        free_badge_hint: "Inget matchande hittades i ingrediensnamnen. Kontrollera alltid innehållsförteckningen.",
         allergy_disclaimer: "Detta är bara en påminnelse. Den läser ingrediensnamn och kan missa dolda ingredienser (såser, buljong, \"kan innehålla\"). Kontrollera alltid förpackningen.",
         allergy_type_label: "Allergi eller intolerans",
         allergy_custom_option: "Annan (skriv själv)…",
@@ -4662,7 +4691,7 @@ const translations = {
         allergy_checked_done: "✓ Kontrollerad, ok (ångra)",
         allergy_remove: "Ta bort allergi",
         allergy_check_label: "Kolla förpackningen",
-        allergen_gluten: "Gluten", allergen_milk: "Mjölk", allergen_lactose: "Laktos", allergen_nuts: "Trädnötter", allergen_peanuts: "Jordnötter", allergen_egg: "Ägg",
+        allergen_tomato: "Tomat", allergen_gluten: "Gluten", allergen_milk: "Mjölk", allergen_lactose: "Laktos", allergen_nuts: "Trädnötter", allergen_peanuts: "Jordnötter", allergen_egg: "Ägg",
         allergen_shellfish: "Skaldjur", allergen_fish: "Fisk", allergen_soy: "Soja", allergen_sesame: "Sesam", allergen_celery: "Selleri", allergen_mustard: "Senap",
         print_people_word: "personer",
         nav_tab_planner: "Planerare",
@@ -5397,9 +5426,16 @@ function closeAnyModal(modal){
 
 // Clicking the dimmed backdrop (not the modal-box content itself)
 // closes whichever modal is open.
+// It must also START on the backdrop: pressing inside a form field, selecting text and letting go outside the
+// box makes the browser send the click to the backdrop, which used to close the window by accident.
+let modalPressTarget = null;
+document.addEventListener("pointerdown", function(e){ modalPressTarget = e.target; }, true);
 document.addEventListener("click", function(e){
 
-    if(e.target.classList && e.target.classList.contains("modal")){
+    const pressedOn = modalPressTarget;
+    modalPressTarget = null;
+
+    if(e.target.classList && e.target.classList.contains("modal") && (pressedOn === null || pressedOn === e.target)){
         closeAnyModal(e.target);
     }
 
@@ -7409,7 +7445,8 @@ const allergenCatalog = {
     soy:      { words:"soy|soja|tofu|tempeh|edamame|miso|tamari|shoyu|natto", not:"" },
     sesame:   { words:"sesame|sesam|tahini|tahin|hummus", not:"" },
     celery:   { words:"celery|selleri|celeriac", not:"" },
-    mustard:  { words:"mustard|senap|dijon", not:"" }
+    mustard:  { words:"mustard|senap|dijon", not:"" },
+    tomato:   { words:"tomato|tomat|passata|ketchup|salsa|marinara|pomodoro|pizza ?sauce|pizzasås|ajvar|bolognese ?(sauce|sås)", not:"" }
 };
 const allergenTypes = Object.keys(allergenCatalog);
 const allergenReCache = {};
@@ -7479,6 +7516,43 @@ function allergenIcon(e){ return e.level === "prefer" ? "⚠️" : "⛔"; }
 function allergenLevelText(e){ return t(e.level === "prefer" ? "allergy_level_prefer" : "allergy_level_avoid"); }
 
 function allergenBadgeStyleClass(e){ return e.level === "prefer" ? "allergen-prefer" : "allergen-avoid"; }
+
+// "✓ Tomato free": for every allergy / intolerance in the household, a recipe whose ingredient names
+// contain nothing that matches gets a green badge. Only a reminder (it reads ingredient names).
+function freeBadgesOn(){
+    try{ return localStorage.getItem("foodflowFreeBadges") !== "0"; }catch(e){ return true; }
+}
+function toggleFreeBadges(on){
+    try{ localStorage.setItem("foodflowFreeBadges", on ? "1" : "0"); }catch(e){}
+    renderRecipes();
+}
+const freeWordSv = { nuts:"Nöt", peanuts:"Jordnöts", egg:"Ägg", shellfish:"Skaldjurs", fish:"Fisk", soy:"Soja", sesame:"Sesam", celery:"Selleri", mustard:"Senaps", milk:"Mjölk", lactose:"Laktos", gluten:"Gluten", tomato:"Tomat" };
+const freeWordEn = { nuts:"Nut", peanuts:"Peanut", shellfish:"Shellfish" };
+function freeLabel(e){
+    if(currentLanguage === "sv"){
+        const w = e.type === "custom" ? ((e.name || "?").charAt(0).toUpperCase() + (e.name || "?").slice(1)) : (freeWordSv[e.type] || allergenLabel(e));
+        return w + "fri";
+    }
+    const w = e.type === "custom" ? (e.name || "?") : (freeWordEn[e.type] || allergenLabel(e));
+    return w + " free";
+}
+// -> household allergy entries this recipe has no match for (one per label)
+function recipeFreeOf(recipe){
+    if(!freeBadgesOn() || !recipe || allergies.length === 0) return [];
+    if(!(recipe.ingredients || []).some(i => String(typeof i === "string" ? i : i.name || "").trim())) return [];
+    const hitIds = new Set(recipeAllergenHits(recipe).map(h => h.entry.id));
+    const seen = new Set();
+    return allergies.filter(e => {
+        if(hitIds.has(e.id)) return false;
+        const k = freeLabel(e).toLowerCase();
+        if(seen.has(k)) return false;
+        seen.add(k);
+        return true;
+    });
+}
+function freeBadgesHtml(recipe){
+    return recipeFreeOf(recipe).map(e => `<span class="allergen-badge free-badge" title="${escapeHtml(t("free_badge_hint"))}">✓ ${escapeHtml(freeLabel(e))}</span>`).join("");
+}
 
 // small chips for recipe cards (unchecked warnings only)
 function allergenBadgesHtml(recipe){
@@ -7572,6 +7646,9 @@ function allergenInlineHtml(name){
 
 // ---- Settings UI ----
 function renderAllergySettings(){
+    const fb = document.getElementById("freeBadgesToggle");
+    if(fb) fb.checked = freeBadgesOn();
+
 
     const sel = document.getElementById("allergyType");
     if(sel && !sel.options.length){
@@ -10866,6 +10943,7 @@ const foodflowStorageKeys = [
     "foodflowCombinedExcluded",
     "foodflowRoundShopping",
     "foodflowRoundMeals",
+    "foodflowFreeBadges",
     "foodflowPrintIngredients",
     "foodflowAskMealType",
     "foodflowWeekLayout",
@@ -11245,7 +11323,100 @@ closeCategoryManager();
 // =======================
 
 
-function openRecipeModal(){
+// =======================
+// RECIPE DRAFT: what you have typed in the recipe window is kept until you save it,
+// even if the window is closed by accident, the page is reloaded or the phone locks
+// =======================
+const RECIPE_DRAFT_KEY = "foodflowRecipeDrafts";
+let recipeDraftInitial = "";
+let recipeDraftBusy = false;
+
+function readRecipeDrafts(){
+    try{ const o = JSON.parse(localStorage.getItem(RECIPE_DRAFT_KEY)); return (o && typeof o === "object") ? o : {}; }
+    catch(e){ return {}; }
+}
+function writeRecipeDrafts(o){
+    try{
+        if(Object.keys(o).length) localStorage.setItem(RECIPE_DRAFT_KEY, JSON.stringify(o));
+        else localStorage.removeItem(RECIPE_DRAFT_KEY);
+    }catch(e){}
+}
+function recipeDraftKey(){
+    return (selectedRecipe !== null && recipes[selectedRecipe] && recipes[selectedRecipe].id) ? recipes[selectedRecipe].id : "new";
+}
+function collectRecipeForm(){
+    const rows = [...document.querySelectorAll("#ingredientList > div")].map(row => ({
+        name: (row.querySelector(".ingredientName") || {}).value || "",
+        amount: (row.querySelector(".ingredientAmount") || {}).value || "",
+        unit: (row.querySelector(".ingredientUnit") || {}).value || "",
+        scale: row.dataset.scale || ""
+    }));
+    return {
+        name: document.getElementById("recipeName").value,
+        people: document.getElementById("recipePeople").value,
+        tags: document.getElementById("recipeTags").value,
+        instructions: document.getElementById("recipeInstructions").value,
+        rows
+    };
+}
+function saveRecipeDraftNow(){
+    if(recipeDraftBusy) return;
+    const modal = document.getElementById("recipeModal");
+    if(!modal || modal.style.display !== "flex") return;
+    const key = recipeDraftKey();
+    const drafts = readRecipeDrafts();
+    const cur = JSON.stringify(collectRecipeForm());
+    if(cur === recipeDraftInitial) delete drafts[key];      // nothing changed: nothing to keep
+    else drafts[key] = { data: collectRecipeForm(), base: recipeDraftInitial, ts: Date.now() };
+    writeRecipeDrafts(drafts);
+}
+function clearRecipeDraft(key){
+    const drafts = readRecipeDrafts();
+    if(key in drafts){ delete drafts[key]; writeRecipeDrafts(drafts); }
+}
+function applyRecipeDraft(d){
+    recipeDraftBusy = true;
+    document.getElementById("recipeName").value = d.name || "";
+    document.getElementById("recipePeople").value = d.people || 4;
+    document.getElementById("recipeTags").value = d.tags || "";
+    document.getElementById("recipeInstructions").value = d.instructions || "";
+    const list = document.getElementById("ingredientList");
+    list.innerHTML = "";
+    (d.rows || []).forEach(r => addIngredientRow(r.name, r.amount, r.unit, r.scale || ""));
+    if(!(d.rows || []).length) addIngredientRow();
+    renderTagPicker();
+    recipeDraftBusy = false;
+}
+// called when the window has just been filled: remember the starting point and bring back a draft
+function finishRecipeFormOpen(skipDraft){
+    recipeDraftInitial = JSON.stringify(collectRecipeForm());
+    const banner = document.getElementById("recipeDraftBanner");
+    if(banner) banner.hidden = true;
+    if(skipDraft){ clearRecipeDraft(recipeDraftKey()); return; }
+    const d = readRecipeDrafts()[recipeDraftKey()];
+    if(d && d.data && d.base === recipeDraftInitial){
+        applyRecipeDraft(d.data);
+        if(banner) banner.hidden = false;
+    }
+}
+function discardRecipeDraft(){
+    if(selectedRecipe === null) openRecipeModal(true);
+    else editRecipe(selectedRecipe, true);
+}
+(function(){
+    let timer = null;
+    const schedule = () => { clearTimeout(timer); timer = setTimeout(saveRecipeDraftNow, 300); };
+    function start(){
+        const m = document.getElementById("recipeModal");
+        if(!m) return;
+        ["input", "change", "click"].forEach(ev => m.addEventListener(ev, schedule, true));
+    }
+    if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
+    document.addEventListener("visibilitychange", () => { if(document.visibilityState === "hidden") saveRecipeDraftNow(); });
+    window.addEventListener("pagehide", saveRecipeDraftNow);
+})();
+
+function openRecipeModal(skipDraft){
 
 selectedRecipe = null;
 
@@ -11280,6 +11451,7 @@ document.querySelector("#recipeModal h2")
 document.getElementById("recipeModal")
 .style.display="flex";
 
+finishRecipeFormOpen(skipDraft === true);
 
 document.getElementById("recipeName")
 .focus();
@@ -11322,6 +11494,8 @@ function renameLinkedMeals(recipeId, oldName, newName){
 }
 
 function saveRecipe(){
+
+const draftKeyToClear = recipeDraftKey();
 
 let oldRecipeName = (selectedRecipe !== null && recipes[selectedRecipe]) ? recipes[selectedRecipe].name : null;
 
@@ -11392,6 +11566,8 @@ if(oldRecipeName !== null && renameLinkedMeals(recipe.id, oldRecipeName, recipe.
     render();
 }
 
+
+clearRecipeDraft(draftKeyToClear);
 
 selectedRecipe = null;
 
@@ -11742,7 +11918,20 @@ let allTags = Array.from(new Set(
 
 let tagBar = document.getElementById("recipeTagFilterBar");
 
-if(allTags.length === 0){
+// "free from" filters for the household's allergies / intolerances, e.g. "✓ Tomato free"
+let freeFilters = [];
+if(freeBadgesOn()){
+    const seenFree = new Set();
+    allergies.forEach(e => {
+        const k = freeLabel(e).toLowerCase();
+        if(seenFree.has(k)) return;
+        seenFree.add(k);
+        freeFilters.push({ key: "free:" + e.id, label: "✓ " + freeLabel(e) });
+    });
+}
+if(activeRecipeTagFilter && String(activeRecipeTagFilter).startsWith("free:") && !freeFilters.some(f => f.key === activeRecipeTagFilter)) activeRecipeTagFilter = null;
+
+if(allTags.length === 0 && freeFilters.length === 0){
 
     tagBar.style.display = "none";
     tagBar.innerHTML = "";
@@ -11753,7 +11942,7 @@ if(allTags.length === 0){
 
     let keepTagScroll = tagBar.scrollLeft;
 
-    tagBar.innerHTML = allTags.map(tag => `
+    tagBar.innerHTML = freeFilters.concat(allTags.map(tag => ({ key: tag, label: tag }))).map(({ key: tag, label }) => `
         <button
             onclick="toggleRecipeTagFilter(decodeURIComponent('${encodeURIComponent(tag).replace(/'/g,"%27")}'))"
             style="
@@ -11764,7 +11953,7 @@ if(allTags.length === 0){
                 color:${activeRecipeTagFilter === tag ? "#fff" : "inherit"};
                 border:1px solid var(--primary);
             "
-        >${escapeHtml(tag)}</button>
+        >${escapeHtml(label)}</button>
     `).join("");
 
     tagBar.scrollLeft = keepTagScroll;
@@ -11777,7 +11966,7 @@ if(sortSelect) sortSelect.value = recipeSortMode;
 let filteredRecipes = recipes
     .map((recipe, index) => ({ recipe, index }))
     .filter(({recipe}) => recipeMatchesSearch(recipe, search))
-    .filter(({recipe}) => !activeRecipeTagFilter || (recipe.tags || []).includes(activeRecipeTagFilter))
+    .filter(({recipe}) => recipeMatchesTagFilter(recipe, activeRecipeTagFilter))
     .sort((a, b) => {
 
         // Favorites are always pinned to the top, regardless of sort mode.
@@ -11867,6 +12056,8 @@ if(recipeSortMode === "tag"){
 }
 
 setupTagScrollers(document);
+fitRecipeChips();
+requestAnimationFrame(fitRecipeChips);
 
 }
 
@@ -11889,7 +12080,31 @@ function setupTagScrollers(root){
     });
 }
 
-window.addEventListener("resize", () => setupTagScrollers(document));
+window.addEventListener("resize", () => { setupTagScrollers(document); fitRecipeChips(); });
+
+// All chips of a recipe stay visible when they fit; if not, the last ones are folded into one "+N" chip
+// (tap it to read them) so every recipe card keeps the same size.
+function fitRecipeChips(){
+    document.querySelectorAll("#recipeList .recipe-chips").forEach(row => {
+        row.querySelectorAll(".recipe-chip-more").forEach(m => m.remove());
+        row.querySelectorAll(".chip-hidden").forEach(c => c.classList.remove("chip-hidden"));
+        if(row.scrollWidth <= row.clientWidth + 1) return;
+        const chips = [...row.children];
+        const more = document.createElement("span");
+        more.className = "recipe-tag-chip recipe-chip-more";
+        row.appendChild(more);
+        const hidden = [];
+        for(let i = chips.length - 1; i >= 1; i--){
+            chips[i].classList.add("chip-hidden");
+            hidden.unshift(chips[i].textContent.trim());
+            more.textContent = "+" + hidden.length;
+            if(row.scrollWidth <= row.clientWidth + 1) break;
+        }
+        more.title = hidden.join(", ");
+        more.setAttribute("aria-label", hidden.join(", "));
+        more.addEventListener("click", ev => { ev.stopPropagation(); showToast(hidden.join(" · ")); });
+    });
+}
 
 function buildRecipeCard(recipe, index){
 
@@ -11910,7 +12125,7 @@ ${escapeHtml(recipe.name)}
 
 </h3>
 
-<div class="recipe-chips tag-scroll">${allergenBadgesHtml(recipe)}${(recipe.tags || []).map(tag => `<span class="recipe-tag-chip">${escapeHtml(tag)}</span>`).join("")}</div>
+<div class="recipe-chips">${allergenBadgesHtml(recipe)}${freeBadgesHtml(recipe)}${(recipe.tags || []).map(tag => `<span class="recipe-tag-chip">${escapeHtml(tag)}</span>`).join("")}</div>
 
 <div class="small" style="margin-top:6px;">
 👥 ${t("servings_count").replace("{n}", recipe.servings)} &nbsp;·&nbsp; 🥕 ${ingredientsCountText(recipe.ingredients.length)}
@@ -12083,6 +12298,15 @@ deleteRecipe(idx);
 }
 
 
+function recipeMatchesTagFilter(recipe, tag){
+    if(!tag) return true;
+    if(String(tag).startsWith("free:")){
+        const id = String(tag).slice(5);
+        return recipeFreeOf(recipe).some(e => e.id === id || freeLabel(e).toLowerCase() === freeLabel(allergies.find(a => a.id === id) || e).toLowerCase());
+    }
+    return (recipe.tags || []).includes(tag);
+}
+
 function toggleRecipeTagFilter(tag){
 
 activeRecipeTagFilter =
@@ -12158,7 +12382,7 @@ showToast(`${t("toast_removed")} "${removedRecipe.name}"`, {
 
 }
 
-function editRecipe(index){
+function editRecipe(index, skipDraft){
 
 let recipe = recipes[index];
 
@@ -12218,6 +12442,8 @@ document.querySelector("#recipeModal h2")
 
 document.getElementById("recipeModal")
 .style.display="flex";
+
+finishRecipeFormOpen(skipDraft === true);
 
 }   
 
