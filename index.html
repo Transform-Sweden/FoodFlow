@@ -1589,6 +1589,7 @@ animation:checkPop .3s ease;
 .allergen-hit.is-checked{ opacity:.65; }
 .allergen-ok{ margin:0; padding:6px 10px; font-size:13px; width:auto; }
 .allergen-chip{ border:1px solid #c0392b; }
+.free-summary{ cursor:pointer; }
 .free-badge{ border-color:#2e7d32; background:rgba(46,125,50,.14); }
 .recipe-chips .recipe-chip-more{ cursor:pointer; font-weight:700; }
 .allergen-inline{ opacity:.9; }
@@ -4097,6 +4098,7 @@ const translations = {
         recipe_draft_discard: "Start over",
         free_badges_label: "Show \"free from\" badges on recipes",
         free_badges_hint_long: "A recipe with nothing matching your list gets a green badge such as \"✓ Tomato free\", and you can filter recipes by it. Only a reminder: it reads ingredient names.",
+        free_summary: "Free from {n}",
         free_badge_hint: "Nothing matching found in the ingredient names. Always check labels.",
         allergy_disclaimer: "This is only a reminder. It reads ingredient names, so it can miss hidden ingredients (sauces, stock cubes, \"may contain\"). Always check labels.",
         allergy_type_label: "Allergy or intolerance",
@@ -4700,6 +4702,7 @@ const translations = {
         recipe_draft_discard: "Börja om",
         free_badges_label: "Visa \"fri från\"-märken på recept",
         free_badges_hint_long: "Ett recept där inget matchar din lista får ett grönt märke som \"✓ Tomatfri\", och du kan filtrera recept på det. Bara en påminnelse: appen läser ingrediensnamn.",
+        free_summary: "Fri från {n}",
         free_badge_hint: "Inget matchande hittades i ingrediensnamnen. Kontrollera alltid innehållsförteckningen.",
         allergy_disclaimer: "Detta är bara en påminnelse. Den läser ingrediensnamn och kan missa dolda ingredienser (såser, buljong, \"kan innehålla\"). Kontrollera alltid förpackningen.",
         allergy_type_label: "Allergi eller intolerans",
@@ -7578,7 +7581,13 @@ function recipeFreeOf(recipe){
     });
 }
 function freeBadgesHtml(recipe){
-    return recipeFreeOf(recipe).map(e => `<span class="allergen-badge free-badge" title="${escapeHtml(t("free_badge_hint"))}">✓ ${escapeHtml(freeLabel(e))}</span>`).join("");
+    // one compact chip on the card (tap it to read the full list); the filter bar still has one button per item
+    const list = recipeFreeOf(recipe);
+    if(list.length === 0) return "";
+    const names = list.map(e => freeLabel(e));
+    if(list.length === 1) return `<span class="allergen-badge free-badge" title="${escapeHtml(t("free_badge_hint"))}">✓ ${escapeHtml(names[0])}</span>`;
+    const full = names.join(" · ");
+    return `<span class="allergen-badge free-badge free-summary" role="button" tabindex="0" title="${escapeHtml(full)}" aria-label="${escapeHtml(full)}" onclick="event.stopPropagation();showToast(this.title)">✓ ${escapeHtml(t("free_summary").replace("{n}", list.length))}</span>`;
 }
 
 // small chips for recipe cards (unchecked warnings only)
@@ -11990,7 +11999,7 @@ let freeBar = document.getElementById("recipeFreeFilterBar");
     enableDesktopRowScroll(bar);
 });
 if(freeBar && tagBar && freeBar.style.display === "flex" && tagBar.style.display === "flex") tagBar.style.marginBottom = "0";
-else if(tagBar) tagBar.style.marginBottom = "";
+else if(tagBar) tagBar.style.marginBottom = "8px";
 
 let sortSelect = document.getElementById("recipeSortSelect");
 if(sortSelect) sortSelect.value = recipeSortMode;
