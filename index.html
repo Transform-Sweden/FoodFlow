@@ -12141,13 +12141,19 @@ function fitRecipeChips(){
         const more = document.createElement("span");
         more.className = "recipe-tag-chip recipe-chip-more";
         row.appendChild(more);
-        const hidden = [];
-        for(let i = chips.length - 1; i >= 1; i--){
-            chips[i].classList.add("chip-hidden");
-            hidden.unshift(chips[i].textContent.trim());
-            more.textContent = "+" + hidden.length;
+        // your own tags come first on the card; when space runs out the "free from" chip is folded away first,
+        // then tags from the end, and allergy warnings last of all
+        const rank = c => c.classList.contains("free-badge") ? 0 : (c.classList.contains("allergen-badge") ? 2 : 1);
+        const order = chips.map((c, i) => ({ c, i })).sort((x, y) => rank(x.c) - rank(y.c) || y.i - x.i);
+        const foldedSet = new Set();
+        for(const { c } of order){
+            if(foldedSet.size >= chips.length - 1) break;
+            c.classList.add("chip-hidden");
+            foldedSet.add(c);
+            more.textContent = "+" + foldedSet.size;
             if(row.scrollWidth <= row.clientWidth + 1) break;
         }
+        const hidden = chips.filter(c => foldedSet.has(c)).map(c => c.textContent.trim());
         more.title = hidden.join(", ");
         more.setAttribute("aria-label", hidden.join(", "));
         more.addEventListener("click", ev => { ev.stopPropagation(); showToast(hidden.join(" · ")); });
@@ -12173,7 +12179,7 @@ ${escapeHtml(recipe.name)}
 
 </h3>
 
-<div class="recipe-chips">${allergenBadgesHtml(recipe)}${freeBadgesHtml(recipe)}${(recipe.tags || []).map(tag => `<span class="recipe-tag-chip">${escapeHtml(tag)}</span>`).join("")}</div>
+<div class="recipe-chips">${(recipe.tags || []).map(tag => `<span class="recipe-tag-chip">${escapeHtml(tag)}</span>`).join("")}${allergenBadgesHtml(recipe)}${freeBadgesHtml(recipe)}</div>
 
 <div class="small" style="margin-top:6px;">
 👥 ${t("servings_count").replace("{n}", recipe.servings)} &nbsp;·&nbsp; 🥕 ${ingredientsCountText(recipe.ingredients.length)}
