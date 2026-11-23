@@ -896,6 +896,29 @@ color:var(--text); font-size:14px; font-weight:500; border-radius:8px; transform
 #newListIcons button { width:42px; height:42px; padding:0; font-size:20px; border-radius:var(--radius-field); }
 
 #recipeTagFilterBar button { min-height:0; height:auto; padding:6px 14px !important; line-height:1.2; margin:0; }
+#recipeFreeFilterBar button { min-height:0; height:auto; padding:6px 14px !important; line-height:1.2; margin:0; }
+/* Desktop: the recipe filter tags stay on one row and slide sideways (drag, wheel or trackpad) when there are more */
+@media(min-width:701px){
+#recipeTagFilterBar { overflow-x:auto; overflow-y:hidden; scrollbar-width:none; padding:3px 2px; cursor:grab; overscroll-behavior-x:contain; }
+#recipeFreeFilterBar { overflow-x:auto; overflow-y:hidden; scrollbar-width:none; padding:3px 2px; cursor:grab; overscroll-behavior-x:contain; }
+#recipeTagFilterBar::-webkit-scrollbar { display:none; }
+#recipeFreeFilterBar::-webkit-scrollbar { display:none; }
+#recipeTagFilterBar > * { flex:0 0 auto; white-space:nowrap; }
+#recipeFreeFilterBar > * { flex:0 0 auto; white-space:nowrap; }
+#recipeTagFilterBar { flex-wrap:nowrap !important; }
+#recipeFreeFilterBar { flex-wrap:nowrap !important; }
+#recipeTagFilterBar.tag-2row { display:grid !important; grid-template-rows:auto auto; grid-auto-flow:column; grid-auto-columns:max-content; }
+#recipeTagFilterBar.dragging { cursor:grabbing; user-select:none; -webkit-user-select:none; }
+#recipeFreeFilterBar.dragging { cursor:grabbing; user-select:none; -webkit-user-select:none; }
+#recipeTagFilterBar.dragging button { pointer-events:none; }
+#recipeFreeFilterBar.dragging button { pointer-events:none; }
+#recipeTagFilterBar.fade-r { -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 36px),transparent); mask-image:linear-gradient(to right,#000 calc(100% - 36px),transparent); }
+#recipeFreeFilterBar.fade-r { -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 36px),transparent); mask-image:linear-gradient(to right,#000 calc(100% - 36px),transparent); }
+#recipeTagFilterBar.fade-l { -webkit-mask-image:linear-gradient(to left,#000 calc(100% - 36px),transparent); mask-image:linear-gradient(to left,#000 calc(100% - 36px),transparent); }
+#recipeFreeFilterBar.fade-l { -webkit-mask-image:linear-gradient(to left,#000 calc(100% - 36px),transparent); mask-image:linear-gradient(to left,#000 calc(100% - 36px),transparent); }
+#recipeTagFilterBar.fade-l.fade-r { -webkit-mask-image:linear-gradient(to right,transparent,#000 36px,#000 calc(100% - 36px),transparent); mask-image:linear-gradient(to right,transparent,#000 36px,#000 calc(100% - 36px),transparent); }
+#recipeFreeFilterBar.fade-l.fade-r { -webkit-mask-image:linear-gradient(to right,transparent,#000 36px,#000 calc(100% - 36px),transparent); mask-image:linear-gradient(to right,transparent,#000 36px,#000 calc(100% - 36px),transparent); }
+}
 /* Tag rows: one line that scrolls sideways on phones, edge fades hint at more */
 @media(max-width:700px){
 .tag-scroll { flex-wrap:nowrap !important; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; scrollbar-width:none; overscroll-behavior-x:contain; }
@@ -904,6 +927,7 @@ color:var(--text); font-size:14px; font-weight:500; border-radius:8px; transform
 /* room around the chips so the scroll box never shaves their borders, and air before the first card */
 .tag-scroll { padding:3px 2px; }
 #recipeTagFilterBar { margin:6px 0 14px !important; }
+#recipeFreeFilterBar { margin:6px 0 14px !important; }
 .tag-scroll.fade-r { -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 36px),transparent); mask-image:linear-gradient(to right,#000 calc(100% - 36px),transparent); }
 .tag-scroll.fade-l { -webkit-mask-image:linear-gradient(to left,#000 calc(100% - 36px),transparent); mask-image:linear-gradient(to left,#000 calc(100% - 36px),transparent); }
 .tag-scroll.fade-l.fade-r { -webkit-mask-image:linear-gradient(to right,transparent,#000 36px,#000 calc(100% - 36px),transparent); mask-image:linear-gradient(to right,transparent,#000 36px,#000 calc(100% - 36px),transparent); }
@@ -2244,6 +2268,9 @@ input[type="radio"] { width:18px; height:18px; }
 </select>
 
 <div id="recipeTagFilterBar" class="tag-scroll" style="display:none; flex-wrap:wrap; gap:6px; margin:8px 0;">
+</div>
+
+<div id="recipeFreeFilterBar" class="tag-scroll" style="display:none; flex-wrap:wrap; gap:6px; margin:8px 0;">
 </div>
 
 <div id="recipeList">
@@ -11931,18 +11958,8 @@ if(freeBadgesOn()){
 }
 if(activeRecipeTagFilter && String(activeRecipeTagFilter).startsWith("free:") && !freeFilters.some(f => f.key === activeRecipeTagFilter)) activeRecipeTagFilter = null;
 
-if(allTags.length === 0 && freeFilters.length === 0){
-
-    tagBar.style.display = "none";
-    tagBar.innerHTML = "";
-
-}else{
-
-    tagBar.style.display = "flex";
-
-    let keepTagScroll = tagBar.scrollLeft;
-
-    tagBar.innerHTML = freeFilters.concat(allTags.map(tag => ({ key: tag, label: tag }))).map(({ key: tag, label }) => `
+function filterBarButtons(items){
+    return items.map(({ key: tag, label }) => `
         <button
             onclick="toggleRecipeTagFilter(decodeURIComponent('${encodeURIComponent(tag).replace(/'/g,"%27")}'))"
             style="
@@ -11955,10 +11972,25 @@ if(allTags.length === 0 && freeFilters.length === 0){
             "
         >${escapeHtml(label)}</button>
     `).join("");
-
-    tagBar.scrollLeft = keepTagScroll;
-
 }
+
+// the household's own tags in the first row, the "free from" filters (if switched on) in a second row
+let freeBar = document.getElementById("recipeFreeFilterBar");
+[[tagBar, allTags.map(tag => ({ key: tag, label: tag }))], [freeBar, freeFilters]].forEach(([bar, items]) => {
+    if(!bar) return;
+    if(items.length === 0){
+        bar.style.display = "none";
+        bar.innerHTML = "";
+        return;
+    }
+    bar.style.display = "flex";
+    const keepTagScroll = bar.scrollLeft;
+    bar.innerHTML = filterBarButtons(items);
+    bar.scrollLeft = keepTagScroll;
+    enableDesktopRowScroll(bar);
+});
+if(freeBar && tagBar && freeBar.style.display === "flex" && tagBar.style.display === "flex") tagBar.style.marginBottom = "0";
+else if(tagBar) tagBar.style.marginBottom = "";
 
 let sortSelect = document.getElementById("recipeSortSelect");
 if(sortSelect) sortSelect.value = recipeSortMode;
@@ -12080,7 +12112,14 @@ function setupTagScrollers(root){
     });
 }
 
-window.addEventListener("resize", () => { setupTagScrollers(document); fitRecipeChips(); });
+// Desktop: always one row; when there are more tags than fit, it slides sideways (drag, wheel or trackpad)
+function fitTagBarRows(){
+    ["recipeTagFilterBar", "recipeFreeFilterBar"].forEach(id => {
+        const bar = document.getElementById(id);
+        if(bar && bar.style.display !== "none"){ setupTagScrollers(bar.parentElement || document); updateTagFade(bar); }
+    });
+}
+window.addEventListener("resize", () => { setupTagScrollers(document); fitRecipeChips(); fitTagBarRows(); });
 
 // All chips of a recipe stay visible when they fit; if not, the last ones are folded into one "+N" chip
 // (tap it to read them) so every recipe card keeps the same size.
