@@ -4099,6 +4099,8 @@ const translations = {
         free_badges_label: "Show \"free from\" badges on recipes",
         free_badges_hint_long: "A recipe with nothing matching your list gets a green badge such as \"✓ Tomato free\", and you can filter recipes by it. Only a reminder: it reads ingredient names.",
         free_summary: "Free of all {n}",
+        update_ready: "A new version is ready",
+        update_now: "Update",
         free_badge_hint: "Nothing matching found in the ingredient names. Always check labels.",
         allergy_disclaimer: "This is only a reminder. It reads ingredient names, so it can miss hidden ingredients (sauces, stock cubes, \"may contain\"). Always check labels.",
         allergy_type_label: "Allergy or intolerance",
@@ -4703,6 +4705,8 @@ const translations = {
         free_badges_label: "Visa \"fri från\"-märken på recept",
         free_badges_hint_long: "Ett recept där inget matchar din lista får ett grönt märke som \"✓ Tomatfri\", och du kan filtrera recept på det. Bara en påminnelse: appen läser ingrediensnamn.",
         free_summary: "Fri från alla {n}",
+        update_ready: "En ny version finns",
+        update_now: "Uppdatera",
         free_badge_hint: "Inget matchande hittades i ingrediensnamnen. Kontrollera alltid innehållsförteckningen.",
         allergy_disclaimer: "Detta är bara en påminnelse. Den läser ingrediensnamn och kan missa dolda ingredienser (såser, buljong, \"kan innehålla\"). Kontrollera alltid förpackningen.",
         allergy_type_label: "Allergi eller intolerans",
@@ -17638,6 +17642,93 @@ if("serviceWorker" in navigator){
         navigator.serviceWorker.register("./sw.js").catch(() => {});
     });
 }
+
+
+// =======================
+// KEEPING AN OPEN APP UP TO DATE
+// Every 30 minutes (and when you come back to the app) the page quietly asks the server whether a newer
+// version has been uploaded. It then reloads ONLY when that cannot disturb anyone: the app is in the
+// background, or has been left untouched for a few minutes with no window open and nothing being typed.
+// Otherwise it keeps working on the old version and shows a small "Update" button instead.
+// The line below is the version of this file; it changes with every new upload.
+// =======================
+const APP_BUILD = "20261124-114952";
+(function(){
+    const CHECK_EVERY = 30 * 60 * 1000;
+    const IDLE_BEFORE_RELOAD = 3 * 60 * 1000;
+    let lastTouch = Date.now(), lastCheck = 0, newer = false, checking = false;
+
+    ["pointerdown", "keydown", "touchstart", "wheel", "scroll"].forEach(ev =>
+        window.addEventListener(ev, () => { lastTouch = Date.now(); }, { passive:true, capture:true }));
+
+    function nothingOpen(){
+        if([...document.querySelectorAll(".modal")].some(m => getComputedStyle(m).display !== "none")) return false;
+        const a = document.activeElement;
+        if(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return false;
+        return true;
+    }
+    function reloadNow(){
+        try{ if(typeof saveRecipeDraftNow === "function") saveRecipeDraftNow(); }catch(e){}
+        setTimeout(() => location.reload(), 250);
+    }
+    function showUpdateButton(){
+        if(document.getElementById("updateBar")) return;
+        const bar = document.createElement("div");
+        bar.id = "updateBar";
+        bar.setAttribute("role", "status");
+        bar.style.cssText = "position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));z-index:9999;display:flex;gap:10px;align-items:center;padding:8px 8px 8px 14px;border-radius:999px;background:var(--card,#fff);color:var(--text,#222);border:1px solid var(--primary,#2e7d32);box-shadow:0 4px 16px rgba(0,0,0,.2);font-size:.9em;max-width:calc(100vw - 24px);";
+        const txt = document.createElement("span");
+        txt.textContent = t("update_ready");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = t("update_now");
+        btn.style.cssText = "margin:0;padding:6px 14px;border-radius:999px;min-height:0;";
+        btn.onclick = reloadNow;
+        const x = document.createElement("button");
+        x.type = "button";
+        x.textContent = "✕";
+        x.setAttribute("aria-label", t("close") || "Close");
+        x.style.cssText = "margin:0;padding:6px 10px;border-radius:999px;min-height:0;background:transparent;color:inherit;border:none;";
+        x.onclick = () => bar.remove();
+        bar.append(txt, btn, x);
+        document.body.appendChild(bar);
+    }
+    function decide(){
+        if(!newer) return;
+        const away = document.hidden;
+        const idle = Date.now() - lastTouch > IDLE_BEFORE_RELOAD;
+        if((away || idle) && nothingOpen()) reloadNow();
+        else if(!document.hidden) showUpdateButton();
+    }
+    async function check(force){
+        if(checking || !navigator.onLine) return;
+        if(!force && Date.now() - lastCheck < 60 * 1000) return;
+        checking = true; lastCheck = Date.now();
+        try{
+            // "reload" skips the browser's own copy and refreshes it, so the reload that follows gets the new file
+            const r = await fetch(location.pathname + (location.search || ""), { cache:"reload" });
+            if(r.ok){
+                const m = (await r.text()).match(/const APP_BUILD = "([^"]+)"/);
+                if(m && m[1] !== APP_BUILD) newer = true;
+            }
+        }catch(e){}
+        checking = false;
+        decide();
+    }
+    setInterval(() => { check(true); decide(); }, CHECK_EVERY);
+    // a shorter tick only to move from "keep the old version" to "reload" once the app has been left alone
+    setInterval(decide, 60 * 1000);
+    document.addEventListener("visibilitychange", () => {
+        if(document.visibilityState === "hidden") decide();
+        else{
+            decide();
+            if(Date.now() - lastCheck > 10 * 60 * 1000) check(true);
+        }
+    });
+    window.addEventListener("online", () => check(false));
+    window.__ffCheckUpdate = () => check(true);
+    window.__ffUpdateState = () => ({ newer, hidden: document.hidden, open: nothingOpen(), idle: Date.now() - lastTouch });
+})();
 
 
 let savedPage =
