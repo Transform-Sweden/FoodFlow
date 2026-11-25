@@ -11881,7 +11881,7 @@ canScale
 ${t("ingredients_heading")}
 </strong>
 
-${ factor > 1 && gentleSpicesOn() && recipe.ingredients.some(i => i.scale !== "linear" && isSeasoningName(i.name))
+${ factor > 1 && gentleSpicesOn() && recipe.ingredients.some(i => i.scale !== "linear" && isSeasoningName(i.name, i.unit))
     ? `<div class="small" style="opacity:.75;margin:4px 0;">${t("scaled_gently_note")}</div>` : "" }
 
 <ul>
@@ -12670,7 +12670,7 @@ function refreshScaleBtn(row){
     const btn = row.querySelector(".scale-btn");
     if(!btn) return;
 
-    const show = gentleSpicesOn() && isSeasoningName(row.querySelector(".ingredientName").value);
+    const show = gentleSpicesOn() && isSeasoningName(row.querySelector(".ingredientName").value, (row.querySelector(".ingredientUnit") || {}).value);
     btn.hidden = !show;
 
     const full = row.dataset.scale === "linear";
@@ -12748,6 +12748,8 @@ function addIngredientRow(name="", amount="", unit="", scale=""){
 
     if(scale === "linear") row.dataset.scale = "linear";
     row.querySelector(".ingredientName").addEventListener("input", () => refreshScaleBtn(row));
+    row.querySelector(".ingredientUnit").addEventListener("input", () => refreshScaleBtn(row));
+    row.querySelector(".ingredientUnit").addEventListener("change", () => refreshScaleBtn(row));
     refreshScaleBtn(row);
 
     renumberIngredientRows();
@@ -13359,10 +13361,10 @@ const unitFamilies = {
 // keyed by their own lowercase unit text as before.
 function toCombinableUnit(amount, unit){
 
-    let info = unitFamilies[(unit || "").toLowerCase()];
+    let info = unitFamilies[normalizeUnit(unit)] || unitFamilies[(unit || "").toLowerCase()];
 
     if(!info){
-        return { amount, unitKey: (unit || "").trim().toLowerCase() };
+        return { amount, unitKey: normalizeUnit(unit) };
     }
 
     return {
@@ -13410,15 +13412,15 @@ function toggleGentleSpices(on){
 
 const seasoningRegex = /\bsalt\b|peppar|pepper|baking powder|baking soda|bicarbonate|bikarbonat|bakpulver|\byeast\b|\bjäst\b|\bchil[il]|cayenne|\bkrydd|spice|seasoning|spiskummin|cumin|curry|paprikapulver|paprika powder|kanel|cinnamon|kardemumma|cardamom|muskot|nutmeg|vanilj|vanilla|gurkmeja|turmeric|oregano|timjan|thyme|rosmarin|rosemary|lagerblad|bay leaf|bay leaves|koriander|coriander|saffran|saffron|ingefära|ginger|nejlikor|cloves/i;
 
-function isSeasoningName(name){
-    const n = normalizeIngredientName(String(name || "")).toLowerCase();
+function isSeasoningName(name, unit){
+    const n = normalizeIngredientName(String(name || ""), unit).toLowerCase();
     if(!n || /lemon|citron|lime|juice|saft|\bfresh\b|färsk/.test(n)) return false;
     return getIngredientCategory(n) === "Herbs & Spices" || seasoningRegex.test(n);
 }
 
 // factor: people / recipe servings. Seasonings use sqrt() above 1.
 function ingredientFactor(ingredient, factor){
-    if(factor > 1 && gentleSpicesOn() && ingredient.scale !== "linear" && isSeasoningName(ingredient.name)){
+    if(factor > 1 && gentleSpicesOn() && ingredient.scale !== "linear" && isSeasoningName(ingredient.name, ingredient.unit)){
         return Math.sqrt(factor);
     }
     return factor;
@@ -13480,8 +13482,8 @@ function amountNumber(v){
 function scaledIngredient(ing, factor){
     let amount = amountNumber(ing.amount) * ingredientFactor(ing, factor);
     let unit = (ing.unit || "").trim();
-    let info = unitFamilies[unit.toLowerCase()];
-    let seasoning = isSeasoningName(ing.name);
+    let info = unitFamilies[normalizeUnit(unit)] || unitFamilies[unit.toLowerCase()];
+    let seasoning = isSeasoningName(ing.name, ing.unit);
     if(mealRoundingOn() && Math.abs(factor - 1) > 1e-9 && amount > 0 && seasoning && !info && amount >= 1 && !roundableCountUnits.has(unit.toLowerCase())){
         // spoon measures of seasoning: up to the next half (4.8 tsk -> 5 tsk)
         amount = Math.ceil(amount * 2 - 1e-9) / 2;
@@ -13504,6 +13506,9 @@ function scaledIngredient(ing, factor){
     }
     return { amount, unit };
 }
+
+// spoon measures in millilitres (1 krm = 1 ml)
+const spoonToMl = { tsp: 5, tbsp: 15, "kryddmått": 1 };
 
 const roundableCountUnits = new Set([
     "", "st", "piece", "clove", "klyfta", "slice", "skiva", "can",
@@ -13771,7 +13776,25 @@ function ingredientVariantName(base){
     return null;
 }
 
-function normalizeIngredientName(name){
+// "paprika" is a vegetable in Swedish and a spice in English, so the name alone can't tell. A spoon, a pinch
+// or a dash can only be the spice; "paprika (pulver)", "sweet paprika" and the like are the spice too.
+const spiceMeasureUnits = new Set(["tsp", "tbsp", "tsk", "msk", "krm", "pinch", "nypa", "dash", "kryddmått", "tsp.", "tbsp.", "tsk.", "msk.", "teaspoon", "teaspoons", "tablespoon", "tablespoons", "tesked", "matsked"]);
+function paprikaSpiceName(lower, unit){
+    if(!/paprika/.test(lower)) return null;
+    if(/(r[öo]kt|smoked)/.test(lower)) return "smoked paprika";
+    if(/(pulver|powder|krydda|kryddmix|malen|ground|flakes|flingor|edels[üu]ss|sweet paprika|hungarian|ungersk|spansk)/.test(lower)) return "paprika powder";
+    const u = String(unit || "").toLowerCase().trim();
+    // only a bare "paprika" / "paprikor" measured in spoons; "röd paprika 2 msk" etc. keep their own names
+    if(spiceMeasureUnits.has(u) && /^paprika(?:s|or)?$/.test(lower.replace(/\([^)]*\)/g, "").trim())) return "paprika powder";
+    return null;
+}
+
+function normalizeIngredientName(name, unit){
+
+    {
+        const sp = paprikaSpiceName(String(name || "").toLowerCase(), unit);
+        if(sp) return sp;
+    }
 
     let base = name
         .toLowerCase()
@@ -13909,10 +13932,15 @@ function generateShoppingList(){
                     }
 
                     let unit = normalizeUnit(ingredient.unit || "");
+                    // "50 | | potions instant mashed potato": a unit word written at the start of the name
+                    if(unit === ""){
+                        const lead = rawName.match(/^(portions?|potions|packages?|packs?|bags?|jars?|bottles?|boxes|cans?|paket|påsar?)\s+(\S.*)$/i);
+                        if(lead){ unit = normalizeUnit(lead[1]); rawName = lead[2].trim(); }
+                    }
                     let amount = amountNumber(ingredient.amount);
                     let scaled = scaledIngredient(ingredient, factor).amount;
 
-                    let normalizedName = normalizeIngredientName(rawName);
+                    let normalizedName = normalizeIngredientName(rawName, unit || ingredient.unit);
 
                     // Show a clean translated label for known ingredients,
                     // otherwise keep whatever the person originally typed.
@@ -13970,6 +13998,19 @@ function generateShoppingList(){
 
         });
 
+    });
+
+    // A spoon measure and a volume of the same product (8 dl soy sauce + 25 tbsp soy sauce) is one line.
+    // Only when both exist: a lone "4 tsp cumin" stays in teaspoons.
+    Object.keys(items).forEach(key=>{
+        const cut = key.lastIndexOf("|");
+        const nm = key.slice(0, cut), uk = key.slice(cut + 1);
+        if(!(uk in spoonToMl)) return;
+        const vol = items[nm + "|family:volume"];
+        if(!vol) return;
+        vol.amount += items[key].amount * spoonToMl[uk];
+        Object.assign(vol.sourcesByIndex, items[key].sourcesByIndex);
+        delete items[key];
     });
 
     // Hide ingredients the person has marked as already-have
@@ -14066,7 +14107,7 @@ function generateShoppingList(){
         .concat(
             (shoppingMealFilter ? [] : shoppingExtras).map(extra => {
 
-                let normalizedName = normalizeIngredientName(extra.name);
+                let normalizedName = normalizeIngredientName(extra.name, extra.unit);
 
                 return {
                     key: "extra:" + extra.id,
@@ -15580,13 +15621,13 @@ function buildCombinedEntries(){
     const order = [];
 
     const add = (name, amount, unit, checked, source, tag) => {
-        const norm = normalizeIngredientName(name);
+        const norm = normalizeIngredientName(name, unit);
         // same product in different units (dl / l, g / kg ...) is one line, as in the meal list
         const comb = toCombinableUnit(Number(amount) || 0, unit);
         const key = norm + "|" + comb.unitKey;
         let e = byKey[key];
         if(!e){
-            e = byKey[key] = { name: (canonicalIngredientNames.has(norm) || norm !== String(name).toLowerCase().trim()) ? norm.charAt(0).toUpperCase() + norm.slice(1) : name, unit: unit || "", amount: 0, category: getIngredientCategory(norm), sources: [], tags: [], allChecked: true, unitKey: comb.unitKey, baseAmount: 0 };
+            e = byKey[key] = { name: (canonicalIngredientNames.has(norm) || norm !== String(name).toLowerCase().trim()) ? norm.charAt(0).toUpperCase() + norm.slice(1) : name, unit: unit || "", amount: 0, category: getIngredientCategory(norm), sources: [], tags: [], allChecked: true, unitKey: comb.unitKey, baseAmount: 0, norm };
             order.push(e);
         }
         e.baseAmount += comb.amount;
@@ -15607,6 +15648,19 @@ function buildCombinedEntries(){
         (l.items || []).forEach(i =>
             add(i.name, i.amount, i.unit, !!i.checked, { type:"custom", listId:id, itemId:i.id }, (l.icon || "🛒") + " " + (l.name || "?")));
     });
+
+    // spoon measures join the volume line of the same product, when there is one
+    for(let n = order.length - 1; n >= 0; n--){
+        const e = order[n];
+        if(!(e.unitKey in spoonToMl)) continue;
+        const vol = byKey[e.norm + "|family:volume"];
+        if(!vol || vol === e) continue;
+        vol.baseAmount += e.baseAmount * spoonToMl[e.unitKey];
+        vol.sources.push(...e.sources);
+        e.tags.forEach(tg => { if(!vol.tags.includes(tg)) vol.tags.push(tg); });
+        if(!e.allChecked) vol.allChecked = false;
+        order.splice(n, 1);
+    }
 
     order.forEach((e, idx) => {
         e.idx = idx; e.checked = e.allChecked;
@@ -16920,7 +16974,7 @@ const knownUnits = [
     "block","blocks","pack","packs","packet","packets",
     "loaf","loaves","limpa","limpor","l/kg","kg/l",
     "bulb","bulbs","litre","litres","liters",
-    "gram","grams","gr","pkt","pk",
+    "gram","grams","gr","gramm","grm","gm","gms","kgs","pkt","pk",
     // long Swedish unit words
     "deciliter","centiliter","milliliter","millilitre","matsked","matskedar","tesked","teskedar",
     "kilo","kilogram","knippe","knippen","glas","tin","tins"
@@ -16938,7 +16992,7 @@ const unitAliases = {
     "pinches":"pinch",
     "cans":"can",
     "packages":"package", "pkg":"package", "pkgs":"package",
-    "bags":"bag",
+    "bags":"package",
     "bottles":"bottle",
     "jars":"jar",
     "boxes":"box",
@@ -16961,8 +17015,9 @@ const unitAliases = {
     "skivor":"skiva",
     "liter":"l",
     "krm":"kryddmått",
-    "gram":"g", "grams":"g", "gr":"g",
-    "pkt":"paket", "pk":"paket",
+    "gram":"g", "grams":"g", "gr":"g", "grs":"g", "gramm":"g", "grm":"g", "gm":"g", "gms":"g", "kgs":"kg", "kilos":"kg",
+    "pkt":"package", "pk":"package", "paket":"package", "förpackning":"package", "förpackningar":"package", "förp":"package",
+    "bag":"package", "påse":"package", "påsar":"package", "portions":"portion",
     "potions":"portion",
     // Swedish spoon measures are the same units as their English
     // names, just spelled differently — "msk" (matsked) = tablespoon,
@@ -16981,7 +17036,8 @@ const unitAliases = {
 // "tablespoons"/"tbsp" etc. all combine as the same unit.
 function normalizeUnit(unit){
 
-    let lower = (unit || "").trim().toLowerCase();
+    // "gr." / "Gr" / " g " are all the same unit: ignore case, spaces and a trailing full stop
+    let lower = (unit || "").trim().toLowerCase().replace(/\.+$/, "").trim();
 
     if(lower === "") return "";
 
@@ -17729,7 +17785,7 @@ if("serviceWorker" in navigator){
 // Otherwise it keeps working on the old version and shows a small "Update" button instead.
 // The line below is the version of this file; it changes with every new upload.
 // =======================
-const APP_BUILD = "20261125-122258";
+const APP_BUILD = "20261125-232930";
 (function(){
     const CHECK_EVERY = 30 * 60 * 1000;
     const IDLE_BEFORE_RELOAD = 3 * 60 * 1000;
