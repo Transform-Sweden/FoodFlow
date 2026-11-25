@@ -1590,6 +1590,7 @@ animation:checkPop .3s ease;
 .allergen-ok{ margin:0; padding:6px 10px; font-size:13px; width:auto; }
 .allergen-chip{ border:1px solid #c0392b; }
 .free-summary{ cursor:pointer; }
+.item-note{ display:block; font-size:.8em; opacity:.8; font-style:italic; margin-top:2px; overflow-wrap:anywhere; }
 .free-badge{ border-color:#2e7d32; background:rgba(46,125,50,.14); }
 .recipe-chips .recipe-chip-more{ cursor:pointer; font-weight:700; }
 .allergen-inline{ opacity:.9; }
@@ -3380,6 +3381,19 @@ placeholder="e.g. g, dl, st" data-i18n-placeholder="ph_item_unit"
 >
 
 
+<label>
+<span data-i18n="note_label">Note</span>
+</label>
+
+
+<input
+id="shoppingItemNote"
+maxlength="140"
+placeholder="e.g. the organic one" data-i18n-placeholder="ph_item_note"
+>
+<p class="small" style="margin:-6px 0 10px;opacity:.75;" data-i18n="note_hint">Only a reminder on this shopping line. It doesn't change the ingredient or the amount.</p>
+
+
 <br>
 
 
@@ -4100,6 +4114,9 @@ const translations = {
         free_badges_hint_long: "A recipe with nothing matching your list gets a green badge such as \"✓ Tomato free\", and you can filter recipes by it. Only a reminder: it reads ingredient names.",
         free_summary: "Free of all {n}",
         update_ready: "A new version is ready",
+        note_label: "Note",
+        ph_item_note: "e.g. the organic one",
+        note_hint: "Only a reminder on this shopping line. It doesn't change the ingredient or the amount.",
         update_now: "Update",
         free_badge_hint: "Nothing matching found in the ingredient names. Always check labels.",
         allergy_disclaimer: "This is only a reminder. It reads ingredient names, so it can miss hidden ingredients (sauces, stock cubes, \"may contain\"). Always check labels.",
@@ -4706,6 +4723,9 @@ const translations = {
         free_badges_hint_long: "Ett recept där inget matchar din lista får ett grönt märke som \"✓ Tomatfri\", och du kan filtrera recept på det. Bara en påminnelse: appen läser ingrediensnamn.",
         free_summary: "Fri från alla {n}",
         update_ready: "En ny version finns",
+        note_label: "Anteckning",
+        ph_item_note: "t.ex. den ekologiska",
+        note_hint: "Bara en påminnelse på den här inköpsraden. Ingrediensen och mängden ändras inte.",
         update_now: "Uppdatera",
         free_badge_hint: "Inget matchande hittades i ingrediensnamnen. Kontrollera alltid innehållsförteckningen.",
         allergy_disclaimer: "Detta är bara en påminnelse. Den läser ingrediensnamn och kan missa dolda ingredienser (såser, buljong, \"kan innehålla\"). Kontrollera alltid förpackningen.",
@@ -6692,6 +6712,13 @@ let shoppingExtrasByWeek = JSON.parse(
     localStorage.getItem("foodflowShoppingExtrasByWeek")
 ) || null;
 
+// Short notes on shopping lines ("the organic one", "ask at the counter"). They belong to the line only:
+// the ingredient, the amount and the recipes are never touched. Kept per shopping range like the other marks.
+let shoppingNotesByWeek = (function(){
+    try{ const o = JSON.parse(localStorage.getItem("foodflowShoppingNotesByWeek")); return (o && typeof o === "object" && !Array.isArray(o)) ? o : {}; }
+    catch(e){ return {}; }
+})();
+
 // The date range currently being shopped for — a plain start/end
 // date, independent of the week you happen to be viewing in the
 // planner, so it can span across a week boundary (e.g. Wednesday
@@ -6889,6 +6916,20 @@ let shoppingStateKey = shoppingKeyForRange(shoppingRangeStart);
 let shoppingChecked = ensureWeekShoppingChecked(shoppingStateKey);
 let shoppingOverrides = ensureWeekShoppingOverrides(shoppingStateKey);
 let shoppingExtras = ensureWeekShoppingExtras(shoppingStateKey);
+let itemNotes = ensureWeekShoppingNotes(shoppingStateKey);
+
+function ensureWeekShoppingNotes(weekKey){
+    if(!shoppingNotesByWeek[weekKey] || typeof shoppingNotesByWeek[weekKey] !== "object") shoppingNotesByWeek[weekKey] = {};
+    return shoppingNotesByWeek[weekKey];
+}
+function shoppingNoteOf(key){ return (itemNotes && typeof itemNotes[key] === "string") ? itemNotes[key] : ""; }
+function setShoppingNote(key, text){
+    text = String(text || "").replace(/\s+/g, " ").trim().slice(0, 140);
+    if(text) itemNotes[key] = text; else delete itemNotes[key];
+}
+function noteLineHtml(text){
+    return text ? `<span class="item-note">📝 ${escapeHtml(text)}</span>` : "";
+}
 
 // Called wherever the list is read or drawn: if the range moved, load that range's marks
 function syncShoppingStateToRange(){
@@ -6897,6 +6938,7 @@ function syncShoppingStateToRange(){
     shoppingChecked = ensureWeekShoppingChecked(shoppingStateKey);
     shoppingOverrides = ensureWeekShoppingOverrides(shoppingStateKey);
     shoppingExtras = ensureWeekShoppingExtras(shoppingStateKey);
+    itemNotes = ensureWeekShoppingNotes(shoppingStateKey);
 }
 
 
@@ -6907,6 +6949,9 @@ function saveShoppingState(){
     shoppingCheckedByWeek[shoppingStateKey] = shoppingChecked;
     shoppingOverridesByWeek[shoppingStateKey] = shoppingOverrides;
     shoppingExtrasByWeek[shoppingStateKey] = shoppingExtras;
+    if(Object.keys(itemNotes).length) shoppingNotesByWeek[shoppingStateKey] = itemNotes; else delete shoppingNotesByWeek[shoppingStateKey];
+
+    try{ localStorage.setItem("foodflowShoppingNotesByWeek", JSON.stringify(shoppingNotesByWeek)); }catch(e){}
 
     localStorage.setItem(
         "foodflowShoppingCheckedByWeek",
@@ -10975,6 +11020,7 @@ const foodflowStorageKeys = [
     "foodflowGentleSpices",
     "foodflowShoppingOverridesByWeek",
     "foodflowShoppingExtrasByWeek",
+    "foodflowShoppingNotesByWeek",
     "foodflowShoppingRangeStart",
     "foodflowShoppingRangeEnd",
     "foodflowCategoryOrder",
@@ -14130,6 +14176,7 @@ function renderShoppingItemRow(item){
                 ${item.isExtra ? `<span class="small">(added by you)</span>` : ""}
                 ${hasSources ? `<span class="small" style="opacity:0.6;"> 📖</span>` : ""}
                 ${allergenInlineHtml(item.name)}
+                ${noteLineHtml(shoppingNoteOf(item.key))}
             </span>
             <button
                 class="edit"
@@ -14953,7 +15000,7 @@ async function bulkDeleteSelected(){
 }
 
 
-function openShoppingItemModal(title, name, amount, unit){
+function openShoppingItemModal(title, name, amount, unit, note){
 
     document.getElementById("shoppingItemModalTitle")
     .innerText = title;
@@ -14966,6 +15013,8 @@ function openShoppingItemModal(title, name, amount, unit){
 
     document.getElementById("shoppingItemUnit")
     .value = unit;
+
+    document.getElementById("shoppingItemNote").value = note || "";
 
     document.getElementById("shoppingItemModal")
     .style.display = "flex";
@@ -14999,7 +15048,8 @@ function editShoppingItem(key){
         t("edit_item_title"),
         item.name,
         item.amount > 0 ? formatAmount(item.amount) : "",
-        item.unit || ""
+        item.unit || "",
+        shoppingNoteOf(key)
     );
 
 }
@@ -15024,11 +15074,13 @@ function saveShoppingItem(){
     let amount =
         Number(String(amountRaw).replace(",",".")) || 0;
 
+    const noteText = String((document.getElementById("shoppingItemNote") || { value:"" }).value || "").replace(/\s+/g, " ").trim().slice(0, 140);
+
     // an item of another list, edited from the combined "All lists" view
     if(editingCustomSource){
         const cl = customLists[editingCustomSource.listId];
         const ci = cl && (cl.items || []).find(i => i.id === editingCustomSource.itemId);
-        if(ci){ ci.name = name; ci.amount = amount; ci.unit = unit; }
+        if(ci){ ci.name = name; ci.amount = amount; ci.unit = unit; if(noteText) ci.note = noteText; else delete ci.note; }
         saveCustomLists();
         editingCustomSource = null;
         editingShoppingKey = null;
@@ -15044,9 +15096,9 @@ function saveShoppingItem(){
 
         if(editingShoppingKey && String(editingShoppingKey).startsWith("custom:")){
             let item = l.items.find(i => i.id === editingShoppingKey.slice(7));
-            if(item){ item.name = name; item.amount = amount; item.unit = unit; }
+            if(item){ item.name = name; item.amount = amount; item.unit = unit; if(noteText) item.note = noteText; else delete item.note; }
         }else{
-            l.items.push({ id: newCustomItemId(), name: name, amount: amount, unit: unit, checked: false });
+            l.items.push({ id: newCustomItemId(), name: name, amount: amount, unit: unit, checked: false, ...(noteText ? { note: noteText } : {}) });
         }
 
         saveCustomLists();
@@ -15060,12 +15112,14 @@ function saveShoppingItem(){
     if(editingShoppingKey === null){
 
         // Brand new manually-added item
+        const newExtraId = "x" + Date.now() + Math.floor(Math.random() * 1000);
         shoppingExtras.push({
-            id: "x" + Date.now() + Math.floor(Math.random() * 1000),
+            id: newExtraId,
             name: name,
             amount: amount,
             unit: unit
         });
+        if(noteText) setShoppingNote("extra:" + newExtraId, noteText);
 
     }else if(editingShoppingIsExtra){
 
@@ -15083,15 +15137,21 @@ function saveShoppingItem(){
     }else{
 
         const cur = generateShoppingList().list.find(i => i.key === editingShoppingKey);
-        shoppingOverrides[editingShoppingKey] = {
-            name: name,
-            amount: amount,
-            unit: unit
-        };
-        // remember what the recipes gave at this moment, to notice when they change later
-        if(cur && cur.autoBase !== undefined) shoppingOverrides[editingShoppingKey].auto = cur.autoBase;
+        // Only the note changed: leave the line as the recipes make it, so it keeps following them
+        const sameAsNow = cur && cur.name === name && Math.abs((Number(cur.amount) || 0) - amount) < 1e-9 && (cur.unit || "") === unit;
+        if(!(sameAsNow && !shoppingOverrides[editingShoppingKey])){
+            shoppingOverrides[editingShoppingKey] = {
+                name: name,
+                amount: amount,
+                unit: unit
+            };
+            // remember what the recipes gave at this moment, to notice when they change later
+            if(cur && cur.autoBase !== undefined) shoppingOverrides[editingShoppingKey].auto = cur.autoBase;
+        }
 
     }
+
+    if(editingShoppingKey !== null) setShoppingNote(editingShoppingKey, noteText);
 
     saveShoppingState();
 
@@ -15410,7 +15470,7 @@ function editCustomItem(id){
     if(!item) return;
     editingShoppingKey = "custom:" + id;
     editingShoppingIsExtra = false;
-    openShoppingItemModal(t("edit_item_title"), item.name, Number(item.amount) > 0 ? item.amount : "", item.unit || "");
+    openShoppingItemModal(t("edit_item_title"), item.name, Number(item.amount) > 0 ? item.amount : "", item.unit || "", item.note || "");
 }
 
 function deleteCustomItem(id){
@@ -15479,7 +15539,7 @@ function renderCustomList(){
     let row = i => `
         <div class="meal" data-custom-id="${esc(i.id)}" style="--accent:var(--primary);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
             <input type="checkbox" style="width:auto;margin:0;" aria-label="${t("aria_check_item")}: ${esc(customItemText(i))}" ${i.checked ? "checked" : ""} onchange="toggleCustomItem('${esc(i.id)}')">
-            <span style="flex:1;${i.checked ? "opacity:.5;text-decoration:line-through;" : ""}">${esc(customItemText(i))}</span>
+            <span style="flex:1;${i.checked ? "opacity:.5;text-decoration:line-through;" : ""}">${esc(customItemText(i))}${noteLineHtml(i.note)}</span>
             <button class="edit" style="margin:0;padding:6px 10px;font-size:13px;" aria-label="${t("aria_edit")}: ${esc(customItemText(i))}" onclick="editCustomItem('${esc(i.id)}')">✏️</button>
             <button class="delete" style="margin:0;padding:6px 10px;font-size:13px;" aria-label="${t("aria_delete")}: ${esc(customItemText(i))}" onclick="deleteCustomItem('${esc(i.id)}')">🗑️</button>
         </div>`;
@@ -15621,6 +15681,7 @@ function renderCombinedList(){
             <span style="flex:1;${e.checked ? "opacity:.5;text-decoration:line-through;" : ""}">${txt}
                 <span class="small" style="opacity:.6;"> · ${e.tags.map(escapeHtml).join(", ")}</span>
                 ${allergenInlineHtml(e.name)}
+                ${noteLineHtml(combinedNotesText(e))}
             </span>
             <span class="combined-actions" style="display:inline-flex;gap:8px;flex-wrap:wrap;">
             ${hasMeal ? `<button class="edit" style="margin:0;padding:6px 10px;font-size:13px;" aria-label="${t("aria_at_home")}: ${escapeHtml(e.name)}" title="${t("aria_at_home")}" onclick="combinedItemHome(${e.idx})">🏠</button>` : ""}
@@ -15636,6 +15697,22 @@ function renderCombinedList(){
         <h3 style="margin:18px 0 8px;">${categoryIcons[cat] || ""} ${escapeHtml(categoryLabel(cat))}</h3>
         ${groups[cat].map(row).join("")}`).join("");
 
+}
+
+// the notes of every item behind a combined line
+function combinedNotesText(e){
+    const out = [];
+    e.sources.forEach(src => {
+        let n = "";
+        if(src.type === "meal") n = shoppingNoteOf(src.key);
+        else{
+            const l = customLists[src.listId];
+            const it = l && (l.items || []).find(i => i.id === src.itemId);
+            n = it && it.note ? it.note : "";
+        }
+        if(n && !out.includes(n)) out.push(n);
+    });
+    return out.join(" · ");
 }
 
 function toggleCombinedEntry(idx){
@@ -15778,7 +15855,7 @@ function combinedEditSource(src){
     editingCustomSource = { listId: src.listId, itemId: src.itemId };
     editingShoppingKey = "custom:" + src.itemId;
     editingShoppingIsExtra = false;
-    openShoppingItemModal(t("edit_item_title"), info.item.name, Number(info.item.amount) > 0 ? info.item.amount : "", info.item.unit || "");
+    openShoppingItemModal(t("edit_item_title"), info.item.name, Number(info.item.amount) > 0 ? info.item.amount : "", info.item.unit || "", src.type === "meal" ? shoppingNoteOf(src.key) : (info.item.note || ""));
 }
 
 function openCombinedActions(idx){
@@ -17652,7 +17729,7 @@ if("serviceWorker" in navigator){
 // Otherwise it keeps working on the old version and shows a small "Update" button instead.
 // The line below is the version of this file; it changes with every new upload.
 // =======================
-const APP_BUILD = "20261124-114952";
+const APP_BUILD = "20261125-122258";
 (function(){
     const CHECK_EVERY = 30 * 60 * 1000;
     const IDLE_BEFORE_RELOAD = 3 * 60 * 1000;
@@ -17811,10 +17888,12 @@ window.ffSoftRefresh = function(opts){
     shoppingCheckedByWeek = read("foodflowShoppingCheckedByWeek", {}) || {};
     shoppingOverridesByWeek = read("foodflowShoppingOverridesByWeek", {}) || {};
     shoppingExtrasByWeek = read("foodflowShoppingExtrasByWeek", {}) || {};
+    shoppingNotesByWeek = read("foodflowShoppingNotesByWeek", {}) || {};
     shoppingStateKey = shoppingKeyForRange(shoppingRangeStart);
     shoppingChecked = ensureWeekShoppingChecked(shoppingStateKey);
     shoppingOverrides = ensureWeekShoppingOverrides(shoppingStateKey);
     shoppingExtras = ensureWeekShoppingExtras(shoppingStateKey);
+    itemNotes = ensureWeekShoppingNotes(shoppingStateKey);
 
     weekTemplates = loadWeekTemplates();
     weekNames = loadWeekNames();
@@ -17889,6 +17968,7 @@ const SYNC_KEYS = {
     foodflowShoppingCheckedByWeek: "map",
     foodflowShoppingOverridesByWeek: "map",
     foodflowShoppingExtrasByWeek: "map",
+    foodflowShoppingNotesByWeek: "map",
     foodflowDayNotes: "map",
     foodflowWeekNames: "map",
     foodflowCustomIngredientTranslations: "map",
