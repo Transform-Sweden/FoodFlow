@@ -1768,11 +1768,24 @@ padding-bottom:calc(180px + env(safe-area-inset-bottom));
 
 }
 
-/* toasts sit above the floating bar instead of covering it */
+/* on phones the work happens in the lower half: notices drop in from the top instead (below the small sync chip) */
 #toastContainer {
 
-bottom:calc(96px + env(safe-area-inset-bottom));
+bottom:auto;
 
+top:calc(52px + env(safe-area-inset-top));
+
+}
+
+.toast {
+
+animation:toastInTop .25s ease;
+
+}
+
+@keyframes toastInTop {
+from { opacity:0; transform:translateY(-14px); }
+to { opacity:1; transform:translateY(0); }
 }
 
 }
@@ -5413,9 +5426,14 @@ function showToast(message, options={}){
 
     }
 
+    // tap a notice to get rid of it
+    toast.addEventListener("click", e => { if(!(e.target.closest && e.target.closest("button"))) removeToast(); });
+    toast.style.cursor = "pointer";
+
     container.appendChild(toast);
 
-    setTimeout(removeToast, options.duration || 5000);
+    // notices with an Undo button stay a little longer than plain ones
+    setTimeout(removeToast, options.duration || (options.actionLabel ? 5000 : 3500));
 
 }
 
@@ -17785,7 +17803,7 @@ if("serviceWorker" in navigator){
 // Otherwise it keeps working on the old version and shows a small "Update" button instead.
 // The line below is the version of this file; it changes with every new upload.
 // =======================
-const APP_BUILD = "20261125-232930";
+const APP_BUILD = "20261126-091922";
 (function(){
     const CHECK_EVERY = 30 * 60 * 1000;
     const IDLE_BEFORE_RELOAD = 3 * 60 * 1000;
@@ -18109,7 +18127,12 @@ function schedulePush(){
 // other device's version, "mine" is ours. Changes made on only one side are
 // kept, and changes made on both sides are combined instead of one replacing
 // the other (lists are merged item by item, objects key by key).
-function merge3(b, t, m){
+// For shopping lists a deletion must stick: a tick (or any small change) made by someone else on the same
+// item must not bring back an item that this device just removed. Recipes and meals keep the safer rule
+// ("edited by them after I deleted it" keeps it), so nobody's recipe work is thrown away.
+const DELETE_WINS_KEYS = new Set(["foodflowCustomLists", "foodflowShoppingExtrasByWeek"]);
+
+function merge3(b, t, m, dw){
     const S = JSON.stringify;
     if(S(m) === S(b)) return t;
     if(S(t) === S(b)) return m;
@@ -18124,13 +18147,13 @@ function merge3(b, t, m){
             const out = [];
             m.forEach(x => {
                 const bx = bm.get(x.id), tx = tm.get(x.id);
-                if(tx === undefined){ if(bx !== undefined && S(bx) === S(x)) return; out.push(x); }   // other side deleted it (unless I changed it)
-                else if(bx === undefined) out.push(S(tx) === S(x) ? x : merge3({}, tx, x));          // both added the same id
-                else out.push(merge3(bx, tx, x));
+                if(tx === undefined){ if(bx !== undefined && (dw || S(bx) === S(x))) return; out.push(x); }   // other side deleted it (unless I changed it - for shopping lists the deletion wins even then, e.g. a tick on the item)
+                else if(bx === undefined) out.push(S(tx) === S(x) ? x : merge3({}, tx, x, dw));          // both added the same id
+                else out.push(merge3(bx, tx, x, dw));
             });
             t.forEach(x => {
                 if(mm.has(x.id)) return;
-                if(!bm.has(x.id) || S(bm.get(x.id)) !== S(x)) out.push(x);   // added by the other side, or edited by them after I deleted it
+                if(!bm.has(x.id) || (!dw && S(bm.get(x.id)) !== S(x))) out.push(x);   // added by the other side, or (unless deletions win) edited by them after I deleted it
             });
             return out;
         }
@@ -18144,7 +18167,7 @@ function merge3(b, t, m){
         const bb = isObj(b) ? b : {};
         const out = {};
         new Set([...Object.keys(bb), ...Object.keys(t), ...Object.keys(m)]).forEach(k => {
-            const v = merge3(bb[k], t[k], m[k]);
+            const v = merge3(bb[k], t[k], m[k], dw);
             if(v !== undefined) out[k] = v;
         });
         return out;
@@ -18212,7 +18235,7 @@ async function pushLocal(){
                 if(snap.exists()){
                     const c = snap.data().v;
                     if(typeof c === "string" && c !== b0 && c !== d.v){
-                        v = JSON.stringify(merge3(parse(b0), parse(c), parse(d.v)));
+                        v = JSON.stringify(merge3(parse(b0), parse(c), parse(d.v), DELETE_WINS_KEYS.has(d.k)));
                     }
                 }
                 t.set(ref, { k: d.k, e: d.e, v, t: serverTimestamp() });
@@ -18224,7 +18247,7 @@ async function pushLocal(){
             if(written !== d.v){
                 // bring the merged result into local data, keeping anything typed in the meantime
                 const nowLocal = (localDocs()[id] || {}).v;
-                const next = nowLocal === undefined ? written : JSON.stringify(merge3(parse(d.v), parse(written), parse(nowLocal)));
+                const next = nowLocal === undefined ? written : JSON.stringify(merge3(parse(d.v), parse(written), parse(nowLocal), DELETE_WINS_KEYS.has(d.k)));
                 if(next !== nowLocal){ applyRemote(d.k, d.e, next); changedLocal = true; }
             }
         }
@@ -18268,7 +18291,7 @@ function mergeWithRemote(key, value){
         let differs = false;
         new Set([...Object.keys(mine), ...Object.keys(c)]).forEach(e => {
             const id = docId(key, e);
-            const merged = doMerge ? merge3(av(id), c[e], mine[e]) : mine[e];
+            const merged = doMerge ? merge3(av(id), c[e], mine[e], DELETE_WINS_KEYS.has(key)) : mine[e];
             if(merged !== undefined) out[e] = merged;
             if(S(merged) !== S(mine[e])) differs = true;
             if(mine[e] !== undefined) appView[id] = S(mine[e]); else delete appView[id];
@@ -18277,7 +18300,7 @@ function mergeWithRemote(key, value){
         return S(out);
     }
     const id = docId(key, null);
-    const merged = doMerge && cur !== null ? merge3(av(id), cur, mine) : mine;
+    const merged = doMerge && cur !== null ? merge3(av(id), cur, mine, DELETE_WINS_KEYS.has(key)) : mine;
     appView[id] = S(mine);
     if(S(merged) !== S(mine)){ scheduleReload(); return S(merged); }
     return value;
@@ -18411,7 +18434,7 @@ function onSnapshotData(snap){
         const localIsEmptyDefault = local[id] && !(id in base) && (local[id].v === "[]" || local[id].v === "{}");
         if(local[id] && local[id].v !== base[id] && !localIsEmptyDefault){
             // both sides changed it: combine the two versions instead of picking one
-            const merged = JSON.stringify(merge3(parse(base[id]), parse(data.v), parse(local[id].v)));
+            const merged = JSON.stringify(merge3(parse(base[id]), parse(data.v), parse(local[id].v), DELETE_WINS_KEYS.has(data.k)));
             base[id] = data.v;
             if(merged !== local[id].v){ try{ applyRemote(data.k, data.e, merged); changed = true; }catch(e){} }
             schedulePush();
