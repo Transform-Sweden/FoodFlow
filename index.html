@@ -17803,7 +17803,7 @@ if("serviceWorker" in navigator){
 // Otherwise it keeps working on the old version and shows a small "Update" button instead.
 // The line below is the version of this file; it changes with every new upload.
 // =======================
-const APP_BUILD = "20261126-091922";
+const APP_BUILD = "20261126-093335";
 (function(){
     const CHECK_EVERY = 30 * 60 * 1000;
     const IDLE_BEFORE_RELOAD = 3 * 60 * 1000;
@@ -17963,6 +17963,7 @@ window.ffSoftRefresh = function(opts){
     shoppingOverridesByWeek = read("foodflowShoppingOverridesByWeek", {}) || {};
     shoppingExtrasByWeek = read("foodflowShoppingExtrasByWeek", {}) || {};
     shoppingNotesByWeek = read("foodflowShoppingNotesByWeek", {}) || {};
+    shoppingRemoved = read("foodflowShoppingRemoved", {}) || {};
     shoppingStateKey = shoppingKeyForRange(shoppingRangeStart);
     shoppingChecked = ensureWeekShoppingChecked(shoppingStateKey);
     shoppingOverrides = ensureWeekShoppingOverrides(shoppingStateKey);
@@ -18043,6 +18044,7 @@ const SYNC_KEYS = {
     foodflowShoppingOverridesByWeek: "map",
     foodflowShoppingExtrasByWeek: "map",
     foodflowShoppingNotesByWeek: "map",
+    foodflowShoppingRemoved: "map",      // lines deleted / hidden from the meal-plan list: now shared by the household
     foodflowDayNotes: "map",
     foodflowWeekNames: "map",
     foodflowCustomIngredientTranslations: "map",
@@ -18741,6 +18743,8 @@ function renderSyncSettings(){
     if(on && status !== "error" && lastSyncAt){
         st.textContent += " · " + tr("sync_last") + " " + new Date(lastSyncAt).toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" });
     }
+    // which version of the app this device runs: all household devices should show the same
+    try{ if(on && typeof APP_BUILD === "string") st.textContent += " · v" + APP_BUILD; }catch(e){}
     st.dataset.state = !on ? "off" : status === "error" ? "error" : status === "connecting" ? "busy" : "on";
     const hasBackup = !!ls.get("foodflowPreJoinBackup");
     document.querySelectorAll(".syncRestoreBtn").forEach(b => { b.style.display = hasBackup ? "" : "none"; });
