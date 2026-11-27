@@ -2458,6 +2458,13 @@ Share your planner, recipes and shopping list with your household. Everyone sees
 <button class="syncRestoreBtn" onclick="ffSyncRestore()" style="display:none;">
 <span data-i18n="sync_restore">♻️ Restore data from before sync</span>
 </button>
+<button onclick="ffShowSyncLog()">
+<span data-i18n="sync_log_btn">🩺 Sync log (troubleshooting)</span>
+</button>
+<div id="syncLogBox" style="display:none;">
+<textarea id="syncLogText" readonly rows="12" style="width:100%;font-size:11px;font-family:monospace;"></textarea>
+<button onclick="ffCopySyncLog()"><span data-i18n="sync_log_copy">📋 Copy log</span></button>
+</div>
 <button class="delete" onclick="ffSyncLeave()">
 <span data-i18n="sync_leave">🚪 Leave household</span>
 </button>
@@ -4318,6 +4325,9 @@ const translations = {
         sync_leave_title: "Leave household?",
         sync_leave_message: "This device stops syncing. Your data stays here, but changes won't be shared anymore.",
         sync_updated: "Updated by your household",
+        sync_log_btn: "🩺 Sync log (troubleshooting)",
+        sync_log_copy: "📋 Copy log",
+        sync_log_copied: "Log copied",
         ws_switched: "Switched to \"{name}\"",
         settings_backup: "💾 Backup",
         backup_description: "Your data lives only in this browser. Export it now and then to keep a safe copy, or to move it to another device.",
@@ -4403,6 +4413,7 @@ const translations = {
         combined_more: "More actions",
         combined_pick_title: "Which one?",
         combined_pick_hint: "This line adds up items from several lists. Pick the one to change.",
+        all_lists_included: "Included",
         all_lists_summary: "Combined from {n} of {total} lists. Tick items here and they are ticked in their own list too. Add and edit items in the individual lists.",
         list_new: "➕ New list",
         new_list_title: "➕ New list",
@@ -4501,7 +4512,7 @@ const translations = {
         shopping_description: "Automatically built from every recipe in your meal planner, scaled to the number of people you set for each meal.",
         add_item: "➕ Add Item",
         more_actions: "⋯ More",
-        shopping_for: "🗓️ Shopping for:",
+        shopping_for: "🗓️ Shopping for (shared with your household):",
         range_to: "to",
         preset_this_week: "This Week",
         preset_rest_of_week: "📍 Rest of Week",
@@ -4927,6 +4938,9 @@ const translations = {
         sync_leave_title: "Lämna hushållet?",
         sync_leave_message: "Den här enheten slutar synka. Din data finns kvar, men ändringar delas inte längre.",
         sync_updated: "Uppdaterad av ditt hushåll",
+        sync_log_btn: "🩺 Synkloggen (felsökning)",
+        sync_log_copy: "📋 Kopiera loggen",
+        sync_log_copied: "Loggen kopierad",
         ws_switched: "Bytte till \"{name}\"",
         settings_backup: "💾 Säkerhetskopia",
         backup_description: "Din data finns bara i den här webbläsaren. Exportera då och då för att ha en säker kopia, eller för att flytta den till en annan enhet.",
@@ -5012,6 +5026,7 @@ const translations = {
         combined_more: "Fler åtgärder",
         combined_pick_title: "Vilken av dem?",
         combined_pick_hint: "Den här raden summerar varor från flera listor. Välj den du vill ändra.",
+        all_lists_included: "Med",
         all_lists_summary: "Samlad från {n} av {total} listor. Bocka av varor här så bockas de av i sin egen lista också. Lägg till och ändra varor i de enskilda listorna.",
         list_new: "➕ Ny lista",
         new_list_title: "➕ Ny lista",
@@ -5110,7 +5125,7 @@ const translations = {
         shopping_description: "Byggs automatiskt utifrån recepten i din måltidsplanerare, skalat efter antalet personer du anger för varje måltid.",
         add_item: "➕ Lägg till vara",
         more_actions: "⋯ Mer",
-        shopping_for: "🗓️ Handlar för:",
+        shopping_for: "🗓️ Handlar för (delas med hushållet):",
         range_to: "till",
         preset_this_week: "Denna vecka",
         preset_rest_of_week: "📍 Resten av veckan",
@@ -15723,7 +15738,10 @@ function renderCombinedList(){
     const excluded = combinedExcludedIds();
     const ids = ["meal"].concat(Object.keys(customLists));
     const usedCount = ids.filter(id => !excluded.includes(id)).length;
-    const summary = `<p class="small" style="margin:10px 0;">${t("all_lists_summary").replace("{n}", usedCount).replace("{total}", ids.length)}</p>`;
+    // name the lists that are included whenever some are left out, so two devices that differ are easy to spot
+    const listLabel = id => id === "meal" ? "🍽️ " + t("list_tab_meal") : ((customLists[id] && customLists[id].icon) || "🛒") + " " + ((customLists[id] && customLists[id].name) || "?");
+    const includedNames = usedCount < ids.length ? ids.filter(id => !excluded.includes(id)).map(listLabel).join(", ") : "";
+    const summary = `<p class="small" style="margin:10px 0;">${t("all_lists_summary").replace("{n}", usedCount).replace("{total}", ids.length)}${includedNames ? `<br><b>${escapeHtml(t("all_lists_included"))}:</b> ${escapeHtml(includedNames || "–")}` : ""}</p>`;
 
     if(total === 0){
         container.innerHTML = summary + `<p class="empty-state">${t("list_empty")}</p>`;
@@ -17803,7 +17821,7 @@ if("serviceWorker" in navigator){
 // Otherwise it keeps working on the old version and shows a small "Update" button instead.
 // The line below is the version of this file; it changes with every new upload.
 // =======================
-const APP_BUILD = "20261126-093335";
+const APP_BUILD = "20261127-100132";
 (function(){
     const CHECK_EVERY = 30 * 60 * 1000;
     const IDLE_BEFORE_RELOAD = 3 * 60 * 1000;
@@ -17919,6 +17937,12 @@ window.ffSoftRefresh = function(opts){
             return (v === null || v === undefined) ? fallback : v;
         }catch(e){ return fallback; }
     };
+
+    // the shopping dates are shared by the household: follow a change made on another device
+    if(!reset){
+        const rs = localStorage.getItem("foodflowShoppingRangeStart"), re = localStorage.getItem("foodflowShoppingRangeEnd");
+        if(rs && re){ shoppingRangeStart = rs; shoppingRangeEnd = re; }
+    }
 
     if(reset){
         currentWeekKey = getMondayKey(new Date());
@@ -18044,6 +18068,7 @@ const SYNC_KEYS = {
     foodflowShoppingOverridesByWeek: "map",
     foodflowShoppingExtrasByWeek: "map",
     foodflowShoppingNotesByWeek: "map",
+    foodflowHouseholdPrefs: "map",       // shopping dates + rounding: one setting for the whole household
     foodflowShoppingRemoved: "map",      // lines deleted / hidden from the meal-plan list: now shared by the household
     foodflowDayNotes: "map",
     foodflowWeekNames: "map",
@@ -18086,6 +18111,28 @@ function parse(v){ try { return v ? JSON.parse(v) : null; } catch(e){ return nul
 const isObj = x => x && typeof x === "object" && !Array.isArray(x);
 const docId = (k, e) => e === null ? SHORT(k) : SHORT(k) + "~" + encodeURIComponent(e);
 
+// "expanded" (which card is opened on this screen) is a personal view state: it is neither shared nor
+// allowed to count as a change - otherwise opening a card on one device would open it everywhere, and
+// could bring back a recipe or meal that someone else had just deleted.
+const UI_ONLY_FIELDS = new Set(["expanded"]);
+const dropUi = (key, val) => UI_ONLY_FIELDS.has(key) ? undefined : val;
+function collectUiState(x, out){
+    if(Array.isArray(x)) x.forEach(i => collectUiState(i, out));
+    else if(isObj(x)){
+        if(typeof x.id === "string" && "expanded" in x) out[x.id] = x.expanded;
+        Object.values(x).forEach(v => collectUiState(v, out));
+    }
+    return out;
+}
+function restoreUiState(x, map){
+    if(Array.isArray(x)) x.forEach(i => restoreUiState(i, map));
+    else if(isObj(x)){
+        if(typeof x.id === "string" && x.id in map) x.expanded = map[x.id];
+        Object.values(x).forEach(v => restoreUiState(v, map));
+    }
+    return x;
+}
+
 // Everything shared, as { docId: {k, e, v} } where v is a JSON string.
 function localDocs(){
     const out = {};
@@ -18095,10 +18142,10 @@ function localDocs(){
         const val = parse(raw);
         if(SYNC_KEYS[k] === "map" && isObj(val)){
             for(const e of Object.keys(val)){
-                out[docId(k, e)] = { k, e, v: JSON.stringify(val[e]) };
+                out[docId(k, e)] = { k, e, v: JSON.stringify(val[e], dropUi) };
             }
         }else if(val !== null){
-            out[docId(k, null)] = { k, e: null, v: JSON.stringify(val) };
+            out[docId(k, null)] = { k, e: null, v: JSON.stringify(val, dropUi) };
         }
     }
     return out;
@@ -18106,10 +18153,15 @@ function localDocs(){
 
 function applyRemote(k, e, v){
     const val = JSON.parse(v);
-    if(e === null){ ls.set(k, JSON.stringify(val)); return; }
+    if(e === null){
+        restoreUiState(val, collectUiState(parse(ls.get(k)), {}));      // keep which cards are open on this device
+        ls.set(k, JSON.stringify(val)); return;
+    }
     let cur = parse(ls.get(k));
     if(!isObj(cur)) cur = {};
+    restoreUiState(val, collectUiState(cur[e], {}));
     cur[e] = val;
+    if(k === "foodflowHouseholdPrefs") queueMicrotask(() => mirrorPrefs(cur));
     ls.set(k, JSON.stringify(cur));
 }
 function removeRemote(k, e){
@@ -18132,7 +18184,7 @@ function schedulePush(){
 // For shopping lists a deletion must stick: a tick (or any small change) made by someone else on the same
 // item must not bring back an item that this device just removed. Recipes and meals keep the safer rule
 // ("edited by them after I deleted it" keeps it), so nobody's recipe work is thrown away.
-const DELETE_WINS_KEYS = new Set(["foodflowCustomLists", "foodflowShoppingExtrasByWeek"]);
+const DELETE_WINS_KEYS = new Set(["foodflowCustomLists", "foodflowShoppingExtrasByWeek", "foodflowWeeks"]);
 
 function merge3(b, t, m, dw){
     const S = JSON.stringify;
@@ -18246,6 +18298,7 @@ async function pushLocal(){
             const written = await Promise.race([tx, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 10000))]);
             base[id] = written;
             saveBase();
+            syncLog("saved " + id + (written !== d.v ? " (merged with others' changes)" : ""));
             if(written !== d.v){
                 // bring the merged result into local data, keeping anything typed in the meantime
                 const nowLocal = (localDocs()[id] || {}).v;
@@ -18258,6 +18311,7 @@ async function pushLocal(){
     }catch(err){
         // typically offline: keep the changes locally and try again later
         console.warn("FoodFlow sync push failed", err);
+        syncLog("save failed: " + (err && err.message ? err.message : err));
         failed = true;
         setStatus("error");
     }
@@ -18309,10 +18363,44 @@ function mergeWithRemote(key, value){
 }
 
 // Any write to a shared key from the app triggers a push.
+// ---- household-wide shopping settings ----
+// The shopping date range and the two rounding settings decide WHAT the list shows, so they are the same on
+// every device: a change on one device is published here and copied into the others' own settings.
+const PREF_KEYS = { rangeStart: "foodflowShoppingRangeStart", rangeEnd: "foodflowShoppingRangeEnd", roundMeals: "foodflowRoundMeals", roundShopping: "foodflowRoundShopping" };
+let prefsBusy = false;
+function publishPref(key, value){
+    if(prefsBusy || value === null || value === undefined) return;
+    const short = Object.keys(PREF_KEYS).find(k => PREF_KEYS[k] === key);
+    if(!short) return;
+    const cur = parse(ls.get("foodflowHouseholdPrefs")) || {};
+    if(cur[short] === value) return;
+    cur[short] = value;
+    localStorage.setItem("foodflowHouseholdPrefs", JSON.stringify(cur));
+    syncLog("shared setting: " + short + " = " + value);
+}
+function mirrorPrefs(prefs){
+    if(!isObj(prefs)) return;
+    prefsBusy = true;
+    try{
+        Object.keys(PREF_KEYS).forEach(short => {
+            const v = prefs[short];
+            if(typeof v === "string" && localStorage.getItem(PREF_KEYS[short]) !== v) origSet.call(localStorage, PREF_KEYS[short], v);
+        });
+    }finally{ prefsBusy = false; }
+}
+// the first device to meet a household without these settings publishes its own
+function ensureHouseholdPrefs(){
+    if(parse(ls.get("foodflowHouseholdPrefs"))) { mirrorPrefs(parse(ls.get("foodflowHouseholdPrefs"))); return; }
+    const out = {};
+    Object.keys(PREF_KEYS).forEach(short => { const v = localStorage.getItem(PREF_KEYS[short]); if(v !== null) out[short] = v; });
+    if(Object.keys(out).length) localStorage.setItem("foodflowHouseholdPrefs", JSON.stringify(out));
+}
+
 Storage.prototype.setItem = function(key, value){
     if(this === localStorage && key in SYNC_KEYS) value = mergeWithRemote(key, value);
     origSet.call(this, key, value);
-    if(this === localStorage && key in SYNC_KEYS) schedulePush();
+    if(this === localStorage && key in SYNC_KEYS){ syncLog("saved on this device: " + key.replace("foodflow", "")); schedulePush(); }
+    if(this === localStorage && code && !switching) publishPref(key, value);
 };
 Storage.prototype.removeItem = function(key){
     origRemove.call(this, key);
@@ -18378,8 +18466,9 @@ function scheduleReload(){
                 for(const id of Object.keys(lv)) appView[id] = lv[id].v;
                 pendingReload = false;
                 toast(tr("sync_updated"));
+                syncLog("screen refreshed");
                 return;
-            }catch(err){ console.warn("FoodFlow soft refresh failed, reloading instead", err); }
+            }catch(err){ console.warn("FoodFlow soft refresh failed, reloading instead", err); syncLog("refresh failed, reloading: " + (err && err.message)); }
         }
         try { sessionStorage.setItem("ff_scroll", String(getAppScrollY())); sessionStorage.setItem("ff_synced", "1"); if(typeof currentWeekKey === "string") sessionStorage.setItem("ff_week", currentWeekKey); } catch(e){}
         location.reload();
@@ -18400,9 +18489,38 @@ function backfillSharedName(){
         .catch(e => console.warn("FoodFlow: could not share the planner name", e));
 }
 
+// A short diary of what the sync did on this device (Settings > Sync > More options > Sync log).
+// It stays on the device and is never uploaded; it helps to find out what happened if lists look wrong.
+const SYNC_LOG_KEY = "foodflowSyncLog";
+function syncLog(msg){
+    try{
+        let a = [];
+        try{ a = JSON.parse(localStorage.getItem(SYNC_LOG_KEY)) || []; }catch(e){}
+        const t = new Date();
+        const hh = n => String(n).padStart(2, "0");
+        a.push(hh(t.getHours()) + ":" + hh(t.getMinutes()) + ":" + hh(t.getSeconds()) + " " + msg);
+        if(a.length > 200) a = a.slice(-200);
+        origSet.call(localStorage, SYNC_LOG_KEY, JSON.stringify(a));
+    }catch(e){}
+}
+const lastDocTime = {};      // newest cloud version seen per document: an older one is never applied after it
+
 function onSnapshotData(snap){
     let changed = false;
     const local = localDocs();
+    const fromCache = !!snap.metadata.fromCache;
+    const firstServer = !fromCache && !onSnapshotData.done;
+    // The saved offline copy of the cloud can be OLDER than what this device already knows. Treating it as
+    // "someone else's change" would roll lists back and push that old state to everybody, so only
+    // server-confirmed data is used. The first confirmed snapshot is read in full, so nothing is missed.
+    let changeList;
+    if(fromCache) changeList = [];
+    else if(firstServer){
+        changeList = [];
+        snap.forEach(d => changeList.push({ type: "modified", doc: d }));
+        snap.docChanges().forEach(ch => { if(ch.type === "removed") changeList.push(ch); });
+    }else changeList = snap.docChanges();
+    syncLog("snapshot " + (fromCache ? "from saved copy (ignored)" : (firstServer ? "from server (full)" : "from server")) + ", " + changeList.length + " docs");
     const remoteIds = new Set();
     let metaName;                                       // undefined = no meta document seen
 
@@ -18411,7 +18529,7 @@ function onSnapshotData(snap){
         else { const m = d.data(); metaName = (m && typeof m.name === "string") ? m.name.trim() : ""; }
     });
 
-    snap.docChanges().forEach(ch => {
+    changeList.forEach(ch => {
         const id = ch.doc.id;
         if(id === "meta"){
             // the household's shared planner name
@@ -18427,16 +18545,24 @@ function onSnapshotData(snap){
         const data = ch.doc.data();
         if(ch.type === "removed"){
             if(local[id] && local[id].v === base[id]){
-                removeRemote(data.k, data.e); delete base[id]; changed = true;
+                removeRemote(data.k, data.e); delete base[id]; changed = true; syncLog("removed by household: " + id);
             }
             return;
         }
         if(!data || typeof data.v !== "string") return;
         if(base[id] === data.v) return;                    // already in sync
+        {
+            const tm = data.t && typeof data.t.toMillis === "function" ? data.t.toMillis() : 0;
+            if(tm){
+                if(lastDocTime[id] && tm < lastDocTime[id]){ syncLog("ignored an older version of " + id); return; }
+                lastDocTime[id] = tm;
+            }
+        }
         const localIsEmptyDefault = local[id] && !(id in base) && (local[id].v === "[]" || local[id].v === "{}");
         if(local[id] && local[id].v !== base[id] && !localIsEmptyDefault){
             // both sides changed it: combine the two versions instead of picking one
             const merged = JSON.stringify(merge3(parse(base[id]), parse(data.v), parse(local[id].v), DELETE_WINS_KEYS.has(data.k)));
+            syncLog("both changed " + id + " -> merged");
             base[id] = data.v;
             if(merged !== local[id].v){ try{ applyRemote(data.k, data.e, merged); changed = true; }catch(e){} }
             schedulePush();
@@ -18444,7 +18570,7 @@ function onSnapshotData(snap){
         }
         if(local[id] && local[id].v === data.v){ base[id] = data.v; return; }
         if(local[id] && base[id] === undefined && (data.v === "[]" || data.v === "{}")){ return; } // never replace real data with an empty doc
-        try{ applyRemote(data.k, data.e, data.v); base[id] = data.v; changed = true; }catch(e){}
+        try{ applyRemote(data.k, data.e, data.v); base[id] = data.v; changed = true; syncLog("applied from household: " + id); }catch(e){ syncLog("could not apply " + id + ": " + e.message); }
     });
 
     // First server-confirmed snapshot: connection is live. (We never delete
@@ -18455,6 +18581,7 @@ function onSnapshotData(snap){
         ready = true;
         setStatus("on");
         if(metaName === "") backfillSharedName();
+        try{ ensureHouseholdPrefs(); }catch(e){}
         schedulePush();
     }
     saveBase();
@@ -18474,7 +18601,7 @@ function attach(){
         { includeMetadataChanges: true },
         onSnapshotData,
         err => {
-            console.warn("FoodFlow sync listener error", err); setStatus("error");
+            console.warn("FoodFlow sync listener error", err); syncLog("listener error: " + (err && err.message)); setStatus("error");
             // never stay disconnected: try again (a little later each time)
             attach.fails = (attach.fails || 0) + 1;
             clearTimeout(attach._retry);
@@ -18707,6 +18834,30 @@ const fmt = c => c.replace(/(.{4})(?=.)/g, "$1-");
 const normalize = s => (s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 
 let lastSyncAt = 0, syncChipTimer = null;
+function ffSyncLogText(){
+    let a = [];
+    try{ a = JSON.parse(localStorage.getItem(SYNC_LOG_KEY)) || []; }catch(e){}
+    let head = "FoodFlow " + (typeof APP_BUILD === "string" ? APP_BUILD : "?") + " | online " + navigator.onLine + " | sync " + (typeof status !== "undefined" ? status : "?") +
+        " | range " + (typeof shoppingRangeStart !== "undefined" ? shoppingRangeStart + ".." + shoppingRangeEnd : "?") + " | " + new Date().toString().slice(0, 24);
+    return head + "\n" + a.join("\n");
+}
+function ffShowSyncLog(){
+    const box = document.getElementById("syncLogBox");
+    const ta = document.getElementById("syncLogText");
+    if(!box || !ta) return;
+    ta.value = ffSyncLogText();
+    box.style.display = box.style.display === "none" ? "block" : "none";
+    ta.scrollTop = ta.scrollHeight;
+}
+function ffCopySyncLog(){
+    const ta = document.getElementById("syncLogText");
+    if(!ta) return;
+    ta.value = ffSyncLogText();
+    const done = () => { try{ toast(tr("sync_log_copied")); }catch(e){} };
+    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(ta.value).then(done, () => { ta.select(); document.execCommand("copy"); done(); }); }
+    else{ ta.select(); try{ document.execCommand("copy"); }catch(e){} done(); }
+}
+
 function syncChip(kind){
     const el = document.getElementById("syncChip");
     if(!el) return;
@@ -18721,6 +18872,7 @@ function hideSyncChip(kind){
     if(el && (!kind || el.dataset.kind === kind)) el.classList.remove("show");
 }
 function setStatus(s){
+    try{ if(typeof status !== "undefined" && status !== s) syncLog("status " + s); }catch(e){}
     status = s;
     if(s === "on") hideSyncChip("offline");
     if(s === "error" && code) syncChip("offline");
@@ -18839,6 +18991,9 @@ window.ffSyncRestore = async function(){
     toast(tr("sync_restored"));
     setTimeout(() => location.reload(), 900);
 };
+
+window.ffShowSyncLog = ffShowSyncLog;
+window.ffCopySyncLog = ffCopySyncLog;
 
 window.ffSyncCopy = async function(){
     try{ await navigator.clipboard.writeText(fmt(code)); toast(tr("sync_copied")); }
